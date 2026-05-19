@@ -14,6 +14,9 @@
 -- No requiere casos especiales.
 -- ============================================================
 
+-- Drop la vista anterior (de 0001) porque cambiamos orden/columnas
+drop view if exists public.profile_ratings cascade;
+
 create or replace view public.profile_ratings as
 with combined as (
   select

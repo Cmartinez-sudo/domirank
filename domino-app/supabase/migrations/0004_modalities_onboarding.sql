@@ -82,6 +82,8 @@ $$;
 -- ============================================================
 -- Vista profile_ratings actualizada para 4 buckets
 -- ============================================================
+drop view if exists public.profile_ratings cascade;
+
 create or replace view public.profile_ratings as
 with combined as (
   select
