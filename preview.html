@@ -1,0 +1,2491 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>DomiRank · Preview</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root, :root[data-theme="dark"]{
+  --bg:#0a1020; --bg-2:#0f1729; --surface:#131c30; --surface-2:#18233c;
+  --surface-3:#1f2c49; --border:rgba(255,255,255,.07); --border-strong:rgba(255,255,255,.14);
+  --text:#eef2ff; --text-dim:#a6b0c8; --text-mute:#6b7490;
+  --primary:#10b981; --primary-2:#059669; --primary-soft:rgba(16,185,129,.15);
+  --danger:#ef4444; --danger-soft:rgba(239,68,68,.12);
+  --warning:#f59e0b; --warning-soft:rgba(245,158,11,.12);
+  --info:#3b82f6; --info-soft:rgba(59,130,246,.12);
+  --teamA:#3b82f6; --teamB:#ef4444;
+  --shadow-card:0 1px 0 rgba(255,255,255,.04) inset, 0 10px 30px -12px rgba(0,0,0,.6);
+  --bg-grad-1:rgba(16,185,129,.10); --bg-grad-2:rgba(59,130,246,.08); --bg-grad-3:rgba(245,158,11,.05);
+  --header-bg:rgba(15,23,41,.85);
+}
+:root[data-theme="light"]{
+  --bg:#f3f4f8; --bg-2:#ffffff; --surface:#ffffff; --surface-2:#f1f5f9;
+  --surface-3:#e2e8f0; --border:rgba(15,23,42,.08); --border-strong:rgba(15,23,42,.16);
+  --text:#0f172a; --text-dim:#475569; --text-mute:#94a3b8;
+  --primary:#059669; --primary-2:#047857; --primary-soft:rgba(5,150,105,.10);
+  --danger:#dc2626; --danger-soft:rgba(220,38,38,.10);
+  --warning:#d97706; --warning-soft:rgba(217,119,6,.10);
+  --info:#2563eb; --info-soft:rgba(37,99,235,.10);
+  --teamA:#2563eb; --teamB:#dc2626;
+  --shadow-card:0 1px 3px rgba(15,23,42,.06), 0 1px 2px rgba(15,23,42,.04);
+  --bg-grad-1:rgba(16,185,129,.05); --bg-grad-2:rgba(59,130,246,.05); --bg-grad-3:rgba(245,158,11,.03);
+  --header-bg:rgba(255,255,255,.85);
+}
+html,body{height:100%}
+body{
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  color:var(--text); background:var(--bg);
+  background-image:
+    radial-gradient(1200px 800px at 15% -10%, var(--bg-grad-1), transparent 60%),
+    radial-gradient(900px 700px at 110% 10%, var(--bg-grad-2), transparent 60%),
+    radial-gradient(800px 600px at 50% 120%, var(--bg-grad-3), transparent 60%);
+  background-attachment:fixed; min-height:100vh;
+  transition: background-color .2s, color .2s;
+}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font:inherit;color:inherit}
+
+header{position:sticky;top:0;z-index:30;border-bottom:1px solid var(--border);background:var(--header-bg);backdrop-filter:blur(8px)}
+.nav-inner{max-width:76rem;margin:0 auto;padding:0 1rem;height:3.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.brand{display:flex;align-items:center;gap:.5rem;font-weight:700;font-size:1.05rem;letter-spacing:-.01em}
+.brand-icon{display:grid;place-items:center;width:1.8rem;height:1.8rem;border-radius:.45rem;background:linear-gradient(135deg,#10b981,#059669);color:#0a1020;font-size:.85rem;font-weight:800}
+nav{display:flex;align-items:center;gap:.15rem;flex-wrap:wrap}
+.nav-link{padding:.45rem .7rem;border-radius:.4rem;color:var(--text-dim);font-size:.9rem;transition:all .15s}
+.nav-link:hover{color:var(--text);background:var(--surface-2)}
+.nav-link.active{color:var(--text);background:var(--surface-2)}
+
+main{max-width:76rem;margin:0 auto;padding:2rem 1rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:.875rem;box-shadow:var(--shadow-card);padding:1.25rem}
+.card-tight{padding:1rem}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.5rem 1rem;border-radius:.5rem;font-weight:500;transition:all .15s;font-size:.95rem;white-space:nowrap}
+.btn-primary{background:var(--primary);color:#fff}
+:root[data-theme="dark"] .btn-primary{color:#000}
+.btn-primary:hover{background:var(--primary-2)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-ghost{background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--surface-3)}
+.btn-danger{background:rgba(239,68,68,.15);color:var(--danger);border:1px solid rgba(239,68,68,.3)}
+.btn-danger:hover{background:rgba(239,68,68,.25)}
+.btn-sm{padding:.3rem .65rem;font-size:.82rem}
+.label{display:block;font-size:.85rem;color:var(--text-dim);margin-bottom:.25rem}
+.input,select.input,textarea.input{width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:.5rem;padding:.5rem .75rem;color:var(--text);outline:none}
+.input:focus{border-color:var(--primary)}
+.badge{display:inline-flex;align-items:center;padding:.1rem .5rem;border-radius:.3rem;font-size:.75rem;font-weight:500}
+.badge-win{background:rgba(16,185,129,.15);color:var(--primary)}
+.badge-loss{background:rgba(239,68,68,.12);color:var(--danger)}
+.badge-info{background:rgba(59,130,246,.15);color:var(--info)}
+.badge-warning{background:rgba(245,158,11,.15);color:var(--warning)}
+.badge-muted{background:var(--surface-2);color:var(--text-mute)}
+
+.hero{text-align:center;padding:2.5rem 0 1.5rem}
+.hero h1{font-size:2.8rem;font-weight:800;letter-spacing:-.02em;margin-bottom:.75rem;line-height:1.05}
+.hero h1 .grad{background:linear-gradient(135deg,#10b981,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{color:var(--text-dim);font-size:1.1rem;max-width:38rem;margin:0 auto}
+.hero .cta{display:flex;gap:.75rem;justify-content:center;margin-top:1.5rem;flex-wrap:wrap}
+
+.tabs{display:inline-flex;gap:.15rem;background:var(--surface);border:1px solid var(--border);border-radius:.5rem;padding:.2rem}
+.tab{padding:.35rem .9rem;border-radius:.35rem;font-size:.85rem;color:var(--text-dim);cursor:pointer}
+.tab.active{background:var(--surface-3);color:var(--text)}
+.tabs.full{display:flex;width:100%}
+.tabs.full .tab{flex:1;text-align:center}
+
+table{width:100%;border-collapse:collapse}
+thead th{text-align:left;font-size:.7rem;color:var(--text-mute);text-transform:uppercase;letter-spacing:.05em;padding:.7rem 1rem;border-bottom:1px solid var(--border);font-weight:600}
+tbody td{padding:.75rem 1rem;border-bottom:1px solid rgba(255,255,255,.04);font-size:.95rem;vertical-align:middle}
+tbody tr:hover{background:rgba(24,35,60,.5)}
+.mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,"SF Mono",Consolas,monospace}
+.text-primary{color:var(--primary)} .text-danger{color:var(--danger)} .text-info{color:var(--info)}
+.text-dim{color:var(--text-dim)} .text-mute{color:var(--text-mute)}
+.text-right{text-align:right} .text-center{text-align:center}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+@media(max-width:720px){
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+}
+.stack{display:flex;flex-direction:column;gap:1.25rem}
+.row{display:flex;align-items:center;justify-content:space-between;gap:.75rem}
+.col{display:flex;flex-direction:column;gap:.5rem}
+.section-title{font-size:1.6rem;font-weight:700;margin-bottom:1rem;letter-spacing:-.01em}
+.muted-help{color:var(--text-mute);font-size:.8rem;text-align:center}
+
+.rating-big{font-size:2.5rem;font-weight:800;color:var(--primary);line-height:1}
+.rating-row{display:flex;align-items:baseline;gap:.5rem;margin-top:.25rem}
+.kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-top:1rem;font-size:.9rem}
+.kpi-label{font-size:.7rem;color:var(--text-mute);text-transform:uppercase;letter-spacing:.04em}
+
+.team-card{padding:1rem;border-radius:.75rem;border:1px solid var(--border);background:var(--surface)}
+.team-card.winner{border-color:rgba(16,185,129,.5);background:linear-gradient(180deg, rgba(16,185,129,.04), transparent)}
+.team-A{color:var(--teamA)} .team-B{color:var(--teamB)}
+.score-display{font-size:2.6rem;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+
+footer{max-width:76rem;margin:0 auto;padding:2.5rem 1rem;text-align:center;color:var(--text-mute);font-size:.85rem}
+
+.banner{padding:.7rem 1rem;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:.5rem;color:var(--warning);font-size:.85rem;text-align:center;margin-bottom:1.5rem}
+.banner.info{background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.2);color:var(--info)}
+.banner.error{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--danger)}
+
+.delta-up{color:var(--primary)} .delta-down{color:var(--danger)}
+.empty{padding:3rem 1rem;text-align:center;color:var(--text-mute)}
+.link{color:var(--primary);cursor:pointer} .link:hover{text-decoration:underline}
+.divider{height:1px;background:var(--border);margin:.75rem 0}
+
+.player-row{padding:.6rem .75rem;background:var(--surface-2);border-radius:.5rem;display:flex;align-items:center;gap:.6rem}
+.player-row + .player-row{margin-top:.4rem}
+
+/* ===== Avatar ===== */
+.avatar{display:inline-grid;place-items:center;border-radius:50%;overflow:hidden;flex-shrink:0;font-weight:600;color:#fff;line-height:1;user-select:none;background:var(--surface-3)}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.avatar-link{display:inline-flex;align-items:center;gap:.6rem}
+.avatar-link:hover .avatar-name{color:var(--primary)}
+.avatar-name{font-weight:500}
+
+/* ===== Range slider ===== */
+input[type=range]{appearance:none;width:100%;height:6px;background:var(--surface-2);border-radius:3px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{appearance:none;width:18px;height:18px;border-radius:50%;background:var(--primary);cursor:pointer;border:none}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--primary);cursor:pointer;border:none}
+
+/* ===== Explainer ===== */
+.exp-section{padding:2rem 0;border-bottom:1px solid var(--border)}
+.exp-section:last-child{border-bottom:none}
+.exp-h{font-size:1.6rem;font-weight:700;margin-bottom:.5rem;letter-spacing:-.01em}
+.exp-h .num{display:inline-grid;place-items:center;width:2rem;height:2rem;border-radius:.5rem;background:var(--primary-soft);color:var(--primary);font-size:1rem;margin-right:.5rem;vertical-align:middle}
+.exp-p{color:var(--text-dim);line-height:1.55;margin-bottom:1rem}
+.exp-p code{background:var(--surface-2);padding:.1rem .35rem;border-radius:.25rem;font-size:.85em;color:var(--text)}
+.exp-widget{background:var(--surface);border:1px solid var(--border);border-radius:.75rem;padding:1.25rem;margin:1.25rem 0}
+.exp-widget canvas{display:block;width:100%;height:auto;background:#0d1426;border-radius:.5rem}
+.exp-readout{display:flex;justify-content:center;gap:1.5rem;margin-top:.75rem;font-size:.9rem;flex-wrap:wrap}
+.exp-readout > div{text-align:center}
+.exp-readout .v{font-size:1.25rem;font-weight:700;font-family:ui-monospace,monospace}
+.exp-readout .l{font-size:.7rem;color:var(--text-mute);text-transform:uppercase;letter-spacing:.04em}
+.exp-compare{border-collapse:collapse;width:100%;margin-top:1rem;font-size:.92rem}
+.exp-compare th,.exp-compare td{padding:.75rem;text-align:left;border-bottom:1px solid var(--border)}
+.exp-compare th{background:var(--surface-2);color:var(--text-mute);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.04em}
+.exp-compare .yes{color:var(--primary)} .exp-compare .no{color:var(--danger)}
+
+/* ===== Polla standings ===== */
+.streak-dot{display:inline-block;width:.55rem;height:.55rem;border-radius:50%;margin-right:2px}
+.streak-w{background:var(--primary)} .streak-l{background:var(--danger)}
+
+/* ===== File upload ===== */
+.upload-zone{border:2px dashed var(--border-strong);border-radius:.75rem;padding:2rem;text-align:center;cursor:pointer;transition:all .2s}
+.upload-zone:hover{border-color:var(--primary);background:rgba(16,185,129,.04)}
+
+/* ===== Misc ===== */
+.kbd{font-family:ui-monospace,monospace;font-size:.85em;background:var(--surface-2);border:1px solid var(--border);padding:.05rem .35rem;border-radius:.25rem;color:var(--text-dim)}
+.spinner{display:inline-block;width:1rem;height:1rem;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fade-in{animation:fadeIn .25s ease-out}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ===== Pref toggles (theme/lang) ===== */
+.pref-toggle{padding:.35rem .55rem;border-radius:.4rem;background:transparent;border:1px solid var(--border);color:var(--text-dim);font-size:.8rem;line-height:1;transition:all .15s;cursor:pointer}
+.pref-toggle:hover{color:var(--text);border-color:var(--border-strong)}
+.pref-toggle .icon{font-size:1rem}
+
+/* ===== Live match · pantalla en vivo (como la app vieja) ===== */
+.live-header{display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem}
+.live-back{display:grid;place-items:center;width:2.4rem;height:2.4rem;border-radius:.6rem;background:var(--surface);border:1px solid var(--border);font-size:1.1rem;cursor:pointer;color:var(--text)}
+.live-back:hover{background:var(--surface-2)}
+.live-title{font-size:1.8rem;font-weight:800;letter-spacing:-.01em}
+.team-tile{position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:1rem;padding:1rem 1.1rem 1.1rem;cursor:pointer;transition:transform .15s,border-color .15s}
+.team-tile:hover{transform:translateY(-1px)}
+.team-tile.A{background:linear-gradient(180deg, rgba(59,130,246,.10), transparent 80%);border-color:rgba(59,130,246,.25)}
+.team-tile.B{background:linear-gradient(180deg, rgba(239,68,68,.10), transparent 80%);border-color:rgba(239,68,68,.25)}
+.team-tile.A.active{border-color:rgba(59,130,246,.7);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.team-tile.B.active{border-color:rgba(239,68,68,.7);box-shadow:0 0 0 3px rgba(239,68,68,.15)}
+.team-tile .pill{display:inline-block;padding:.2rem .6rem;border-radius:1rem;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.5rem}
+.team-tile.A .pill{background:rgba(59,130,246,.15);color:var(--teamA)}
+.team-tile.B .pill{background:rgba(239,68,68,.15);color:var(--teamB)}
+.team-tile .team-name{font-size:1.05rem;font-weight:600;line-height:1.2}
+.team-tile .team-score{font-size:3.6rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;margin-top:.5rem}
+.team-tile .bar{position:absolute;left:1.1rem;right:1.1rem;bottom:.6rem;height:3px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden}
+:root[data-theme="light"] .team-tile .bar{background:rgba(0,0,0,.06)}
+.team-tile .bar > span{display:block;height:100%;background:var(--teamA);transition:width .3s}
+.team-tile.B .bar > span{background:var(--teamB)}
+
+.meta-row{display:flex;justify-content:space-between;align-items:center;padding:.85rem 1.1rem;background:var(--surface);border:1px solid var(--border);border-radius:.85rem;margin-bottom:1rem}
+.meta-label{font-size:.78rem;color:var(--text-mute);font-weight:500}
+.meta-value{font-size:1.05rem;font-weight:700;margin-top:.1rem}
+
+.live-card{background:var(--surface);border:1px solid var(--border);border-radius:.85rem;padding:1.1rem 1.1rem 1.2rem}
+.who-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem}
+.team-picker{display:flex;background:var(--surface-2);border:1px solid var(--border);border-radius:.6rem;padding:.25rem;gap:.25rem}
+.team-pick{flex:1;padding:.55rem 1rem;border-radius:.45rem;font-size:.95rem;font-weight:500;color:var(--text-dim);cursor:pointer;text-align:center;border:none;background:transparent}
+.team-pick.A.active{background:rgba(59,130,246,.18);color:var(--teamA);box-shadow:inset 0 0 0 1px rgba(59,130,246,.45)}
+.team-pick.B.active{background:rgba(239,68,68,.15);color:var(--teamB);box-shadow:inset 0 0 0 1px rgba(239,68,68,.45)}
+.points-display{margin:1rem 0;height:3.6rem;background:var(--surface-2);border:1px solid var(--border-strong);border-radius:.75rem;display:flex;align-items:center;justify-content:flex-end;padding:0 1.1rem;font-size:1.5rem;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text)}
+.points-display.empty{color:var(--text-mute);font-weight:400;justify-content:flex-end}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:.55rem}
+.numkey{padding:.95rem 0;background:var(--surface-2);border:1px solid var(--border);border-radius:.65rem;font-size:1.5rem;font-weight:600;cursor:pointer;color:var(--text);transition:transform .05s,background .15s}
+.numkey:hover{background:var(--surface-3)}
+.numkey:active{transform:scale(.97)}
+.numkey.danger{color:var(--danger)}
+.live-actions{display:flex;gap:.6rem;margin-top:1rem;flex-wrap:wrap}
+.live-actions > *{flex:1;min-width:7rem}
+.rounds-list{margin-top:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:.75rem;overflow:hidden}
+.rounds-list .head{padding:.7rem 1rem;border-bottom:1px solid var(--border);font-size:.85rem;font-weight:600}
+.round-row{display:flex;justify-content:space-between;align-items:center;padding:.55rem 1rem;border-top:1px solid rgba(255,255,255,.04);font-size:.9rem}
+:root[data-theme="light"] .round-row{border-top-color:rgba(0,0,0,.04)}
+.round-row .team-A-text{color:var(--teamA);font-weight:500}
+.round-row .team-B-text{color:var(--teamB);font-weight:500}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav-inner">
+    <a href="#/" class="brand" onclick="event.preventDefault();go('/')">
+      <span class="brand-icon">DR</span>
+      <span>DomiRank</span>
+    </a>
+    <nav id="nav"></nav>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<footer>
+  DomiRank preview · OpenSkill (Plackett-Luce / Weng-Lin) · datos mock locales ·
+  <a class="link" onclick="resetAll()">resetear datos</a>
+</footer>
+
+<script type="module">
+import { rating, rate as osRate, ordinal as osOrdinal, predictWin } from 'https://esm.sh/openskill@4';
+window.os = { rating, rate: osRate, ordinal: osOrdinal, predictWin };
+window.dispatchEvent(new Event('os-ready'));
+</script>
+
+<script>
+/* ============================================================
+   MODALIDADES, SETS, PAÍSES
+   ============================================================ */
+const SETS = {
+  'd6': { code:'d6', label:'6-6', tilesPerPlayer:7, totalTiles:28 },
+  'd9': { code:'d9', label:'9-9', tilesPerPlayer:10, totalTiles:55 },
+};
+const MODALIDADES = {
+  ven:    { code:'ven', name:'Venezolano',     flag:'🇻🇪', country:'VE', set:'d6', target:100, capicua:30, format:'doubles', desc:'Doble-seis · 100 pts · capicúa +30 · 2v2' },
+  dom:    { code:'dom', name:'Dominicano',     flag:'🇩🇴', country:'DO', set:'d6', target:200, capicua:30, format:'doubles', desc:'Doble-seis · 200 pts · capicúa +30 · 2v2' },
+  cub:    { code:'cub', name:'Cubano',         flag:'🇨🇺', country:'CU', set:'d9', target:150, capicua:30, format:'doubles', desc:'Doble-nueve · 150 pts · capicúa +30 · 2v2' },
+  pri:    { code:'pri', name:'Puertorriqueño', flag:'🇵🇷', country:'PR', set:'d6', target:200, capicua:50, format:'doubles', desc:'Doble-seis · 200 pts · capicúa +50 · 2v2' },
+  custom: { code:'custom', name:'Personalizado', flag:'⚙️', country:null, set:'d6', target:100, capicua:30, format:'doubles', desc:'Ajusta los parámetros manualmente' },
+};
+const COUNTRIES = [
+  { code:'VE', name:'Venezuela',         flag:'🇻🇪', suggested:'ven' },
+  { code:'DO', name:'Rep. Dominicana',   flag:'🇩🇴', suggested:'dom' },
+  { code:'CU', name:'Cuba',              flag:'🇨🇺', suggested:'cub' },
+  { code:'PR', name:'Puerto Rico',       flag:'🇵🇷', suggested:'pri' },
+  { code:'CO', name:'Colombia',          flag:'🇨🇴', suggested:'ven' },
+  { code:'MX', name:'México',            flag:'🇲🇽', suggested:'dom' },
+  { code:'PA', name:'Panamá',            flag:'🇵🇦', suggested:'ven' },
+  { code:'ES', name:'España',            flag:'🇪🇸', suggested:'dom' },
+  { code:'US', name:'Estados Unidos',    flag:'🇺🇸', suggested:'dom' },
+  { code:'AR', name:'Argentina',         flag:'🇦🇷', suggested:'custom' },
+  { code:'CL', name:'Chile',             flag:'🇨🇱', suggested:'custom' },
+  { code:'PE', name:'Perú',              flag:'🇵🇪', suggested:'custom' },
+  { code:'OT', name:'Otro',              flag:'🌎', suggested:'custom' },
+];
+function modalityByCode(c) { return MODALIDADES[c] || MODALIDADES.custom; }
+function countryByCode(c) { return COUNTRIES.find(x => x.code === c); }
+function bucketKey(set, format) { return `${set}_${format === 'singles' ? 's' : 'd'}`; }
+
+/* ============================================================
+   I18N (es neutro / en)
+   ============================================================ */
+const I18N = {
+  es: {
+    'app.tagline': 'el ranking oficial de dominó',
+    'app.subtitle': 'Registra partidas y pollas. Tu rating OpenSkill (Plackett-Luce / Weng-Lin) se actualiza automáticamente y refleja tu nivel real, en singles y en parejas.',
+    'nav.ranking': 'Ranking', 'nav.tournaments': 'Pollas', 'nav.explain': 'Cómo funciona',
+    'nav.newMatch': '+ Partida', 'nav.signIn': 'Entrar', 'nav.signOut': 'Salir',
+    'common.back': 'Atrás', 'common.save': 'Guardar', 'common.cancel': 'Cancelar',
+    'common.edit': 'Editar', 'common.delete': 'Borrar', 'common.loading': 'Cargando…',
+    'common.create': 'Crear', 'common.continue': 'Continuar', 'common.finish': 'Finalizar',
+    'common.undo': 'Deshacer', 'common.confirm': 'Confirmar', 'common.players': 'jugadores',
+    'common.matches': 'partidas', 'common.win': 'Ganó', 'common.loss': 'Perdió',
+    'common.rated': 'Rankeada', 'common.casual': 'Casual', 'common.finished': 'Finalizada',
+    'home.cta.signup': 'Crear cuenta', 'home.cta.dashboard': 'Ir a mi panel',
+    'home.cta.howItWorks': 'Cómo funciona el rating →',
+    'home.top5.global': 'Top 5 · DomiRank Global', 'home.top5.empty': 'Sin jugadores con suficientes partidas todavía.',
+    'home.viewAll': 'Ver completo →', 'home.activePollas': 'Pollas activas',
+    'home.noPollas': 'No hay pollas activas.',
+    'leaderboard.title': 'Ranking',
+    'leaderboard.tab.global': 'DomiRank Global', 'leaderboard.tab.singles': 'Singles', 'leaderboard.tab.doubles': 'Parejas',
+    'leaderboard.col.player': 'Jugador', 'leaderboard.col.rating': 'Rating',
+    'leaderboard.col.games': 'Partidas', 'leaderboard.col.wl': 'G-P',
+    'leaderboard.help.global': 'DomiRank Global combina tus dos ratings ponderando por certeza (1/σ²). Cuanto más juegas un formato, más pesa en el global.',
+    'leaderboard.help.format': 'Rating = μ − 3σ (OpenSkill ordinal). μ es el skill estimado, σ la incertidumbre.',
+    'dashboard.hello': 'Hola, {name}',
+    'dashboard.editProfile': 'editar perfil',
+    'dashboard.newMatch': '+ Nueva partida',
+    'dashboard.domirank': 'DomiRank Global',
+    'dashboard.rating': 'rating',
+    'dashboard.pendingQualify': 'faltan {n} partidas para calificar',
+    'dashboard.totalGames': '{n} partidas totales · ponderado por certeza (1/σ²)',
+    'dashboard.seeMath': 'ver cómo se calcula',
+    'dashboard.lastMatches': 'Tus últimas partidas',
+    'history.title': 'Historial', 'history.range.15': '15 días', 'history.range.30': '30 días',
+    'history.range.90': '90 días', 'history.range.all': 'Todo',
+    'history.kpi.games': 'Partidas ({range})', 'history.kpi.wl': 'G - P',
+    'history.kpi.delta': 'Δ Rating neto', 'history.empty': 'No hay partidas en el rango seleccionado.',
+    'profile.singles': 'Singles', 'profile.doubles': 'Parejas',
+    'match.live.title': 'Partida',
+    'match.live.teamAPill': 'Pareja A', 'match.live.teamBPill': 'Pareja B',
+    'match.live.teamASingle': 'Jugador A', 'match.live.teamBSingle': 'Jugador B',
+    'match.live.meta': 'Meta', 'match.live.metaPoints': '{n} puntos',
+    'match.live.status': 'En curso', 'match.live.today': 'Hoy',
+    'match.live.registerPoints': 'Registrar puntos', 'match.live.whoSums': '¿Quién suma?',
+    'match.live.enterPoints': 'Ingresa los puntos', 'match.live.add': 'Sumar',
+    'match.live.undoLast': 'Deshacer última', 'match.live.cancel': 'Cancelar partida',
+    'match.live.finish': 'Finalizar', 'match.live.rounds': 'Manos jugadas',
+    'match.live.noRounds': 'Aún no hay manos registradas.',
+    'match.live.empty': 'Sumar al equipo {team}: {pts} pts',
+    'match.live.winnerReached': '{team} llegó a la meta',
+    'match.new.title': 'Nueva partida',
+    'match.new.subtitle': 'Configura la partida y pasamos a la pantalla en vivo para registrar las manos.',
+    'match.new.format': 'Formato', 'match.new.singles': 'Singles (1v1)', 'match.new.doubles': 'Parejas (2v2)',
+    'match.new.target': 'Puntos objetivo', 'match.new.teamA': 'Equipo A', 'match.new.teamB': 'Equipo B',
+    'match.new.player': 'Jugador {n}', 'match.new.selectPlayer': '— Selecciona —',
+    'match.new.start': 'Iniciar partida en vivo',
+    'pollas.title': 'Pollas', 'pollas.new': '+ Nueva polla', 'pollas.active': 'Activas',
+    'pollas.finished': 'Finalizadas',
+    'pollas.empty.active': 'No hay pollas activas.', 'pollas.continuous': '∞ continua',
+    'pollas.new.title': 'Nueva polla',
+    'login.title': 'Entrar / Crear cuenta',
+    'login.subtitle': 'En el preview elige un jugador para "iniciar sesión". En producción será un enlace mágico a tu correo.',
+    'login.as': 'Entrar como',
+    'settings.title': 'Editar perfil', 'settings.displayName': 'Nombre mostrado',
+    'settings.photo': 'Foto de perfil', 'settings.upload': 'Click para subir una imagen',
+    'settings.uploadHint': 'JPG o PNG · se recorta a círculo · max ~2MB',
+    'settings.remove': 'Quitar foto actual', 'settings.save': 'Guardar cambios',
+    'meta.brand': 'DomiRank',
+  },
+  en: {
+    'app.tagline': 'the official domino ranking',
+    'app.subtitle': 'Log matches and tournaments. Your OpenSkill rating (Plackett-Luce / Weng-Lin) updates automatically and reflects your true level, both singles and doubles.',
+    'nav.ranking': 'Ranking', 'nav.tournaments': 'Tournaments', 'nav.explain': 'How it works',
+    'nav.newMatch': '+ Match', 'nav.signIn': 'Sign in', 'nav.signOut': 'Sign out',
+    'common.back': 'Back', 'common.save': 'Save', 'common.cancel': 'Cancel',
+    'common.edit': 'Edit', 'common.delete': 'Delete', 'common.loading': 'Loading…',
+    'common.create': 'Create', 'common.continue': 'Continue', 'common.finish': 'Finish',
+    'common.undo': 'Undo', 'common.confirm': 'Confirm', 'common.players': 'players',
+    'common.matches': 'matches', 'common.win': 'Win', 'common.loss': 'Loss',
+    'common.rated': 'Rated', 'common.casual': 'Casual', 'common.finished': 'Finished',
+    'home.cta.signup': 'Sign up', 'home.cta.dashboard': 'Go to my dashboard',
+    'home.cta.howItWorks': 'How the rating works →',
+    'home.top5.global': 'Top 5 · DomiRank Global', 'home.top5.empty': 'No players with enough matches yet.',
+    'home.viewAll': 'View all →', 'home.activePollas': 'Active tournaments',
+    'home.noPollas': 'No active tournaments.',
+    'leaderboard.title': 'Ranking',
+    'leaderboard.tab.global': 'DomiRank Global', 'leaderboard.tab.singles': 'Singles', 'leaderboard.tab.doubles': 'Doubles',
+    'leaderboard.col.player': 'Player', 'leaderboard.col.rating': 'Rating',
+    'leaderboard.col.games': 'Matches', 'leaderboard.col.wl': 'W-L',
+    'leaderboard.help.global': 'DomiRank Global combines your two ratings weighted by certainty (1/σ²). The more you play a format, the more it weighs.',
+    'leaderboard.help.format': 'Rating = μ − 3σ (OpenSkill ordinal). μ is estimated skill, σ uncertainty.',
+    'dashboard.hello': 'Hi, {name}',
+    'dashboard.editProfile': 'edit profile',
+    'dashboard.newMatch': '+ New match',
+    'dashboard.domirank': 'DomiRank Global',
+    'dashboard.rating': 'rating',
+    'dashboard.pendingQualify': '{n} more matches needed to qualify',
+    'dashboard.totalGames': '{n} total matches · weighted by certainty (1/σ²)',
+    'dashboard.seeMath': 'see how it works',
+    'dashboard.lastMatches': 'Your latest matches',
+    'history.title': 'History', 'history.range.15': '15 days', 'history.range.30': '30 days',
+    'history.range.90': '90 days', 'history.range.all': 'All',
+    'history.kpi.games': 'Matches ({range})', 'history.kpi.wl': 'W - L',
+    'history.kpi.delta': 'Net rating Δ', 'history.empty': 'No matches in selected range.',
+    'profile.singles': 'Singles', 'profile.doubles': 'Doubles',
+    'match.live.title': 'Match',
+    'match.live.teamAPill': 'Team A', 'match.live.teamBPill': 'Team B',
+    'match.live.teamASingle': 'Player A', 'match.live.teamBSingle': 'Player B',
+    'match.live.meta': 'Target', 'match.live.metaPoints': '{n} points',
+    'match.live.status': 'In progress', 'match.live.today': 'Today',
+    'match.live.registerPoints': 'Add points', 'match.live.whoSums': 'Who scores?',
+    'match.live.enterPoints': 'Enter points', 'match.live.add': 'Add',
+    'match.live.undoLast': 'Undo last', 'match.live.cancel': 'Cancel match',
+    'match.live.finish': 'Finish', 'match.live.rounds': 'Hands played',
+    'match.live.noRounds': 'No hands logged yet.',
+    'match.live.empty': 'Add to team {team}: {pts} pts',
+    'match.live.winnerReached': '{team} reached the target',
+    'match.new.title': 'New match',
+    'match.new.subtitle': 'Set up the match and we’ll switch to the live screen to log each hand.',
+    'match.new.format': 'Format', 'match.new.singles': 'Singles (1v1)', 'match.new.doubles': 'Doubles (2v2)',
+    'match.new.target': 'Target points', 'match.new.teamA': 'Team A', 'match.new.teamB': 'Team B',
+    'match.new.player': 'Player {n}', 'match.new.selectPlayer': '— Select —',
+    'match.new.start': 'Start live match',
+    'pollas.title': 'Tournaments', 'pollas.new': '+ New tournament', 'pollas.active': 'Active',
+    'pollas.finished': 'Finished',
+    'pollas.empty.active': 'No active tournaments.', 'pollas.continuous': '∞ continuous',
+    'pollas.new.title': 'New tournament',
+    'login.title': 'Sign in / Sign up',
+    'login.subtitle': 'In this preview pick a player to "sign in". In production it will be a magic link to your email.',
+    'login.as': 'Sign in as',
+    'settings.title': 'Edit profile', 'settings.displayName': 'Display name',
+    'settings.photo': 'Profile photo', 'settings.upload': 'Click to upload an image',
+    'settings.uploadHint': 'JPG or PNG · cropped to circle · max ~2MB',
+    'settings.remove': 'Remove current photo', 'settings.save': 'Save changes',
+    'meta.brand': 'DomiRank',
+  }
+};
+let lang = (localStorage.getItem('domirank-lang') === 'en') ? 'en' : 'es';
+function t(key, vars) {
+  let s = (I18N[lang] && I18N[lang][key]) || I18N.es[key] || key;
+  if (vars) for (const k in vars) s = s.replaceAll('{' + k + '}', vars[k]);
+  return s;
+}
+function setLang(v) {
+  lang = v; localStorage.setItem('domirank-lang', v); render();
+}
+window.toggleLang = () => setLang(lang === 'es' ? 'en' : 'es');
+
+/* Theme */
+let theme = localStorage.getItem('domirank-theme') === 'light' ? 'light' : 'dark';
+function applyTheme() { document.documentElement.dataset.theme = theme; }
+function setTheme(v) { theme = v; localStorage.setItem('domirank-theme', v); applyTheme(); render(); }
+window.toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
+applyTheme();
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const D = () => ({mu:25.0, sigma:25/3, g:0, w:0, l:0});  // bucket default
+const SEED_PLAYERS = [
+  { id:'u1', username:'carlos',  name:'Carlos M.',   avatarUrl:null, country:'VE', defaultModality:'ven', onboarded:true,
+    d6_s:{mu:32.4,sigma:3.2,g:48,w:31,l:17}, d6_d:{mu:29.8,sigma:3.4,g:30,w:19,l:11}, d9_s:D(), d9_d:{mu:28.1,sigma:4.2,g:9,w:5,l:4} },
+  { id:'u2', username:'rafa',    name:'Rafa Díaz',   avatarUrl:null, country:'DO', defaultModality:'dom', onboarded:true,
+    d6_s:{mu:30.1,sigma:2.9,g:62,w:38,l:24}, d6_d:{mu:31.2,sigma:2.8,g:54,w:35,l:19}, d9_s:D(), d9_d:D() },
+  { id:'u3', username:'lucia',   name:'Lucía P.',    avatarUrl:null, country:'VE', defaultModality:'ven', onboarded:true,
+    d6_s:{mu:28.5,sigma:3.0,g:40,w:23,l:17}, d6_d:{mu:30.7,sigma:3.1,g:28,w:18,l:10}, d9_s:D(), d9_d:D() },
+  { id:'u4', username:'nando',   name:'Fernando R.', avatarUrl:null, country:'CU', defaultModality:'cub', onboarded:true,
+    d6_s:{mu:27.1,sigma:3.4,g:25,w:13,l:12}, d6_d:{mu:26.3,sigma:3.7,g:20,w:10,l:10}, d9_s:D(), d9_d:{mu:27.4,sigma:3.9,g:12,w:7,l:5} },
+  { id:'u5', username:'mariam',  name:'María M.',    avatarUrl:null, country:'PR', defaultModality:'pri', onboarded:true,
+    d6_s:{mu:26.8,sigma:3.6,g:18,w:9,l:9},   d6_d:{mu:28.2,sigma:3.3,g:22,w:13,l:9},  d9_s:D(), d9_d:D() },
+  { id:'u6', username:'jrod',    name:'José R.',     avatarUrl:null, country:'CU', defaultModality:'cub', onboarded:true,
+    d6_s:{mu:25.4,sigma:4.1,g:12,w:5,l:7},   d6_d:{mu:24.9,sigma:4.5,g:8,w:3,l:5},    d9_s:D(), d9_d:{mu:26.6,sigma:4.0,g:10,w:6,l:4} },
+  { id:'u7', username:'ana',     name:'Ana C.',      avatarUrl:null, country:null,  defaultModality:null,   onboarded:false,
+    d6_s:{mu:24.2,sigma:5.2,g:6,w:2,l:4},    d6_d:D(),                                d9_s:D(), d9_d:D() },
+  { id:'u8', username:'pedro',   name:'Pedro V.',    avatarUrl:null, country:'DO', defaultModality:'dom', onboarded:true,
+    d6_s:{mu:22.6,sigma:4.8,g:9,w:3,l:6},    d6_d:{mu:23.4,sigma:4.9,g:7,w:2,l:5},    d9_s:D(), d9_d:D() },
+];
+
+const now = Date.now();
+const daysAgo = (n) => new Date(now - n*86400000).toISOString();
+
+const SEED_MATCHES = [
+  // últimos 15 días
+  {id:'m1',format:'singles',set:'d6',modality:'ven',target_points:100,capicua_bonus:30,date:daysAgo(1),tournament_id:null,teams:[
+    {team:1,score:100,players:[{user_id:'u1',mu_before:31.5,mu_after:32.4,sigma_before:3.4,sigma_after:3.2,rank:1}]},
+    {team:2,score:73, players:[{user_id:'u4',mu_before:27.6,mu_after:27.1,sigma_before:3.3,sigma_after:3.4,rank:2}]}]},
+  {id:'m2',format:'doubles',set:'d6',modality:'dom',target_points:200,capicua_bonus:30,date:daysAgo(2),tournament_id:'t1',teams:[
+    {team:1,score:200,players:[
+      {user_id:'u2',mu_before:30.9,mu_after:31.2,sigma_before:2.85,sigma_after:2.80,rank:1},
+      {user_id:'u3',mu_before:30.4,mu_after:30.7,sigma_before:3.15,sigma_after:3.10,rank:1}]},
+    {team:2,score:148,players:[
+      {user_id:'u5',mu_before:28.5,mu_after:28.2,sigma_before:3.35,sigma_after:3.30,rank:2},
+      {user_id:'u6',mu_before:25.2,mu_after:24.9,sigma_before:4.55,sigma_after:4.50,rank:2}]}]},
+  {id:'m3',format:'singles',set:'d6',modality:'ven',target_points:100,capicua_bonus:30,date:daysAgo(4),tournament_id:null,teams:[
+    {team:1,score:100,players:[{user_id:'u2',mu_before:29.7,mu_after:30.1,sigma_before:2.95,sigma_after:2.90,rank:1}]},
+    {team:2,score:84, players:[{user_id:'u3',mu_before:28.9,mu_after:28.5,sigma_before:2.95,sigma_after:3.00,rank:2}]}]},
+  {id:'m4',format:'doubles',set:'d6',modality:'dom',target_points:200,capicua_bonus:30,date:daysAgo(7),tournament_id:'t1',teams:[
+    {team:1,score:200,players:[
+      {user_id:'u1',mu_before:29.5,mu_after:29.8,sigma_before:3.5,sigma_after:3.4,rank:1},
+      {user_id:'u5',mu_before:27.9,mu_after:28.2,sigma_before:3.4,sigma_after:3.3,rank:1}]},
+    {team:2,score:172,players:[
+      {user_id:'u2',mu_before:31.4,mu_after:31.2,sigma_before:2.8,sigma_after:2.85,rank:2},
+      {user_id:'u4',mu_before:26.6,mu_after:26.3,sigma_before:3.6,sigma_after:3.7,rank:2}]}]},
+  {id:'m5',format:'doubles',set:'d9',modality:'cub',target_points:150,capicua_bonus:30,date:daysAgo(9),tournament_id:null,teams:[
+    {team:1,score:150,players:[
+      {user_id:'u1',mu_before:27.5,mu_after:28.1,sigma_before:4.4,sigma_after:4.2,rank:1},
+      {user_id:'u4',mu_before:27.0,mu_after:27.4,sigma_before:4.1,sigma_after:3.9,rank:1}]},
+    {team:2,score:112,players:[
+      {user_id:'u6',mu_before:26.9,mu_after:26.6,sigma_before:4.2,sigma_after:4.0,rank:2},
+      {user_id:'u6',mu_before:25.0,mu_after:25.0,sigma_before:8.33,sigma_after:8.33,rank:2}]}]},
+  // 15-30 días
+  {id:'m6',format:'doubles',set:'d6',modality:'ven',target_points:100,capicua_bonus:30,date:daysAgo(22),tournament_id:'t1',teams:[
+    {team:1,score:100,players:[
+      {user_id:'u1',mu_before:29.0,mu_after:29.5,sigma_before:3.7,sigma_after:3.5,rank:1},
+      {user_id:'u3',mu_before:30.0,mu_after:30.4,sigma_before:3.2,sigma_after:3.15,rank:1}]},
+    {team:2,score:78,players:[
+      {user_id:'u5',mu_before:28.2,mu_after:27.9,sigma_before:3.5,sigma_after:3.4,rank:2},
+      {user_id:'u8',mu_before:23.0,mu_after:22.6,sigma_before:4.7,sigma_after:4.8,rank:2}]}]},
+  {id:'m7',format:'singles',set:'d6',modality:'dom',target_points:200,capicua_bonus:30,date:daysAgo(28),tournament_id:null,teams:[
+    {team:1,score:200,players:[{user_id:'u2',mu_before:29.4,mu_after:29.7,sigma_before:3.0,sigma_after:2.95,rank:1}]},
+    {team:2,score:172,players:[{user_id:'u5',mu_before:27.1,mu_after:26.8,sigma_before:3.5,sigma_after:3.6,rank:2}]}]},
+  // 30-90 días
+  {id:'m8',format:'doubles',set:'d6',modality:'dom',target_points:200,capicua_bonus:30,date:daysAgo(45),tournament_id:'t1',teams:[
+    {team:1,score:200,players:[
+      {user_id:'u2',mu_before:30.5,mu_after:30.9,sigma_before:2.9,sigma_after:2.85,rank:1},
+      {user_id:'u1',mu_before:28.7,mu_after:29.0,sigma_before:3.8,sigma_after:3.7,rank:1}]},
+    {team:2,score:165,players:[
+      {user_id:'u4',mu_before:27.0,mu_after:26.6,sigma_before:3.5,sigma_after:3.6,rank:2},
+      {user_id:'u6',mu_before:26.1,mu_after:25.9,sigma_before:3.9,sigma_after:4.0,rank:2}]}]},
+  {id:'m9',format:'singles',set:'d6',modality:'ven',target_points:100,capicua_bonus:30,date:daysAgo(70),tournament_id:null,teams:[
+    {team:1,score:100,players:[{user_id:'u3',mu_before:28.7,mu_after:28.9,sigma_before:3.0,sigma_after:2.95,rank:1}]},
+    {team:2,score:79, players:[{user_id:'u8',mu_before:23.5,mu_after:23.0,sigma_before:4.6,sigma_after:4.7,rank:2}]}]},
+];
+
+const SEED_TOURNAMENTS = [
+  { id:'t1', name:'Polla sabatina 🍻', playerIds:['u1','u2','u3','u4','u5','u6','u8'], pointsToWin:200, rounds:0, continuous:true, rated:true, modality:'dom', status:'active', createdAt:daysAgo(60), finishedAt:null },
+];
+
+const STORAGE_KEY = 'domirank-preview-v2';
+function loadState() {
+  try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) return JSON.parse(raw); } catch(e) {}
+  return { players: structuredClone(SEED_PLAYERS), matches: structuredClone(SEED_MATCHES), tournaments: structuredClone(SEED_TOURNAMENTS), me: 'u1' };
+}
+function saveState() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {} }
+function resetAll() { localStorage.removeItem(STORAGE_KEY); state = loadState(); go('/'); }
+
+let state = loadState();
+let osReady = !!window.os;
+window.addEventListener('os-ready', () => { osReady = true; render(); });
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+const fmt = (n,d=2) => Number(n).toFixed(d);
+const ord = (mu, sigma) => mu - 3*sigma;
+
+/* DomiRank Global: combinación Bayesiana inverse-variance de los 4 buckets.
+   Buckets: d6_s (singles 6-6), d6_d (doubles 6-6), d9_s (singles 9-9), d9_d (doubles 9-9).
+   Cada uno es una estimación parcial de la habilidad latente del jugador.
+   Se combinan con la fórmula clásica de fusión de gaussianas independientes:
+     μ_g = Σ μ_i · p_i / Σ p_i      donde p_i = 1/σ²_i (precisión)
+     σ²_g = 1 / Σ p_i
+   La σ alta default de buckets no-jugados los hace contribuir muy poco. */
+const GLOBAL_MIN_GAMES = 5;
+const BUCKETS = ['d6_s','d6_d','d9_s','d9_d'];
+function getBucket(p, key) { return p[key] || {mu:25, sigma:25/3, g:0, w:0, l:0}; }
+function totalGames(p) { return BUCKETS.reduce((s,k) => s + getBucket(p,k).g, 0); }
+
+function globalRating(p) {
+  let muNumerator = 0, precSum = 0;
+  for (const k of BUCKETS) {
+    const b = getBucket(p, k);
+    const prec = 1 / (b.sigma * b.sigma);
+    muNumerator += b.mu * prec;
+    precSum += prec;
+  }
+  const mu = muNumerator / precSum;
+  const sigma = Math.sqrt(1 / precSum);
+  const games = totalGames(p);
+  return { mu, sigma, ordinal: mu - 3*sigma, games, qualified: games >= GLOBAL_MIN_GAMES };
+}
+const playerById = id => state.players.find(p => p.id === id);
+const me = () => playerById(state.me);
+const tournamentById = id => state.tournaments.find(t => t.id === id);
+const matchesByTournament = id => state.matches.filter(m => m.tournament_id === id);
+const fmtDate = iso => new Date(iso).toLocaleString('es',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+const fmtDateShort = iso => new Date(iso).toLocaleDateString('es',{day:'2-digit',month:'short'});
+
+function hashStr(s) { let h = 0; for (let i=0;i<s.length;i++) h = ((h<<5)-h) + s.charCodeAt(i)|0; return h; }
+function avatarColor(username) {
+  const colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#06b6d4'];
+  return colors[Math.abs(hashStr(username)) % colors.length];
+}
+function initials(name) {
+  return name.split(/\s+/).slice(0,2).map(w => w[0]).join('').toUpperCase();
+}
+function avatarHtml(player, size = 36) {
+  const s = `${size}px`;
+  const fs = `${Math.round(size*0.4)}px`;
+  if (player?.avatarUrl) {
+    return `<div class="avatar" style="width:${s};height:${s}"><img src="${player.avatarUrl}" alt=""></div>`;
+  }
+  return `<div class="avatar" style="width:${s};height:${s};background:${avatarColor(player?.username||'')};font-size:${fs}">${initials(player?.name||'?')}</div>`;
+}
+function avatarLink(player, size = 36, opts = {}) {
+  return `<a class="avatar-link" href="#" onclick="event.preventDefault();go('/profile/${player.username}')">
+    ${avatarHtml(player, size)}
+    ${opts.hideName?'':`<span class="avatar-name">${player.name}</span>`}
+    ${opts.username?`<span class="text-mute" style="font-size:.85rem">@${player.username}</span>`:''}
+  </a>`;
+}
+
+function deltaTag(delta) {
+  const cls = delta >= 0 ? 'delta-up' : 'delta-down';
+  const sign = delta >= 0 ? '+' : '';
+  return `<span class="mono ${cls}">${sign}${delta.toFixed(2)} μ</span>`;
+}
+
+function daysSince(iso) { return (Date.now() - new Date(iso).getTime()) / 86400000; }
+
+/* ============================================================
+   ROUTER
+   ============================================================ */
+window.go = function(path){ location.hash = '#' + path; };
+window.addEventListener('hashchange', render);
+function currentPath() {
+  const h = location.hash.replace(/^#/, '') || '/';
+  const [path, queryStr] = h.split('?');
+  return { path, query: new URLSearchParams(queryStr||'') };
+}
+
+/* ============================================================
+   NAV
+   ============================================================ */
+function renderNav() {
+  const { path } = currentPath();
+  const meExists = state.me && playerById(state.me);
+  const u = meExists ? me() : null;
+  $('#nav').innerHTML = `
+    <a class="nav-link ${path.startsWith('/leaderboard')?'active':''}" href="#" onclick="event.preventDefault();go('/leaderboard')">${t('nav.ranking')}</a>
+    <a class="nav-link ${path.startsWith('/tournaments')?'active':''}" href="#" onclick="event.preventDefault();go('/tournaments')">${t('nav.tournaments')}</a>
+    <a class="nav-link ${path==='/como-funciona'?'active':''}" href="#" onclick="event.preventDefault();go('/como-funciona')">${t('nav.explain')}</a>
+    ${meExists ? `<a class="nav-link ${path==='/matches/new'||path==='/matches/live'?'active':''}" href="#" onclick="event.preventDefault();go(state.liveMatch?'/matches/live':'/matches/new')">${state.liveMatch?'⏱ '+t('match.live.title'):t('nav.newMatch')}</a>` : ''}
+    <button class="pref-toggle" title="${theme==='dark'?'Light':'Dark'} theme" onclick="toggleTheme()"><span class="icon">${theme==='dark'?'☀️':'🌙'}</span></button>
+    <button class="pref-toggle" title="${lang==='es'?'English':'Español'}" onclick="toggleLang()">${lang==='es'?'ES':'EN'}</button>
+    ${meExists
+      ? `<a class="nav-link ${path==='/dashboard'?'active':''}" href="#" onclick="event.preventDefault();go('/dashboard')" style="display:inline-flex;align-items:center;gap:.4rem;padding-left:.5rem">${avatarHtml(u,24)}<span>${u.name.split(' ')[0]}</span></a>`
+      : `<button class="btn btn-primary btn-sm" onclick="go('/login')">${t('nav.signIn')}</button>`}
+  `;
+}
+
+/* ============================================================
+   VIEW: HOME
+   ============================================================ */
+function viewHome() {
+  const top = [...state.players]
+    .map(p => ({ p, gr: globalRating(p) }))
+    .filter(x => x.gr.qualified)
+    .sort((a,b) => b.gr.ordinal - a.gr.ordinal)
+    .slice(0,5);
+  return `
+    <div class="banner info">
+      Preview interactivo · datos mock locales. Crea partidas o pollas y todo se recalcula con la librería real OpenSkill.
+    </div>
+    <section class="hero">
+      <h1>DomiRank — ${t('app.tagline').replace('el ranking oficial', '<span class="grad">el ranking oficial</span>').replace('the official', '<span class="grad">the official</span>')}</h1>
+      <p>${t('app.subtitle')}</p>
+      <div class="cta">
+        ${state.me ? `<button class="btn btn-primary" onclick="go('/dashboard')">${t('home.cta.dashboard')}</button>` : `<button class="btn btn-primary" onclick="go('/login')">${t('home.cta.signup')}</button>`}
+        <button class="btn btn-ghost" onclick="go('/como-funciona')">${t('home.cta.howItWorks')}</button>
+      </div>
+    </section>
+    <div class="grid-2" style="margin-top:1.5rem">
+      <section class="card">
+        <div class="row" style="margin-bottom:1rem">
+          <h2 style="font-size:1.15rem;font-weight:600">${t('home.top5.global')}</h2>
+          <a class="link" style="font-size:.9rem" onclick="go('/leaderboard')">${t('home.viewAll')}</a>
+        </div>
+        ${top.length === 0
+          ? `<p class="text-mute" style="text-align:center;padding:1rem">${t('home.top5.empty')}</p>`
+          : top.map(({p,gr},i) => `
+          <div class="player-row">
+            <span class="text-mute mono" style="width:1.5rem;text-align:right">${i+1}</span>
+            ${avatarHtml(p,28)}
+            <a class="link" onclick="go('/profile/${p.username}')" style="font-weight:500;color:var(--text);flex:1">${p.name}</a>
+            <span class="text-dim" style="font-size:.85rem">${gr.games} p.</span>
+            <span class="mono text-primary" style="font-weight:700">${gr.ordinal.toFixed(1)}</span>
+          </div>
+        `).join('')}
+      </section>
+      <section class="card">
+        <div class="row" style="margin-bottom:1rem">
+          <h2 style="font-size:1.15rem;font-weight:600">${t('home.activePollas')}</h2>
+          <a class="link" style="font-size:.9rem" onclick="go('/tournaments')">${t('home.viewAll')}</a>
+        </div>
+        ${state.tournaments.filter(x=>x.status==='active').map(x => {
+          const games = matchesByTournament(x.id).length;
+          return `
+            <div class="player-row" style="cursor:pointer" onclick="go('/tournaments/${x.id}')">
+              <span style="font-size:1.25rem">🍻</span>
+              <div style="flex:1">
+                <div style="font-weight:500">${x.name}</div>
+                <div class="text-mute" style="font-size:.8rem">${x.playerIds.length} ${t('common.players')} · ${games} ${t('common.matches')}${x.continuous?' · '+t('pollas.continuous'):''}</div>
+              </div>
+              ${x.rated ? `<span class="badge badge-win">${t('common.rated')}</span>` : `<span class="badge badge-muted">${t('common.casual')}</span>`}
+            </div>
+          `;
+        }).join('') || `<p class="text-mute" style="text-align:center;padding:1rem">${t('home.noPollas')}</p>`}
+      </section>
+    </div>
+  `;
+}
+
+/* ============================================================
+   VIEW: LEADERBOARD
+   ============================================================ */
+function bucketLabel(key) {
+  const [set, fmt] = key.split('_');
+  return (fmt === 's' ? t('leaderboard.tab.singles') : t('leaderboard.tab.doubles')) + ' ' + SETS[set].label;
+}
+
+function viewLeaderboard() {
+  const { query } = currentPath();
+  const tabRaw = query.get('tab') || 'global';
+  const tab = (tabRaw === 'global' || BUCKETS.includes(tabRaw)) ? tabRaw : 'global';
+
+  let rows;
+  if (tab === 'global') {
+    rows = state.players
+      .map(p => ({ p, gr: globalRating(p) }))
+      .filter(x => x.gr.qualified)
+      .sort((a,b) => b.gr.ordinal - a.gr.ordinal);
+  } else {
+    rows = [...state.players]
+      .filter(p => getBucket(p,tab).g > 0)
+      .sort((a,b) => ord(getBucket(b,tab).mu, getBucket(b,tab).sigma) - ord(getBucket(a,tab).mu, getBucket(a,tab).sigma))
+      .map(p => ({ p, key: tab }));
+  }
+
+  const tabBtn = (key, label) => `<span class="tab ${tab===key?'active':''}" onclick="go('/leaderboard?tab=${key}')">${label}</span>`;
+
+  return `
+    <div class="row" style="margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem">
+      <h1 class="section-title" style="margin:0">${t('leaderboard.title')}</h1>
+      <div class="tabs" style="flex-wrap:wrap">
+        ${tabBtn('global', t('leaderboard.tab.global'))}
+        ${tabBtn('d6_s', t('leaderboard.tab.singles')+' 6-6')}
+        ${tabBtn('d6_d', t('leaderboard.tab.doubles')+' 6-6')}
+        ${tabBtn('d9_s', t('leaderboard.tab.singles')+' 9-9')}
+        ${tabBtn('d9_d', t('leaderboard.tab.doubles')+' 9-9')}
+      </div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table>
+        <thead><tr>
+          <th style="width:3rem">#</th><th>Jugador</th>
+          <th class="text-right">Rating</th>
+          <th class="text-right">μ</th><th class="text-right">σ</th>
+          <th class="text-right">Partidas</th>
+          ${tab==='global' ? '<th class="text-right">S / P</th>' : '<th class="text-right">G-P</th>'}
+        </tr></thead>
+        <tbody>
+        ${rows.length === 0 ? `<tr><td colspan="7" class="empty">${tab==='global'?`Aún nadie tiene ${GLOBAL_MIN_GAMES}+ partidas para entrar al ranking global.`:`Sin jugadores con partidas en ${bucketLabel(tab)} todavía.`}</td></tr>`
+          : rows.map((row,i) => {
+              const p = row.p;
+              const isGlobal = tab === 'global';
+              const b = isGlobal ? null : getBucket(p, row.key);
+              const rating = isGlobal ? row.gr.ordinal : ord(b.mu, b.sigma);
+              const mu     = isGlobal ? row.gr.mu      : b.mu;
+              const sigma  = isGlobal ? row.gr.sigma   : b.sigma;
+              const games  = isGlobal ? row.gr.games   : b.g;
+              const country = p.country ? countryByCode(p.country) : null;
+              return `
+              <tr>
+                <td class="text-mute">${i+1}</td>
+                <td>
+                  <div class="avatar-link" style="cursor:pointer" onclick="go('/profile/${p.username}')">
+                    ${avatarHtml(p,32)}
+                    <div>
+                      <div class="avatar-name" style="color:var(--text)">${country?country.flag+' ':''}${p.name}</div>
+                      <div class="text-mute" style="font-size:.8rem">@${p.username}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-right mono text-primary" style="font-weight:700">${rating.toFixed(1)}</td>
+                <td class="text-right mono text-dim" style="font-size:.85rem">${mu.toFixed(2)}</td>
+                <td class="text-right mono text-dim" style="font-size:.85rem">${sigma.toFixed(2)}</td>
+                <td class="text-right">${games}</td>
+                ${isGlobal
+                  ? `<td class="text-right text-dim" style="font-size:.85rem">${BUCKETS.map(k => getBucket(p,k).g).filter(g=>g>0).length} formatos</td>`
+                  : `<td class="text-right" style="font-size:.9rem"><span class="text-primary">${b.w}</span>-<span class="text-danger">${b.l}</span></td>`}
+              </tr>
+            `}).join('')}
+        </tbody>
+      </table>
+    </div>
+    <p class="muted-help" style="margin-top:1rem">
+      ${tab==='global'
+        ? `DomiRank Global combina tus dos ratings ponderando por <strong>certeza</strong> (1/σ²). Cuanto más juegas un formato, más pesa en el global. Mínimo ${GLOBAL_MIN_GAMES} partidas totales.`
+        : `Rating = μ − 3σ (OpenSkill ordinal). μ es el skill estimado, σ la incertidumbre.`}
+    </p>
+  `;
+}
+
+/* ============================================================
+   VIEW: DASHBOARD (con historial segmentado)
+   ============================================================ */
+function viewDashboard() {
+  if (!state.me) { go('/'); return ''; }
+  const p = me();
+  const { query } = currentPath();
+  const range = parseInt(query.get('range') || '15');
+  return `
+    <div class="row" style="margin-bottom:1.5rem">
+      <div class="avatar-link" style="gap:.85rem">
+        ${avatarHtml(p, 60)}
+        <div>
+          <h1 class="section-title" style="margin:0">${t('dashboard.hello', {name: p.name.split(' ')[0]})}</h1>
+          <p class="text-dim">@${p.username} · <a class="link" onclick="go('/settings')">${t('dashboard.editProfile')}</a></p>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="go('/matches/new')">${t('dashboard.newMatch')}</button>
+    </div>
+    ${domiRankCard(p)}
+    ${ratingBreakdown(p)}
+    ${historySection(p.id, range, '/dashboard')}
+  `;
+}
+
+function ratingBreakdown(p) {
+  const cards = BUCKETS.filter(k => getBucket(p,k).g > 0).map(k => ratingCard(bucketLabel(k), getBucket(p,k))).join('');
+  if (!cards) {
+    return `<div class="card text-mute" style="text-align:center;padding:1.5rem;margin-bottom:1.25rem">Aún no tienes partidas. <a class="link" onclick="go('/matches/new')">Inicia la primera.</a></div>`;
+  }
+  return `<div class="grid-2" style="margin-bottom:1.25rem">${cards}</div>`;
+}
+
+function domiRankCard(p) {
+  const gr = globalRating(p);
+  return `
+    <div class="card" style="margin-bottom:1.25rem;background:linear-gradient(135deg, rgba(16,185,129,.08), rgba(59,130,246,.05));border-color:rgba(16,185,129,.2)">
+      <div class="row" style="align-items:flex-start;flex-wrap:wrap;gap:1rem">
+        <div>
+          <div class="text-mute" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.06em">${t('dashboard.domirank')}</div>
+          <div style="display:flex;align-items:baseline;gap:.6rem;margin-top:.25rem">
+            <span class="mono" style="font-size:3.5rem;font-weight:800;line-height:1;background:linear-gradient(135deg,#10b981,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">
+              ${gr.qualified ? gr.ordinal.toFixed(1) : '—'}
+            </span>
+            ${gr.qualified
+              ? `<span class="text-mute" style="font-size:.85rem">${t('dashboard.rating')} · μ ${gr.mu.toFixed(2)} · σ ${gr.sigma.toFixed(2)}</span>`
+              : `<span class="text-mute" style="font-size:.85rem">${t('dashboard.pendingQualify', {n: GLOBAL_MIN_GAMES - gr.games})}</span>`}
+          </div>
+          <div class="text-dim" style="font-size:.85rem;margin-top:.5rem">
+            ${t('dashboard.totalGames', {n: gr.games})} ·
+            <a class="link" onclick="go('/como-funciona')">${t('dashboard.seeMath')}</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function ratingCard(title, r) {
+  return `
+    <div class="card">
+      <div class="text-mute" style="font-size:.85rem">${title}</div>
+      <div class="rating-row">
+        <span class="rating-big mono">${r.g > 0 ? ord(r.mu,r.sigma).toFixed(1) : '—'}</span>
+        <span class="text-mute" style="font-size:.9rem">rating</span>
+      </div>
+      <div class="kpi">
+        <div><div class="kpi-label">μ</div><div class="mono">${r.mu.toFixed(2)}</div></div>
+        <div><div class="kpi-label">σ</div><div class="mono">${r.sigma.toFixed(2)}</div></div>
+        <div><div class="kpi-label">Partidas</div><div class="mono">${r.g}</div></div>
+      </div>
+      <div style="margin-top:.75rem;font-size:.9rem" class="text-dim">
+        <span class="text-primary">${r.w} G</span> · <span class="text-danger">${r.l} P</span>
+        ${r.g>0?`· ${((r.w/r.g)*100).toFixed(0)}% victorias`:''}
+      </div>
+    </div>
+  `;
+}
+
+function historySection(userId, range, basePath) {
+  const all = state.matches
+    .map(m => ({m, mp: m.teams.flatMap(t => t.players).find(pp => pp.user_id === userId), team: m.teams.find(t => t.players.some(pp=>pp.user_id===userId))}))
+    .filter(x => x.mp)
+    .sort((a,b) => new Date(b.m.date) - new Date(a.m.date));
+  const filtered = range >= 9999 ? all : all.filter(({m}) => daysSince(m.date) <= range);
+
+  // Summary stats
+  const wins = filtered.filter(x => x.mp.rank === 1).length;
+  const losses = filtered.length - wins;
+  const netDelta = filtered.reduce((s,x) => s + (x.mp.mu_after - x.mp.mu_before), 0);
+  const rangeLabel = range >= 9999 ? 'Todo' : `${range} días`;
+
+  const tab = (n, label) => `<span class="tab ${range===n?'active':''}" onclick="go('${basePath}?range=${n}')">${label}</span>`;
+
+  return `
+    <div class="card">
+      <div class="row" style="margin-bottom:1rem;flex-wrap:wrap">
+        <h2 style="font-size:1.25rem;font-weight:600">Historial</h2>
+        <div class="tabs">
+          ${tab(15,'15 días')}
+          ${tab(30,'30 días')}
+          ${tab(90,'90 días')}
+          ${tab(99999,'Todo')}
+        </div>
+      </div>
+      <div class="grid-3" style="margin-bottom:1rem">
+        <div class="card card-tight" style="background:var(--surface-2)">
+          <div class="kpi-label">Partidas (${rangeLabel})</div>
+          <div class="mono" style="font-size:1.5rem;font-weight:700;margin-top:.25rem">${filtered.length}</div>
+        </div>
+        <div class="card card-tight" style="background:var(--surface-2)">
+          <div class="kpi-label">G - P</div>
+          <div class="mono" style="font-size:1.5rem;font-weight:700;margin-top:.25rem">
+            <span class="text-primary">${wins}</span> - <span class="text-danger">${losses}</span>
+            <span class="text-dim" style="font-size:.85rem;margin-left:.5rem">${filtered.length?((wins/filtered.length)*100).toFixed(0)+'%':'—'}</span>
+          </div>
+        </div>
+        <div class="card card-tight" style="background:var(--surface-2)">
+          <div class="kpi-label">Δ Rating neto</div>
+          <div class="mono ${netDelta>=0?'delta-up':'delta-down'}" style="font-size:1.5rem;font-weight:700;margin-top:.25rem">
+            ${netDelta>=0?'+':''}${netDelta.toFixed(2)} μ
+          </div>
+        </div>
+      </div>
+      ${filtered.length === 0
+        ? `<p class="text-mute" style="text-align:center;padding:1.5rem 0">No hay partidas en los últimos ${rangeLabel.toLowerCase()}.</p>`
+        : filtered.slice(0,20).map(({m,mp}) => {
+            const won = mp.rank === 1;
+            const delta = mp.mu_after - mp.mu_before;
+            const tour = m.tournament_id ? tournamentById(m.tournament_id) : null;
+            return `
+              <div class="row" style="padding:.7rem 0;border-bottom:1px solid var(--border)">
+                <div>
+                  <a class="link" onclick="go('/matches/${m.id}')" style="color:var(--text);font-weight:500">
+                    ${m.format==='singles'?'Singles':'Parejas'} a ${m.target_points} pts
+                  </a>
+                  ${tour?` <span class="badge badge-info" style="margin-left:.4rem">${tour.name}</span>`:''}
+                  <div class="text-mute" style="font-size:.75rem;margin-top:.15rem">${fmtDate(m.date)}</div>
+                </div>
+                <div style="display:flex;gap:.75rem;align-items:center;font-size:.9rem">
+                  <span class="badge ${won?'badge-win':'badge-loss'}">${won?'Ganó':'Perdió'}</span>
+                  ${deltaTag(delta)}
+                </div>
+              </div>
+            `;
+          }).join('')}
+    </div>
+  `;
+}
+
+/* ============================================================
+   VIEW: PROFILE PÚBLICO (avatar + historial segmentado)
+   ============================================================ */
+function viewProfile(username) {
+  const p = state.players.find(x => x.username === username);
+  if (!p) return `<div class="empty">No existe @${username}</div>`;
+  const { query } = currentPath();
+  const range = parseInt(query.get('range') || '30');
+
+  const gr = globalRating(p);
+  return `
+    <div class="card" style="margin-bottom:1rem">
+      <div class="row" style="align-items:flex-start;flex-wrap:wrap;gap:1.5rem">
+        <div class="avatar-link" style="gap:1rem">
+          ${avatarHtml(p, 80)}
+          <div>
+            <h1 class="section-title" style="margin-bottom:.1rem">${p.name}</h1>
+            <p class="text-mute">@${p.username}</p>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div class="text-mute" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.06em">DomiRank Global</div>
+          <div class="mono" style="font-size:2.75rem;font-weight:800;line-height:1;background:linear-gradient(135deg,#10b981,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">
+            ${gr.qualified ? gr.ordinal.toFixed(1) : '—'}
+          </div>
+          <div class="text-mute" style="font-size:.75rem;margin-top:.15rem">${gr.games} partidas totales</div>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-top:1.5rem">
+        ${BUCKETS.filter(k => getBucket(p,k).g > 0).map(k => profileBlock(bucketLabel(k), getBucket(p,k))).join('') || '<div class="text-mute" style="grid-column:1/-1;text-align:center;padding:1rem">Sin partidas registradas todavía.</div>'}
+      </div>
+    </div>
+    ${historySection(p.id, range, '/profile/'+username)}
+  `;
+}
+
+function profileBlock(title, r) {
+  return `
+    <div style="padding:1rem;background:var(--surface-2);border-radius:.5rem">
+      <div class="text-mute" style="font-size:.85rem">${title}</div>
+      <div class="mono text-primary" style="font-size:2rem;font-weight:700;margin-top:.25rem">${r.g>0?ord(r.mu,r.sigma).toFixed(1):'—'}</div>
+      <div class="text-dim" style="font-size:.85rem;margin-top:.25rem">
+        ${r.g} partidas · <span class="text-primary">${r.w}G</span>-<span class="text-danger">${r.l}P</span>
+        ${r.g>0?` · ${((r.w/r.g)*100).toFixed(0)}%`:''}
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   VIEW: MATCH DETAIL
+   ============================================================ */
+function viewMatch(id) {
+  const m = state.matches.find(x => x.id === id);
+  if (!m) return `<div class="empty">No existe la partida ${id}</div>`;
+  const tour = m.tournament_id ? tournamentById(m.tournament_id) : null;
+  return `
+    <div style="margin-bottom:1rem">
+      <div class="text-mute" style="font-size:.85rem">
+        ${m.format==='singles'?'Singles':'Parejas'} · a ${m.target_points} pts · ${fmtDate(m.date)}
+        ${tour?` · polla <a class="link" onclick="go('/tournaments/${tour.id}')">${tour.name}</a>`:''}
+      </div>
+      <h1 class="section-title" style="margin-top:.25rem">Partida</h1>
+    </div>
+    <div class="grid-2">
+      ${m.teams.map(t => {
+        const won = t.players[0].rank === 1;
+        return `
+          <div class="team-card ${won?'winner':''}">
+            <div class="row" style="margin-bottom:.5rem">
+              <h2 style="font-weight:600">Equipo ${t.team}</h2>
+              ${won?'<span class="badge badge-win">Ganador</span>':''}
+            </div>
+            <div class="score-display mono" style="margin-bottom:1rem">${t.score}</div>
+            ${t.players.map(pp => {
+              const player = playerById(pp.user_id);
+              const delta = pp.mu_after - pp.mu_before;
+              return `
+                <div class="row" style="font-size:.9rem;padding:.5rem 0;border-top:1px solid var(--border)">
+                  <div class="avatar-link" style="cursor:pointer" onclick="go('/profile/${player.username}')">
+                    ${avatarHtml(player,28)}
+                    <span style="color:var(--text)">${player.name}</span>
+                  </div>
+                  <div class="mono" style="display:flex;gap:.4rem;align-items:center">
+                    <span class="text-mute">${pp.mu_before.toFixed(2)}</span>
+                    <span class="text-mute">→</span>
+                    <span>${pp.mu_after.toFixed(2)}</span>
+                    <span class="${delta>=0?'delta-up':'delta-down'}">(${delta>=0?'+':''}${delta.toFixed(2)})</span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+/* ============================================================
+   VIEW: LOGIN
+   ============================================================ */
+function viewLogin() {
+  return `
+    <div style="max-width:24rem;margin:2rem auto">
+      <div class="card">
+        <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:.25rem">Entrar / Crear cuenta</h1>
+        <p class="text-dim" style="margin-bottom:1.5rem">En el preview elige un jugador para "iniciar sesión". En producción será un enlace mágico a tu correo.</p>
+        <label class="label">Entrar como</label>
+        <select class="input" id="loginSelect">
+          ${state.players.map(p => `<option value="${p.id}" ${state.me===p.id?'selected':''}>${p.name} (@${p.username})</option>`).join('')}
+        </select>
+        <button class="btn btn-primary" style="width:100%;margin-top:1rem" onclick="loginAs(document.getElementById('loginSelect').value)">Entrar</button>
+        <p class="muted-help" style="margin-top:1rem">Preview con datos mock. <a class="link" onclick="resetAll()">Resetear todo</a></p>
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   VIEW: SETTINGS (avatar)
+   ============================================================ */
+function viewSettings() {
+  if (!state.me) { go('/login'); return ''; }
+  const p = me();
+  return `
+    <div style="max-width:32rem;margin:0 auto" class="stack">
+      <h1 class="section-title">Editar perfil</h1>
+      <div class="card">
+        <div class="row" style="margin-bottom:1.25rem">
+          ${avatarHtml(p, 80)}
+          <div class="col" style="flex:1;gap:.4rem">
+            <div style="font-weight:600">${p.name}</div>
+            <div class="text-mute">@${p.username}</div>
+          </div>
+        </div>
+        <label class="label">Nombre mostrado</label>
+        <input class="input" id="setName" value="${p.name}" style="margin-bottom:1rem">
+
+        <label class="label">Foto de perfil</label>
+        <div class="upload-zone" onclick="document.getElementById('avatarFile').click()">
+          <div style="font-size:.95rem;color:var(--text-dim)">Click para subir una imagen</div>
+          <div class="text-mute" style="font-size:.75rem;margin-top:.25rem">JPG o PNG · se recorta a círculo · max ~2MB</div>
+        </div>
+        <input type="file" id="avatarFile" accept="image/*" style="display:none" onchange="handleAvatarUpload(event)">
+        ${p.avatarUrl ? `<button class="btn btn-ghost btn-sm" style="margin-top:.75rem" onclick="removeAvatar()">Quitar foto actual</button>` : ''}
+
+        <div class="divider"></div>
+        <label class="label">País y modalidad por defecto</label>
+        <div style="display:flex;align-items:center;gap:.6rem;padding:.6rem .85rem;background:var(--surface-2);border-radius:.5rem;margin-bottom:.5rem">
+          <span style="font-size:1.2rem">${p.country?countryByCode(p.country)?.flag:'🌎'}</span>
+          <div style="flex:1">
+            <div style="font-weight:500">${p.country?countryByCode(p.country)?.name:'Sin país'}</div>
+            <div class="text-mute" style="font-size:.8rem">${p.defaultModality?(MODALIDADES[p.defaultModality]?.flag+' '+MODALIDADES[p.defaultModality]?.name):'Sin modalidad'}</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="go('/onboarding')">Cambiar</button>
+        </div>
+        <div class="divider"></div>
+        <button class="btn btn-primary" onclick="saveSettings()">Guardar cambios</button>
+      </div>
+    </div>
+  `;
+}
+
+window.handleAvatarUpload = (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { alert('Imagen muy grande (máx 2MB)'); return; }
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    me().avatarUrl = ev.target.result;
+    saveState(); render();
+  };
+  reader.readAsDataURL(file);
+};
+window.removeAvatar = () => { me().avatarUrl = null; saveState(); render(); };
+window.saveSettings = () => {
+  const name = document.getElementById('setName').value.trim();
+  if (name) me().name = name;
+  saveState();
+  go('/dashboard');
+};
+
+/* ============================================================
+   VIEW: ONBOARDING (país + modalidad default)
+   ============================================================ */
+function viewOnboarding() {
+  if (!state.me) { go('/login'); return ''; }
+  const p = me();
+  const step = window._ob?.step || 1;
+  const country = window._ob?.country || p.country || null;
+  const modality = window._ob?.modality || p.defaultModality || (country ? COUNTRIES.find(c=>c.code===country)?.suggested : null);
+  window._ob = { step, country, modality };
+
+  if (step === 1) {
+    return `
+      <div style="max-width:36rem;margin:2rem auto" class="stack">
+        <div style="text-align:center">
+          <div style="display:inline-grid;place-items:center;width:4rem;height:4rem;border-radius:1rem;background:linear-gradient(135deg,#10b981,#3b82f6);color:#fff;font-weight:800;font-size:1.5rem;margin-bottom:1rem">DR</div>
+          <h1 class="section-title" style="margin-bottom:.5rem">¡Bienvenido a DomiRank!</h1>
+          <p class="text-dim">Antes de empezar, cuéntanos un poco sobre cómo juegas. Esto nos ayuda a poner tus partidas en la modalidad correcta por defecto.</p>
+        </div>
+        <div class="card">
+          <label class="label" style="font-size:1rem;margin-bottom:.85rem">¿De qué país eres?</label>
+          <div class="grid-2" style="gap:.5rem">
+            ${COUNTRIES.map(c => `
+              <label style="display:flex;align-items:center;gap:.6rem;padding:.7rem;background:${country===c.code?'var(--primary-soft)':'var(--surface-2)'};border:1px solid ${country===c.code?'rgba(16,185,129,.4)':'var(--border)'};border-radius:.5rem;cursor:pointer">
+                <input type="radio" name="country" value="${c.code}" ${country===c.code?'checked':''} onchange="setOnboardingCountry('${c.code}')">
+                <span style="font-size:1.25rem">${c.flag}</span>
+                <span>${c.name}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="onboardingStep2()" ${country?'':'disabled'}>Continuar →</button>
+      </div>
+    `;
+  }
+  // Step 2: modalidad
+  const c = countryByCode(country);
+  return `
+    <div style="max-width:36rem;margin:2rem auto" class="stack">
+      <div style="text-align:center">
+        <div style="font-size:3rem;margin-bottom:.5rem">${c?.flag||'🌎'}</div>
+        <h1 class="section-title" style="margin-bottom:.5rem">¿Qué modalidad juegas?</h1>
+        <p class="text-dim">Te sugerimos la más común para ${c?.name||'tu país'}, pero puedes elegir cualquiera. Después puedes cambiar al crear cada partida.</p>
+      </div>
+      <div class="card stack" style="gap:.5rem">
+        ${Object.values(MODALIDADES).map(m => {
+          const suggested = c && c.suggested === m.code;
+          return `
+            <label style="display:flex;gap:.75rem;align-items:flex-start;padding:.85rem;background:${modality===m.code?'var(--primary-soft)':'var(--surface-2)'};border:1px solid ${modality===m.code?'rgba(16,185,129,.4)':'var(--border)'};border-radius:.5rem;cursor:pointer">
+              <input type="radio" name="modality" value="${m.code}" ${modality===m.code?'checked':''} onchange="setOnboardingModality('${m.code}')" style="margin-top:.2rem">
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
+                  <span style="font-weight:600">${m.flag} ${m.name}</span>
+                  ${suggested?'<span class="badge badge-win">Sugerido para tu país</span>':''}
+                </div>
+                <div class="text-mute" style="font-size:.8rem;margin-top:.15rem">${m.desc}</div>
+              </div>
+            </label>
+          `;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:.6rem">
+        <button class="btn btn-ghost" onclick="onboardingBack()">← Atrás</button>
+        <button class="btn btn-primary" style="flex:1" onclick="finishOnboarding()" ${modality?'':'disabled'}>Empezar a jugar</button>
+      </div>
+    </div>
+  `;
+}
+window.setOnboardingCountry = (c) => {
+  window._ob.country = c;
+  // Auto-sugerir modalidad
+  const suggested = COUNTRIES.find(x=>x.code===c)?.suggested;
+  if (suggested) window._ob.modality = suggested;
+  render();
+};
+window.setOnboardingModality = (m) => { window._ob.modality = m; render(); };
+window.onboardingStep2 = () => { window._ob.step = 2; render(); };
+window.onboardingBack = () => { window._ob.step = 1; render(); };
+window.finishOnboarding = () => {
+  const u = me();
+  u.country = window._ob.country;
+  u.defaultModality = window._ob.modality;
+  u.onboarded = true;
+  window._ob = null;
+  saveState();
+  go('/dashboard');
+};
+
+/* ============================================================
+   VIEW: NUEVA PARTIDA
+   ============================================================ */
+function viewNewMatch() {
+  if (!state.me) { go('/login'); return ''; }
+
+  // Inicializa con la modalidad default del usuario
+  const userDefault = me()?.defaultModality || 'ven';
+  const initial = MODALIDADES[userDefault];
+  const nm = window._nm || {
+    modality: userDefault,
+    format: initial.format,
+    set: initial.set,
+    target: initial.target,
+    capicua: initial.capicua,
+    teamA: [state.me, ''],
+    teamB: ['', ''],
+  };
+  window._nm = nm;
+  const size = nm.format === 'singles' ? 1 : 2;
+
+  function playerSelect(team, idx) {
+    const value = (team==='A'?nm.teamA:nm.teamB)[idx] || '';
+    return `
+      <label class="label">${t('match.new.player', {n: idx+1})}</label>
+      <select class="input" onchange="setNMSlot('${team}',${idx},this.value)">
+        <option value="">${t('match.new.selectPlayer')}</option>
+        ${state.players.map(p => { const c = p.country?countryByCode(p.country):null; return `<option value="${p.id}" ${value===p.id?'selected':''}>${c?c.flag+' ':''}${p.name} (@${p.username})</option>`; }).join('')}
+      </select>
+    `;
+  }
+
+  const isCustom = nm.modality === 'custom';
+
+  return `
+    <div style="max-width:46rem;margin:0 auto" class="stack">
+      <div>
+        <h1 class="section-title" style="margin-bottom:.25rem">${t('match.new.title')}</h1>
+        <p class="text-dim">${t('match.new.subtitle')}</p>
+      </div>
+
+      <div class="card">
+        <label class="label" style="margin-bottom:.5rem">Modalidad</label>
+        <div class="grid-2" style="gap:.5rem">
+          ${Object.values(MODALIDADES).map(m => `
+            <label style="display:flex;gap:.6rem;align-items:flex-start;padding:.7rem .85rem;background:${nm.modality===m.code?'var(--primary-soft)':'var(--surface-2)'};border:1px solid ${nm.modality===m.code?'rgba(16,185,129,.4)':'var(--border)'};border-radius:.5rem;cursor:pointer">
+              <input type="radio" name="modality" value="${m.code}" ${nm.modality===m.code?'checked':''} onchange="setNMModality('${m.code}')" style="margin-top:.15rem">
+              <div style="flex:1">
+                <div style="font-weight:600">${m.flag} ${m.name}${m.code===userDefault?` <span class="badge badge-info" style="margin-left:.25rem;font-size:.65rem">tu default</span>`:''}</div>
+                <div class="text-mute" style="font-size:.75rem;margin-top:.1rem">${m.desc}</div>
+              </div>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="grid-2">
+          <div>
+            <label class="label">${t('match.new.format')}</label>
+            <div class="tabs full">
+              <span class="tab ${nm.format==='singles'?'active':''}" onclick="setNMFormat('singles')">${t('match.new.singles')}</span>
+              <span class="tab ${nm.format==='doubles'?'active':''}" onclick="setNMFormat('doubles')">${t('match.new.doubles')}</span>
+            </div>
+          </div>
+          <div>
+            <label class="label">Set de fichas</label>
+            <div class="tabs full">
+              <span class="tab ${nm.set==='d6'?'active':''}" onclick="${isCustom?`setNMField('set','d6')`:''}" style="${isCustom?'':'opacity:.6;cursor:not-allowed'}">6-6 · 28 fichas</span>
+              <span class="tab ${nm.set==='d9'?'active':''}" onclick="${isCustom?`setNMField('set','d9')`:''}" style="${isCustom?'':'opacity:.6;cursor:not-allowed'}">9-9 · 55 fichas</span>
+            </div>
+          </div>
+          <div>
+            <label class="label">Puntos meta</label>
+            <input class="input" type="number" min="50" max="500" step="10" value="${nm.target}" onchange="setNMField('target', parseInt(this.value)||100)" ${isCustom?'':'readonly style="opacity:.7"'}>
+          </div>
+          <div>
+            <label class="label">Capicúa bonus</label>
+            <input class="input" type="number" min="0" max="100" step="5" value="${nm.capicua}" onchange="setNMField('capicua', parseInt(this.value)||0)" ${isCustom?'':'readonly style="opacity:.7"'}>
+          </div>
+        </div>
+        ${!isCustom ? `<p class="text-mute" style="font-size:.75rem;margin-top:.5rem">Set, puntos y capicúa vienen del preset. Para editarlos elige "Personalizado".</p>` : ''}
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3 class="team-A" style="font-weight:600;margin-bottom:.75rem">${t('match.new.teamA')}</h3>
+          ${Array.from({length:size}).map((_,i) => `<div style="margin-bottom:.6rem">${playerSelect('A',i)}</div>`).join('')}
+        </div>
+        <div class="card">
+          <h3 class="team-B" style="font-weight:600;margin-bottom:.75rem">${t('match.new.teamB')}</h3>
+          ${Array.from({length:size}).map((_,i) => `<div style="margin-bottom:.6rem">${playerSelect('B',i)}</div>`).join('')}
+        </div>
+      </div>
+      <div id="nm-error" style="display:none" class="banner error"></div>
+      <button class="btn btn-primary" style="width:100%" onclick="startLiveMatch()">${t('match.new.start')}</button>
+    </div>
+  `;
+}
+
+window.setNMModality = (code) => {
+  const m = MODALIDADES[code];
+  window._nm.modality = code;
+  if (code !== 'custom') {
+    window._nm.set = m.set;
+    window._nm.target = m.target;
+    window._nm.capicua = m.capicua;
+    window._nm.format = m.format;
+    const size = m.format === 'singles' ? 1 : 2;
+    window._nm.teamA = window._nm.teamA.slice(0,size); while(window._nm.teamA.length < size) window._nm.teamA.push('');
+    window._nm.teamB = window._nm.teamB.slice(0,size); while(window._nm.teamB.length < size) window._nm.teamB.push('');
+  }
+  render();
+};
+window.setNMField = (field, value) => { window._nm[field] = value; render(); };
+window.setNMFormat = (f) => {
+  window._nm.format = f;
+  const size = f === 'singles' ? 1 : 2;
+  window._nm.teamA = window._nm.teamA.slice(0,size); while(window._nm.teamA.length < size) window._nm.teamA.push('');
+  window._nm.teamB = window._nm.teamB.slice(0,size); while(window._nm.teamB.length < size) window._nm.teamB.push('');
+  render();
+};
+window.setNMSlot = (team, idx, val) => {
+  if (team === 'A') window._nm.teamA[idx] = val; else window._nm.teamB[idx] = val;
+};
+
+window.startLiveMatch = () => {
+  const errEl = document.getElementById('nm-error');
+  const showErr = msg => { errEl.style.display='block'; errEl.textContent=msg; };
+  errEl.style.display='none';
+  const nm = window._nm;
+  const size = nm.format === 'singles' ? 1 : 2;
+  const a = nm.teamA.slice(0,size).filter(Boolean);
+  const b = nm.teamB.slice(0,size).filter(Boolean);
+  if (a.length !== size || b.length !== size) return showErr(`Selecciona ${size} jugador(es) por equipo.`);
+  const ids = [...a, ...b];
+  if (new Set(ids).size !== ids.length) return showErr('Un jugador no puede estar en dos equipos.');
+
+  state.liveMatch = {
+    format: nm.format, set: nm.set, modality: nm.modality,
+    target_points: nm.target, capicua_bonus: nm.capicua,
+    teamA: a, teamB: b,
+    scoreA: 0, scoreB: 0, rounds: [],
+    startedAt: new Date().toISOString(), tournamentId: null,
+    activeTeam: 'A', currentInput: 0,
+  };
+  window._nm = null;
+  saveState();
+  go('/matches/live');
+};
+
+/* ============================================================
+   VIEW: PARTIDA EN VIVO (estilo app vieja con numpad)
+   ============================================================ */
+function teamNames(live) {
+  const A = live.teamA.map(id => playerById(id)?.name.split(' ')[0]||'?').join(' & ');
+  const B = live.teamB.map(id => playerById(id)?.name.split(' ')[0]||'?').join(' & ');
+  return { A, B };
+}
+
+function viewLiveMatch() {
+  if (!state.me) { go('/login'); return ''; }
+  const live = state.liveMatch;
+  if (!live) { go('/matches/new'); return ''; }
+  const { A: nameA, B: nameB } = teamNames(live);
+  const isSingles = live.format === 'singles';
+  const pillA = isSingles ? t('match.live.teamASingle') : t('match.live.teamAPill');
+  const pillB = isSingles ? t('match.live.teamBPill').replace('A','B') : t('match.live.teamBPill');
+  const pillBFinal = isSingles ? t('match.live.teamBSingle') : t('match.live.teamBPill');
+  const pctA = Math.min(100, (live.scoreA / live.target_points) * 100);
+  const pctB = Math.min(100, (live.scoreB / live.target_points) * 100);
+  const finished = live.scoreA >= live.target_points || live.scoreB >= live.target_points;
+  const winnerName = live.scoreA >= live.target_points ? nameA : nameB;
+  const lcd = live.currentInput;
+  const startTime = new Date(live.startedAt);
+  const isToday = startTime.toDateString() === new Date().toDateString();
+  const dateLabel = isToday
+    ? `${t('match.live.today')} · ${startTime.toLocaleTimeString(lang==='en'?'en':'es',{hour:'2-digit',minute:'2-digit'})}`
+    : startTime.toLocaleString(lang==='en'?'en':'es',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+
+  const mod = MODALIDADES[live.modality] || MODALIDADES.custom;
+  return `
+    <div style="max-width:36rem;margin:0 auto">
+      <div class="live-header">
+        <button class="live-back" onclick="cancelLiveMatch()" title="${t('match.live.cancel')}">‹</button>
+        <div style="flex:1">
+          <h1 class="live-title">${t('match.live.title')}</h1>
+          <div class="text-mute" style="font-size:.78rem;margin-top:.1rem">${mod.flag} ${mod.name} · ${SETS[live.set].label} · capicúa +${live.capicua_bonus}</div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="gap:.85rem;margin-bottom:1rem">
+        <div class="team-tile A ${live.activeTeam==='A'?'active':''}" onclick="setLiveTeam('A')">
+          <span class="pill">${pillA}</span>
+          <div class="team-name">${nameA}</div>
+          <div class="team-score">${live.scoreA}</div>
+          <div class="bar"><span style="width:${pctA}%"></span></div>
+        </div>
+        <div class="team-tile B ${live.activeTeam==='B'?'active':''}" onclick="setLiveTeam('B')">
+          <span class="pill">${pillBFinal}</span>
+          <div class="team-name">${nameB}</div>
+          <div class="team-score">${live.scoreB}</div>
+          <div class="bar"><span style="width:${pctB}%"></span></div>
+        </div>
+      </div>
+
+      <div class="meta-row">
+        <div>
+          <div class="meta-label">${t('match.live.meta')}</div>
+          <div class="meta-value">${t('match.live.metaPoints', {n: live.target_points})}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="meta-label">${finished ? t('common.finish').toUpperCase() : t('match.live.status')}</div>
+          <div class="meta-value">${dateLabel}</div>
+        </div>
+      </div>
+
+      ${finished ? `
+        <div class="banner" style="background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--primary)">
+          ${t('match.live.winnerReached', {team: winnerName})}
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="finalizeLiveMatch()">${t('common.finish')} · ${t('dashboard.rating')}</button>
+      ` : `
+        <div class="live-card">
+          <div class="who-row">
+            <div style="font-size:1.05rem;font-weight:700">${t('match.live.registerPoints')}</div>
+            <div class="text-mute" style="font-size:.85rem">${t('match.live.whoSums')}</div>
+          </div>
+          <div class="team-picker">
+            <button class="team-pick A ${live.activeTeam==='A'?'active':''}" onclick="setLiveTeam('A')">${nameA}</button>
+            <button class="team-pick B ${live.activeTeam==='B'?'active':''}" onclick="setLiveTeam('B')">${nameB}</button>
+          </div>
+          <div class="points-display ${lcd===0?'empty':''}">${lcd===0?t('match.live.enterPoints'):lcd}</div>
+          <div class="numpad">
+            <button class="numkey" onclick="numInput(7)">7</button>
+            <button class="numkey" onclick="numInput(8)">8</button>
+            <button class="numkey" onclick="numInput(9)">9</button>
+            <button class="numkey" onclick="numInput(4)">4</button>
+            <button class="numkey" onclick="numInput(5)">5</button>
+            <button class="numkey" onclick="numInput(6)">6</button>
+            <button class="numkey" onclick="numInput(1)">1</button>
+            <button class="numkey" onclick="numInput(2)">2</button>
+            <button class="numkey" onclick="numInput(3)">3</button>
+            <button class="numkey danger" onclick="numClear()">C</button>
+            <button class="numkey" onclick="numInput(0)">0</button>
+            <button class="numkey" onclick="numBackspace()">⌫</button>
+          </div>
+          <div class="live-actions">
+            <button class="btn btn-ghost" onclick="undoLastRound()" ${live.rounds.length===0?'disabled':''}>${t('match.live.undoLast')}</button>
+            <button class="btn btn-ghost" style="background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3);color:var(--warning)" onclick="capicuaBonus()">¡Capicúa! +${live.capicua_bonus}</button>
+            <button class="btn btn-primary" onclick="addLiveRound()" ${lcd<=0?'disabled':''}>${t('match.live.add')}</button>
+          </div>
+        </div>
+      `}
+
+      <div class="rounds-list">
+        <div class="head">${t('match.live.rounds')} (${live.rounds.length})</div>
+        ${live.rounds.length === 0
+          ? `<div class="empty" style="padding:1.25rem">${t('match.live.noRounds')}</div>`
+          : live.rounds.map((r,i) => {
+              const teamName = r.team === 1 ? nameA : nameB;
+              const cls = r.team === 1 ? 'team-A-text' : 'team-B-text';
+              return `<div class="round-row"><span class="text-mute mono">#${i+1}</span><span class="${cls}">${teamName}</span><span class="mono" style="font-weight:700">+${r.points}</span></div>`;
+            }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+window.setLiveTeam = (team) => {
+  if (!state.liveMatch || state.liveMatch.scoreA >= state.liveMatch.target_points || state.liveMatch.scoreB >= state.liveMatch.target_points) return;
+  state.liveMatch.activeTeam = team;
+  saveState(); render();
+};
+window.numInput = (digit) => {
+  const live = state.liveMatch; if (!live) return;
+  const next = live.currentInput * 10 + digit;
+  if (next > 999) return;
+  live.currentInput = next;
+  saveState(); render();
+};
+window.numClear = () => { state.liveMatch.currentInput = 0; saveState(); render(); };
+window.numBackspace = () => { state.liveMatch.currentInput = Math.floor(state.liveMatch.currentInput / 10); saveState(); render(); };
+
+window.addLiveRound = () => {
+  const live = state.liveMatch;
+  if (!live || live.currentInput <= 0) return;
+  const team = live.activeTeam === 'A' ? 1 : 2;
+  live.rounds.push({ team, points: live.currentInput, at: new Date().toISOString() });
+  if (team === 1) live.scoreA += live.currentInput; else live.scoreB += live.currentInput;
+  live.currentInput = 0;
+  saveState(); render();
+};
+
+window.undoLastRound = () => {
+  const live = state.liveMatch;
+  if (!live || live.rounds.length === 0) return;
+  const r = live.rounds.pop();
+  if (r.team === 1) live.scoreA -= r.points; else live.scoreB -= r.points;
+  saveState(); render();
+};
+
+window.capicuaBonus = () => {
+  const live = state.liveMatch;
+  if (!live) return;
+  const team = live.activeTeam === 'A' ? 1 : 2;
+  const pts = live.capicua_bonus;
+  live.rounds.push({ team, points: pts, at: new Date().toISOString(), kind: 'capicua' });
+  if (team === 1) live.scoreA += pts; else live.scoreB += pts;
+  saveState(); render();
+};
+
+window.cancelLiveMatch = () => {
+  if (!state.liveMatch) { go('/dashboard'); return; }
+  if (state.liveMatch.rounds.length > 0 && !confirm(lang==='en'?'Cancel match and discard rounds?':'¿Cancelar partida y descartar las manos registradas?')) return;
+  state.liveMatch = null;
+  saveState();
+  go('/dashboard');
+};
+
+window.finalizeLiveMatch = () => {
+  const live = state.liveMatch;
+  if (!live) return;
+  if (!osReady) { alert(lang==='en'?'Rating engine still loading, try again in a second.':'Motor de rating aún cargando, intenta en un segundo.'); return; }
+  const mid = recordMatch({
+    format: live.format, set: live.set, modality: live.modality,
+    target: live.target_points, capicua_bonus: live.capicua_bonus,
+    teamA: live.teamA, teamB: live.teamB,
+    scoreA: live.scoreA, scoreB: live.scoreB,
+    tournamentId: live.tournamentId, rated: true,
+  });
+  state.liveMatch = null;
+  saveState();
+  go('/matches/' + mid);
+};
+
+/* Core: record a match, update OpenSkill if rated.
+   El bucket de rating se determina por (set, format): d6_s, d6_d, d9_s, d9_d. */
+function recordMatch({ format, set='d6', modality='ven', target, capicua_bonus=30, teamA, teamB, scoreA, scoreB, tournamentId, rated=true }) {
+  const key = bucketKey(set, format);
+  const ratingsA = teamA.map(id => { const p = playerById(id); const b = getBucket(p,key); return window.os.rating({ mu:b.mu, sigma:b.sigma }); });
+  const ratingsB = teamB.map(id => { const p = playerById(id); const b = getBucket(p,key); return window.os.rating({ mu:b.mu, sigma:b.sigma }); });
+  const ranks = scoreA > scoreB ? [1,2] : [2,1];
+  let newA = ratingsA, newB = ratingsB;
+  if (rated) {
+    [newA, newB] = window.os.rate([ratingsA, ratingsB], { rank: ranks });
+  }
+  const matchId = 'm' + Date.now() + Math.random().toString(36).slice(2,6);
+  const newMatch = {
+    id: matchId, format, set, modality, target_points: target, capicua_bonus,
+    date: new Date().toISOString(), tournament_id: tournamentId,
+    teams: [
+      { team:1, score: scoreA, players: teamA.map((id,i) => ({
+          user_id: id, mu_before: ratingsA[i].mu, sigma_before: ratingsA[i].sigma,
+          mu_after: newA[i].mu, sigma_after: newA[i].sigma, rank: ranks[0]
+      }))},
+      { team:2, score: scoreB, players: teamB.map((id,i) => ({
+          user_id: id, mu_before: ratingsB[i].mu, sigma_before: ratingsB[i].sigma,
+          mu_after: newB[i].mu, sigma_after: newB[i].sigma, rank: ranks[1]
+      }))},
+    ]
+  };
+  state.matches.unshift(newMatch);
+  if (rated) {
+    teamA.forEach((id,i) => {
+      const p = playerById(id);
+      if (!p[key]) p[key] = D();
+      p[key].mu = newA[i].mu; p[key].sigma = newA[i].sigma; p[key].g += 1;
+      if (ranks[0] === 1) p[key].w += 1; else p[key].l += 1;
+    });
+    teamB.forEach((id,i) => {
+      const p = playerById(id);
+      if (!p[key]) p[key] = D();
+      p[key].mu = newB[i].mu; p[key].sigma = newB[i].sigma; p[key].g += 1;
+      if (ranks[1] === 1) p[key].w += 1; else p[key].l += 1;
+    });
+  }
+  saveState();
+  return matchId;
+}
+
+/* ============================================================
+   VIEW: POLLAS (lista)
+   ============================================================ */
+function viewTournaments() {
+  const active = state.tournaments.filter(t => t.status === 'active');
+  const finished = state.tournaments.filter(t => t.status !== 'active');
+  return `
+    <div class="row" style="margin-bottom:1.5rem">
+      <h1 class="section-title" style="margin:0">Pollas</h1>
+      ${state.me ? `<button class="btn btn-primary" onclick="go('/tournaments/new')">+ Nueva polla</button>` : ''}
+    </div>
+    <h2 style="font-size:1.1rem;font-weight:600;margin-bottom:.75rem">Activas</h2>
+    ${active.length === 0
+      ? '<div class="card empty">No hay pollas activas.</div>'
+      : `<div class="stack" style="gap:.75rem">${active.map(tournamentCard).join('')}</div>`}
+    ${finished.length > 0 ? `
+      <h2 style="font-size:1.1rem;font-weight:600;margin:2rem 0 .75rem">Finalizadas</h2>
+      <div class="stack" style="gap:.75rem">${finished.map(tournamentCard).join('')}</div>
+    ` : ''}
+  `;
+}
+
+function tournamentCard(t) {
+  const games = matchesByTournament(t.id).length;
+  const progress = t.rounds > 0 ? Math.min(100, Math.round(games / t.rounds * 100)) : null;
+  return `
+    <div class="card" style="cursor:pointer" onclick="go('/tournaments/${t.id}')">
+      <div class="row">
+        <div style="display:flex;align-items:center;gap:.6rem;flex:1;min-width:0">
+          <span style="font-size:1.5rem">🍻</span>
+          <div style="min-width:0">
+            <div style="font-weight:600">${t.name}</div>
+            <div class="text-mute" style="font-size:.85rem">${t.playerIds.length} jugadores · ${games} partidas · ${t.pointsToWin}pts ${t.continuous ? '· ∞ continua' : t.rounds ? `· meta ${t.rounds}` : ''}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          ${t.rated ? '<span class="badge badge-win">Rankeada</span>' : '<span class="badge badge-muted">Casual</span>'}
+          ${t.status === 'finished' ? '<span class="badge badge-muted">Finalizada</span>' : ''}
+        </div>
+      </div>
+      ${progress !== null ? `
+        <div style="margin-top:.75rem;height:.3rem;background:var(--surface-2);border-radius:.15rem;overflow:hidden">
+          <div style="width:${progress}%;height:100%;background:var(--primary);transition:width .3s"></div>
+        </div>
+        <div class="text-mute" style="font-size:.75rem;margin-top:.25rem">${games} / ${t.rounds} (${progress}%)</div>
+      ` : ''}
+    </div>
+  `;
+}
+
+/* ============================================================
+   VIEW: NUEVA POLLA
+   ============================================================ */
+function viewTournamentNew() {
+  if (!state.me) { go('/login'); return ''; }
+  const userDef = me()?.defaultModality || 'dom';
+  const f = window._nt || { name:'', playerIds:[state.me], modality: userDef, pointsToWin: MODALIDADES[userDef]?.target||100, rounds:0, continuous:false, rated:true };
+  window._nt = f;
+
+  const togglePlayer = (id) => {
+    const arr = window._nt.playerIds;
+    const idx = arr.indexOf(id);
+    if (idx >= 0) arr.splice(idx, 1); else arr.push(id);
+    render();
+  };
+  window.togglePollaPlayer = togglePlayer;
+
+  return `
+    <div style="max-width:42rem;margin:0 auto" class="stack">
+      <div>
+        <h1 class="section-title" style="margin-bottom:.25rem">Nueva polla</h1>
+        <p class="text-dim">Sistema de rotación: cada partida se eligen 4 jugadores de la polla, se sortean parejas y se juega.</p>
+      </div>
+      <div class="card stack">
+        <div>
+          <label class="label">Nombre</label>
+          <input class="input" id="ntName" placeholder="Polla sabatina 🍻" value="${f.name}" oninput="window._nt.name=this.value">
+        </div>
+        <div>
+          <label class="label">Modalidad</label>
+          <select class="input" onchange="setPollaModality(this.value)">
+            ${Object.values(MODALIDADES).map(m => `<option value="${m.code}" ${f.modality===m.code?'selected':''}>${m.flag} ${m.name} · ${m.desc}</option>`).join('')}
+          </select>
+        </div>
+        <div class="grid-2">
+          <div>
+            <label class="label">Puntos por partida</label>
+            <select class="input" onchange="window._nt.pointsToWin=parseInt(this.value)">
+              <option ${f.pointsToWin===50?'selected':''} value="50">50</option>
+              <option ${f.pointsToWin===100?'selected':''} value="100">100</option>
+              <option ${f.pointsToWin===150?'selected':''} value="150">150</option>
+              <option ${f.pointsToWin===200?'selected':''} value="200">200</option>
+            </select>
+          </div>
+          <div>
+            <label class="label">Vueltas / partidas meta</label>
+            <input class="input" type="number" min="0" max="100" value="${f.rounds}" oninput="window._nt.rounds=parseInt(this.value)||0">
+            <p class="text-mute" style="font-size:.75rem;margin-top:.25rem">0 = sin límite</p>
+          </div>
+        </div>
+        <div class="grid-2">
+          <label style="display:flex;align-items:center;gap:.6rem;padding:.65rem .8rem;background:var(--surface-2);border-radius:.5rem;cursor:pointer">
+            <input type="checkbox" ${f.continuous?'checked':''} onchange="window._nt.continuous=this.checked">
+            <span><strong>Continua ∞</strong> <span class="text-mute" style="font-size:.8rem;display:block">Polla sin fin (jornadas)</span></span>
+          </label>
+          <label style="display:flex;align-items:center;gap:.6rem;padding:.65rem .8rem;background:var(--surface-2);border-radius:.5rem;cursor:pointer">
+            <input type="checkbox" ${f.rated?'checked':''} onchange="window._nt.rated=this.checked">
+            <span><strong>Rankeada</strong> <span class="text-mute" style="font-size:.8rem;display:block">Afecta rating global de parejas</span></span>
+          </label>
+        </div>
+        <div>
+          <label class="label">Jugadores inscritos (mín. 4)</label>
+          <div class="grid-2" style="gap:.4rem">
+            ${state.players.map(p => `
+              <label style="display:flex;align-items:center;gap:.5rem;padding:.4rem .6rem;background:${f.playerIds.includes(p.id)?'var(--primary-soft)':'var(--surface-2)'};border:1px solid ${f.playerIds.includes(p.id)?'rgba(16,185,129,.4)':'var(--border)'};border-radius:.4rem;cursor:pointer">
+                <input type="checkbox" ${f.playerIds.includes(p.id)?'checked':''} onchange="togglePollaPlayer('${p.id}')">
+                ${avatarHtml(p,24)}
+                <span style="font-size:.9rem">${p.name}</span>
+              </label>
+            `).join('')}
+          </div>
+          <p class="text-mute" style="font-size:.8rem;margin-top:.5rem">${f.playerIds.length} seleccionados</p>
+        </div>
+        <div id="nt-error" style="display:none" class="banner error"></div>
+        <button class="btn btn-primary" onclick="createTournament()">Crear polla</button>
+      </div>
+    </div>
+  `;
+}
+
+window.setPollaModality = (code) => {
+  window._nt.modality = code;
+  const m = MODALIDADES[code];
+  if (m && code !== 'custom') window._nt.pointsToWin = m.target;
+  render();
+};
+window.createTournament = () => {
+  const f = window._nt;
+  const errEl = document.getElementById('nt-error');
+  const showErr = m => { errEl.style.display='block'; errEl.textContent=m; };
+  errEl.style.display='none';
+  if (!f.name.trim()) return showErr('Pon un nombre a la polla.');
+  if (f.playerIds.length < 4) return showErr('Necesitas al menos 4 jugadores.');
+  const id = 't' + Date.now();
+  state.tournaments.push({ id, name:f.name.trim(), playerIds:[...f.playerIds],
+    modality: f.modality||'dom', pointsToWin:f.pointsToWin, rounds:f.rounds,
+    continuous:f.continuous, rated:f.rated,
+    status:'active', createdAt:new Date().toISOString(), finishedAt:null });
+  window._nt = null;
+  saveState();
+  go('/tournaments/'+id);
+};
+
+/* ============================================================
+   VIEW: POLLA DETAIL (standings + partidas + jugar)
+   ============================================================ */
+function viewTournament(id) {
+  const t = tournamentById(id);
+  if (!t) return `<div class="empty">No existe esa polla</div>`;
+  const games = matchesByTournament(id).sort((a,b) => new Date(b.date) - new Date(a.date));
+  const standings = computeStandings(t, games);
+  const progress = t.rounds > 0 ? Math.min(100, Math.round(games.length / t.rounds * 100)) : null;
+
+  return `
+    <div class="card" style="margin-bottom:1rem">
+      <div class="row" style="flex-wrap:wrap;gap:1rem">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:.6rem">
+            <span style="font-size:1.6rem">🍻</span>
+            <h1 class="section-title" style="margin:0">${t.name}</h1>
+          </div>
+          <div class="text-mute" style="font-size:.9rem;margin-top:.35rem">
+            ${t.playerIds.length} jugadores · ${t.pointsToWin} puntos · ${games.length} partidas
+            ${t.continuous?' · continua ∞':t.rounds?' · meta '+t.rounds:''}
+            ${t.rated?' · <span class="text-primary">rankeada</span>':' · casual'}
+          </div>
+        </div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          ${t.status === 'active'
+            ? `<button class="btn btn-primary" onclick="go('/tournaments/${t.id}/play')">+ Jugar partida</button>
+               <button class="btn btn-ghost btn-sm" onclick="finishTournament('${t.id}')">Finalizar</button>`
+            : `<span class="badge badge-muted">Finalizada</span>
+               <button class="btn btn-ghost btn-sm" onclick="reopenTournament('${t.id}')">Reabrir</button>`}
+        </div>
+      </div>
+      ${progress !== null ? `
+        <div style="margin-top:1rem;height:.4rem;background:var(--surface-2);border-radius:.2rem;overflow:hidden">
+          <div style="width:${progress}%;height:100%;background:var(--primary)"></div>
+        </div>
+        <div class="text-mute" style="font-size:.8rem;margin-top:.25rem">${games.length} / ${t.rounds} partidas (${progress}%)</div>
+      ` : ''}
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:1rem">
+      <div style="padding:.85rem 1rem;border-bottom:1px solid var(--border);font-weight:600">Standings</div>
+      <table>
+        <thead><tr>
+          <th style="width:3rem">#</th><th>Jugador</th>
+          <th class="text-right">G</th><th class="text-right">P</th>
+          <th class="text-right">%</th>
+          <th class="text-right">PF</th><th class="text-right">PC</th>
+          <th class="text-right">Racha</th>
+        </tr></thead>
+        <tbody>
+          ${standings.length === 0
+            ? `<tr><td colspan="8" class="empty">Aún no se han jugado partidas en esta polla.</td></tr>`
+            : standings.map((s,i) => `
+              <tr>
+                <td class="text-mute">${i+1}</td>
+                <td>
+                  <div class="avatar-link" style="cursor:pointer" onclick="go('/profile/${s.player.username}')">
+                    ${avatarHtml(s.player,28)}
+                    <span style="color:var(--text)">${s.player.name}</span>
+                  </div>
+                </td>
+                <td class="text-right text-primary mono">${s.wins}</td>
+                <td class="text-right text-danger mono">${s.losses}</td>
+                <td class="text-right mono">${s.games>0?((s.wins/s.games)*100).toFixed(0)+'%':'—'}</td>
+                <td class="text-right mono">${s.pf}</td>
+                <td class="text-right mono">${s.pa}</td>
+                <td class="text-right">${s.streak.map(w => `<span class="streak-dot ${w?'streak-w':'streak-l'}"></span>`).join('')}</td>
+              </tr>
+            `).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:.85rem 1rem;border-bottom:1px solid var(--border);font-weight:600">Partidas (${games.length})</div>
+      ${games.length === 0
+        ? '<div class="empty">Sin partidas.</div>'
+        : games.slice(0,30).map(m => {
+            const t1 = m.teams[0], t2 = m.teams[1];
+            const winner = t1.players[0].rank === 1 ? t1 : t2;
+            const loser  = winner === t1 ? t2 : t1;
+            return `
+              <div class="row" style="padding:.8rem 1rem;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer" onclick="go('/matches/${m.id}')">
+                <div style="display:flex;gap:.5rem;align-items:center;flex:1;flex-wrap:wrap">
+                  ${winner.players.map(pp => { const p = playerById(pp.user_id); return avatarHtml(p,24); }).join('')}
+                  <span class="mono text-primary" style="font-weight:700;margin-left:.25rem">${winner.score}</span>
+                  <span class="text-mute" style="margin:0 .25rem">vs</span>
+                  <span class="mono">${loser.score}</span>
+                  ${loser.players.map(pp => { const p = playerById(pp.user_id); return avatarHtml(p,24); }).join('')}
+                </div>
+                <div class="text-mute" style="font-size:.8rem">${fmtDateShort(m.date)}</div>
+              </div>
+            `;
+          }).join('')}
+    </div>
+  `;
+}
+
+function computeStandings(t, games) {
+  const stats = {};
+  for (const pid of t.playerIds) {
+    stats[pid] = { player: playerById(pid), wins:0, losses:0, games:0, pf:0, pa:0, streak:[] };
+  }
+  // Process oldest → newest for racha order
+  const ordered = [...games].sort((a,b) => new Date(a.date) - new Date(b.date));
+  for (const m of ordered) {
+    for (const team of m.teams) {
+      for (const pp of team.players) {
+        if (!stats[pp.user_id]) continue;
+        const s = stats[pp.user_id];
+        s.games++;
+        const won = pp.rank === 1;
+        if (won) s.wins++; else s.losses++;
+        const myScore = team.score;
+        const opponentScore = m.teams.find(t => t !== team).score;
+        s.pf += myScore; s.pa += opponentScore;
+        s.streak.push(won);
+        if (s.streak.length > 5) s.streak.shift();
+      }
+    }
+  }
+  // Solo jugadores con al menos 1 partida o todos? Mostramos todos los inscritos.
+  return Object.values(stats).sort((a,b) => {
+    if (b.pf !== a.pf) return b.pf - a.pf;
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    const wpa = a.games?a.wins/a.games:0, wpb = b.games?b.wins/b.games:0;
+    if (wpb !== wpa) return wpb - wpa;
+    return (b.pf-b.pa) - (a.pf-a.pa);
+  });
+}
+
+window.finishTournament = (id) => {
+  if (!confirm('¿Finalizar polla?')) return;
+  const t = tournamentById(id); t.status = 'finished'; t.finishedAt = new Date().toISOString();
+  saveState(); render();
+};
+window.reopenTournament = (id) => {
+  const t = tournamentById(id); t.status = 'active'; t.finishedAt = null;
+  saveState(); render();
+};
+
+/* ============================================================
+   VIEW: POLLA PLAY (sortear parejas y jugar)
+   ============================================================ */
+function viewTournamentPlay(id) {
+  const t = tournamentById(id);
+  if (!t) return `<div class="empty">No existe esa polla</div>`;
+  if (!window._tp || window._tp.tournamentId !== id) {
+    window._tp = drawTournamentLineup(t);
+  }
+  const tp = window._tp;
+
+  return `
+    <div style="max-width:48rem;margin:0 auto" class="stack">
+      <div class="row">
+        <div>
+          <h1 class="section-title" style="margin-bottom:.25rem">Partida de polla</h1>
+          <p class="text-dim"><a class="link" onclick="go('/tournaments/${id}')">${t.name}</a> · ${t.pointsToWin} pts</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="resortTournamentLineup('${id}')">↻ Volver a sortear</button>
+      </div>
+      <div class="grid-2">
+        ${renderTPTeam('A', tp.teamA, tp.scoreA, t)}
+        ${renderTPTeam('B', tp.teamB, tp.scoreB, t)}
+      </div>
+      <div id="tp-error" style="display:none" class="banner error"></div>
+      <button class="btn btn-primary" onclick="submitTournamentMatch('${id}')">Guardar partida</button>
+      <p class="muted-help">Se eligen 4 jugadores al azar de la polla y se sortean en dos parejas. Edita manualmente si quieres.</p>
+    </div>
+  `;
+}
+
+function drawTournamentLineup(t) {
+  // Pick 4 random from t.playerIds
+  const pool = [...t.playerIds].sort(() => Math.random() - 0.5).slice(0,4);
+  if (pool.length < 4) pool.push(...t.playerIds.slice(0, 4 - pool.length));
+  return { tournamentId: t.id, teamA: [pool[0], pool[1]], teamB: [pool[2], pool[3]], scoreA: t.pointsToWin, scoreB: 0 };
+}
+window.resortTournamentLineup = (id) => { window._tp = drawTournamentLineup(tournamentById(id)); render(); };
+
+function renderTPTeam(label, team, score, t) {
+  const color = label === 'A' ? 'team-A' : 'team-B';
+  return `
+    <div class="card">
+      <h3 class="${color}" style="font-weight:600;margin-bottom:.75rem">Equipo ${label}</h3>
+      ${[0,1].map(i => `
+        <div style="margin-bottom:.5rem">
+          <label class="label">Jugador ${i+1}</label>
+          <select class="input" onchange="setTPSlot('${label}',${i},this.value)">
+            ${t.playerIds.map(pid => { const p = playerById(pid); return `<option value="${pid}" ${team[i]===pid?'selected':''}>${p.name}</option>`; }).join('')}
+          </select>
+        </div>
+      `).join('')}
+      <label class="label">Puntos del equipo</label>
+      <input class="input" type="number" min="0" max="500" value="${score}" onchange="setTPScore('${label}',parseInt(this.value)||0)">
+    </div>
+  `;
+}
+window.setTPSlot = (label, idx, val) => {
+  const arr = label==='A'?window._tp.teamA:window._tp.teamB;
+  arr[idx] = val;
+};
+window.setTPScore = (label, val) => {
+  if (label === 'A') window._tp.scoreA = val; else window._tp.scoreB = val;
+};
+window.submitTournamentMatch = (tournamentId) => {
+  const tp = window._tp;
+  const t = tournamentById(tournamentId);
+  const errEl = document.getElementById('tp-error');
+  const showErr = m => { errEl.style.display='block'; errEl.textContent=m; };
+  errEl.style.display='none';
+  if (!osReady) return showErr('Motor de rating aún cargando, intenta de nuevo en un segundo.');
+  if (tp.teamA.some(x=>!x) || tp.teamB.some(x=>!x)) return showErr('Faltan jugadores en algún equipo.');
+  if (tp.scoreA === tp.scoreB) return showErr('Empates no se admiten.');
+  const ids = [...tp.teamA, ...tp.teamB];
+  if (new Set(ids).size !== 4) return showErr('No puedes repetir jugadores.');
+  const tMod = MODALIDADES[t.modality] || MODALIDADES.dom;
+  const mid = recordMatch({
+    format:'doubles', set: tMod.set, modality: t.modality || 'dom',
+    target:t.pointsToWin, capicua_bonus: tMod.capicua,
+    teamA:tp.teamA, teamB:tp.teamB, scoreA:tp.scoreA, scoreB:tp.scoreB,
+    tournamentId, rated:t.rated,
+  });
+  window._tp = null;
+  go('/tournaments/'+tournamentId);
+};
+
+/* ============================================================
+   VIEW: EXPLAINER /como-funciona
+   ============================================================ */
+function viewExplainer() {
+  return `
+    <div style="max-width:60rem;margin:0 auto">
+      <header style="text-align:center;padding:1.5rem 0 2rem">
+        <div class="badge badge-info" style="margin-bottom:.75rem">Cómo funciona DomiRank</div>
+        <h1 style="font-size:2.5rem;font-weight:800;letter-spacing:-.02em;margin-bottom:.5rem">El rating que <span style="color:var(--primary)">no es un número</span></h1>
+        <p class="text-dim" style="max-width:36rem;margin:0 auto;font-size:1.05rem">Tu nivel en DomiRank no se representa con un número solitario tipo Elo, sino con una <strong>distribución de probabilidad</strong>. Esta página es interactiva — toca las cosas.</p>
+      </header>
+
+      <!-- 1. Intro -->
+      <section class="exp-section">
+        <h2 class="exp-h"><span class="num">1</span>Tu rating tiene dos números: μ y σ</h2>
+        <p class="exp-p">
+          OpenSkill modela cada jugador con una <strong>gaussiana</strong>: una campana centrada en <code>μ</code> (mu) con anchura <code>σ</code> (sigma).
+          <br>· <strong class="text-primary">μ</strong> = tu skill estimado más probable.
+          <br>· <strong class="text-info">σ</strong> = qué tan inseguro está el sistema. Empieza alto (sabemos poco) y baja a medida que juegas.
+        </p>
+        <div class="exp-widget">
+          <div class="grid-2" style="margin-bottom:1rem;gap:1.5rem">
+            <div>
+              <div class="row" style="margin-bottom:.25rem"><label class="label" style="margin:0">μ (skill)</label><span class="mono" id="mu1Val">25.00</span></div>
+              <input type="range" id="mu1" min="10" max="40" step="0.5" value="25" oninput="drawDist()">
+            </div>
+            <div>
+              <div class="row" style="margin-bottom:.25rem"><label class="label" style="margin:0">σ (incertidumbre)</label><span class="mono" id="sig1Val">8.33</span></div>
+              <input type="range" id="sig1" min="1" max="10" step="0.1" value="8.33" oninput="drawDist()">
+            </div>
+          </div>
+          <canvas id="dist1" width="900" height="220"></canvas>
+          <div class="exp-readout">
+            <div><div class="l">μ</div><div class="v text-primary" id="r-mu">25.00</div></div>
+            <div><div class="l">σ</div><div class="v text-info" id="r-sig">8.33</div></div>
+            <div><div class="l">Rating ordinal (μ−3σ)</div><div class="v" id="r-ord">0.00</div></div>
+            <div><div class="l">El sistema cree que tu skill es al menos</div><div class="v text-primary" id="r-at-least">0.00</div></div>
+          </div>
+          <p class="text-mute" style="font-size:.85rem;margin-top:.75rem;text-align:center">El rating que muestra DomiRank es <code>μ − 3σ</code>: el peor caso al 99.7%. Conservador a propósito.</p>
+        </div>
+      </section>
+
+      <!-- 2. Elo vs OpenSkill -->
+      <section class="exp-section">
+        <h2 class="exp-h"><span class="num">2</span>¿Por qué no Elo?</h2>
+        <p class="exp-p">Elo es genial para 1v1 (ajedrez). Para dominó se queda corto. OpenSkill lo cubre todo:</p>
+        <table class="exp-compare">
+          <thead><tr><th>Capacidad</th><th>Elo</th><th>OpenSkill (Plackett-Luce)</th></tr></thead>
+          <tbody>
+            <tr><td>1v1</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>Equipos (2v2, 3v3...)</td><td class="no">✗ con parches ad-hoc</td><td class="yes">✓ nativo</td></tr>
+            <tr><td>Free-for-all (4 jugadores, ranking 1-4)</td><td class="no">✗</td><td class="yes">✓ nativo</td></tr>
+            <tr><td>Modela incertidumbre del rating</td><td class="no">✗</td><td class="yes">✓ con σ</td></tr>
+            <tr><td>Distingue novato (5 partidas) de veterano (500)</td><td class="no">✗</td><td class="yes">✓</td></tr>
+            <tr><td>Base bayesiana sólida</td><td class="no">✗ heurística</td><td class="yes">✓ derivación formal</td></tr>
+            <tr><td>Sin patentes</td><td class="yes">✓</td><td class="yes">✓ (TrueSkill no)</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 3. Simulación interactiva -->
+      <section class="exp-section">
+        <h2 class="exp-h"><span class="num">3</span>Mira lo que pasa cuando ganas una partida</h2>
+        <p class="exp-p">Dos jugadores empiezan iguales (μ=25, σ=8.33). Haz clic en el que gana y observa cómo se mueven las curvas. La μ del ganador sube, la del perdedor baja, y σ de ambos baja (más certeza).</p>
+        <div class="exp-widget">
+          <canvas id="dist2" width="900" height="240"></canvas>
+          <div class="exp-readout" id="sim-readout"></div>
+          <div style="display:flex;gap:.75rem;justify-content:center;margin-top:1rem;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm" style="background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--primary)" onclick="simWin('A')">Alice gana →</button>
+            <button class="btn btn-ghost btn-sm" style="background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--danger)" onclick="simWin('B')">← Bob gana</button>
+            <button class="btn btn-ghost btn-sm" onclick="simReset()">Reset</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. predictWin -->
+      <section class="exp-section">
+        <h2 class="exp-h"><span class="num">4</span>Probabilidad de victoria, en vivo</h2>
+        <p class="exp-p">Ajusta los ratings de dos jugadores y mira la probabilidad de victoria que OpenSkill calcula. Esto es lo que usa el matchmaking en chess.com (con modelo distinto) — y lo que podríamos usar en DomiRank para sugerir rivales parejos.</p>
+        <div class="exp-widget">
+          <div class="grid-2" style="gap:1.5rem;margin-bottom:1rem">
+            <div>
+              <div class="row"><label class="label" style="margin:0;color:var(--teamA)">Alice μ</label><span class="mono" id="paMuV">32.0</span></div>
+              <input type="range" id="paMu" min="15" max="40" step="0.5" value="32" oninput="updatePredict()">
+            </div>
+            <div>
+              <div class="row"><label class="label" style="margin:0;color:var(--teamB)">Bob μ</label><span class="mono" id="pbMuV">25.0</span></div>
+              <input type="range" id="pbMu" min="15" max="40" step="0.5" value="25" oninput="updatePredict()">
+            </div>
+          </div>
+          <div id="predict-bar" style="height:2.5rem;background:var(--surface-2);border-radius:.5rem;overflow:hidden;display:flex">
+            <div id="predict-A" style="background:var(--teamA);display:grid;place-items:center;color:white;font-weight:600;transition:width .3s">50%</div>
+            <div id="predict-B" style="background:var(--teamB);display:grid;place-items:center;color:white;font-weight:600;transition:width .3s">50%</div>
+          </div>
+          <p class="text-mute" style="font-size:.85rem;margin-top:.75rem;text-align:center">σ fija en 3.0 para los dos (jugadores establecidos).</p>
+        </div>
+      </section>
+
+      <!-- 5. Convergencia -->
+      <section class="exp-section">
+        <h2 class="exp-h"><span class="num">5</span>Cuanto más juegas, más certeza</h2>
+        <p class="exp-p">σ empieza alta porque el sistema no sabe nada de ti. Cada partida, baja. Pulsa para simular 30 victorias seguidas contra rivales iguales y ver cómo evolucionan μ (sube) y σ (baja).</p>
+        <div class="exp-widget">
+          <canvas id="conv" width="900" height="220"></canvas>
+          <div style="text-align:center;margin-top:1rem">
+            <button class="btn btn-primary btn-sm" onclick="runConvergence()">▶ Simular 30 partidas</button>
+            <button class="btn btn-ghost btn-sm" onclick="resetConvergence()">Reset</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. Equipos y FFA -->
+      <section class="exp-section">
+        <h2 class="exp-h"><span class="num">6</span>Equipos y free-for-all funcionan igual</h2>
+        <p class="exp-p">OpenSkill calcula la μ combinada del equipo como la <strong>suma</strong> de las μ de sus miembros, y la σ² combinada como la suma de varianzas. Después aplica el modelo Plackett-Luce sobre los equipos como si fueran "jugadores".</p>
+        <div class="exp-widget">
+          <div style="text-align:center;font-size:.9rem;margin-bottom:1rem" class="text-dim">Ejemplo: equipo de Carlos (μ 32) + Lucía (μ 28) vs Rafa (μ 30) + María (μ 27)</div>
+          <div class="grid-2" style="gap:1rem">
+            <div class="team-card winner">
+              <div style="font-weight:600" class="team-A">Equipo A</div>
+              <div class="text-mute" style="font-size:.85rem">Carlos (32) + Lucía (28)</div>
+              <div style="font-size:2rem;font-weight:800;margin-top:.5rem">μ ≈ 60</div>
+              <div class="text-primary" style="font-size:.85rem">favorito · 67% prob.</div>
+            </div>
+            <div class="team-card">
+              <div style="font-weight:600" class="team-B">Equipo B</div>
+              <div class="text-mute" style="font-size:.85rem">Rafa (30) + María (27)</div>
+              <div style="font-size:2rem;font-weight:800;margin-top:.5rem">μ ≈ 57</div>
+              <div class="text-mute" style="font-size:.85rem">underdog</div>
+            </div>
+          </div>
+          <p class="text-mute" style="font-size:.85rem;text-align:center;margin-top:.75rem">Y para FFA (4 jugadores, ranking 1-4): cada uno se compara contra los otros tres pares-a-par. Cuanto más arriba quedes, más sube tu μ. Funciona en partidas asimétricas (3v2, 1v3, etc.).</p>
+        </div>
+      </section>
+
+      <!-- 7. DomiRank Global -->
+      <section class="exp-section">
+        <h2 class="exp-h"><span class="num">7</span>DomiRank Global: el número único</h2>
+        <p class="exp-p">
+          Singles y parejas miden cosas distintas (cálculo individual vs. lectura con compañero), así que los guardamos por separado.
+          Pero queremos un <strong>número único</strong> que responda la pregunta "¿quién es el mejor?". Para eso combinamos las dos
+          distribuciones con la fusión bayesiana correcta: ponderar por <strong>precisión</strong> (1/σ²) — más certeza pesa más.
+        </p>
+        <div class="exp-widget">
+          <div style="background:var(--surface-2);padding:1rem;border-radius:.5rem;font-family:ui-monospace,monospace;font-size:.85rem;line-height:1.7;text-align:center;margin-bottom:1rem">
+            <span class="text-primary">DomiRank μ</span> = (μ<sub>s</sub>/σ²<sub>s</sub> + μ<sub>d</sub>/σ²<sub>d</sub>) / (1/σ²<sub>s</sub> + 1/σ²<sub>d</sub>)<br>
+            <span class="text-info">DomiRank σ</span> = √(1 / (1/σ²<sub>s</sub> + 1/σ²<sub>d</sub>))<br>
+            <span class="text-dim">DomiRank rating = μ − 3σ</span>
+          </div>
+          <div class="grid-2" style="gap:1.5rem;margin-bottom:1rem">
+            <div style="background:var(--surface-2);padding:.85rem;border-radius:.5rem">
+              <div class="text-mute" style="font-size:.7rem;text-transform:uppercase">Singles</div>
+              <div class="row" style="margin-top:.25rem"><label class="label" style="margin:0">μ</label><span class="mono" id="gMuSV">25</span></div>
+              <input type="range" id="gMuS" min="15" max="40" step="0.5" value="25" oninput="updateGlobal()">
+              <div class="row" style="margin-top:.4rem"><label class="label" style="margin:0">σ</label><span class="mono" id="gSigSV">3</span></div>
+              <input type="range" id="gSigS" min="1" max="9" step="0.1" value="3" oninput="updateGlobal()">
+            </div>
+            <div style="background:var(--surface-2);padding:.85rem;border-radius:.5rem">
+              <div class="text-mute" style="font-size:.7rem;text-transform:uppercase">Parejas</div>
+              <div class="row" style="margin-top:.25rem"><label class="label" style="margin:0">μ</label><span class="mono" id="gMuDV">30</span></div>
+              <input type="range" id="gMuD" min="15" max="40" step="0.5" value="30" oninput="updateGlobal()">
+              <div class="row" style="margin-top:.4rem"><label class="label" style="margin:0">σ</label><span class="mono" id="gSigDV">2</span></div>
+              <input type="range" id="gSigD" min="1" max="9" step="0.1" value="2" oninput="updateGlobal()">
+            </div>
+          </div>
+          <div style="background:linear-gradient(135deg, rgba(16,185,129,.08), rgba(59,130,246,.05));border:1px solid rgba(16,185,129,.2);padding:1rem;border-radius:.5rem;text-align:center">
+            <div class="text-mute" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.06em">DomiRank Global</div>
+            <div class="mono" style="font-size:2.5rem;font-weight:800;line-height:1;background:linear-gradient(135deg,#10b981,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text" id="globalOrdinal">23.0</div>
+            <div class="text-dim" style="font-size:.85rem;margin-top:.4rem">
+              μ = <span class="mono" id="globalMu">27.5</span> ·
+              σ = <span class="mono" id="globalSig">1.66</span>
+            </div>
+            <div class="text-mute" style="font-size:.8rem;margin-top:.5rem" id="globalExplain">
+              Parejas pesa más porque su σ es menor (más certeza).
+            </div>
+          </div>
+        </div>
+        <p class="exp-p" style="margin-top:1rem">
+          La clave: si nunca jugaste un formato, su σ alta hace que <strong>casi no contribuya</strong> al global.
+          Si juegas mucho los dos, ambos pesan. Es la matemática haciendo lo justo automáticamente.
+        </p>
+      </section>
+
+      <!-- 8. Auditable -->
+      <section class="exp-section">
+        <h2 class="exp-h"><span class="num">8</span>Cada partida guarda su huella</h2>
+        <p class="exp-p">DomiRank guarda <code>μ_antes</code>, <code>σ_antes</code>, <code>μ_después</code> y <code>σ_después</code> en cada fila de jugador-por-partida. Eso permite:</p>
+        <ul class="exp-p" style="padding-left:1.5rem;list-style:disc">
+          <li>Reconstruir cualquier rating histórico exacto.</li>
+          <li>Mostrarte "ganaste +1.84 μ por esta partida" (el detalle de partida ya lo hace).</li>
+          <li>Recalcular con un modelo distinto en el futuro sin perder la historia.</li>
+        </ul>
+      </section>
+
+      <section class="exp-section">
+        <h2 class="exp-h"><span class="num">9</span>Para nerdear más</h2>
+        <p class="exp-p">
+          · Weng, R. C. & Lin, C. J. (2011). <em>A Bayesian approximation method for online ranking</em>. <a class="link" href="https://jmlr.org/papers/v12/weng11a.html" target="_blank">JMLR</a>
+          <br>· OpenSkill (referencia): <a class="link" href="https://openskill.me/" target="_blank">openskill.me</a>
+          <br>· Plackett-Luce model (1975): permutaciones probabilísticas.
+        </p>
+      </section>
+    </div>
+  `;
+}
+
+/* ============================================================
+   EXPLAINER WIDGETS
+   ============================================================ */
+function pdf(x, mu, sigma) {
+  const a = 1 / (sigma * Math.sqrt(2*Math.PI));
+  return a * Math.exp(-0.5 * ((x - mu) / sigma) ** 2);
+}
+
+function drawDistributions(canvas, dists, opts = {}) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth || canvas.width;
+  const h = 220;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
+  ctx.clearRect(0,0,w,h);
+
+  const xMin = 0, xMax = 50;
+  const peak = Math.max(...dists.map(d => pdf(d.mu, d.mu, d.sigma)));
+
+  // X axis
+  ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, h-20); ctx.lineTo(w, h-20); ctx.stroke();
+  ctx.fillStyle = 'rgba(167,176,200,.6)'; ctx.font = '11px ui-monospace,monospace';
+  for (let v = 0; v <= 50; v += 10) {
+    const px = (v - xMin) / (xMax - xMin) * w;
+    ctx.fillText(v, px + 2, h - 6);
+    ctx.strokeStyle = 'rgba(255,255,255,.04)';
+    ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, h-20); ctx.stroke();
+  }
+
+  for (const d of dists) {
+    // Shading
+    if (d.shade) {
+      ctx.fillStyle = d.shadeColor || (d.color + '33');
+      ctx.beginPath();
+      for (let px = 0; px <= w; px++) {
+        const x = xMin + (xMax - xMin) * px / w;
+        const y = pdf(x, d.mu, d.sigma);
+        const py = (h-20) - (y / peak) * (h - 40);
+        if (px === 0) ctx.moveTo(px, h-20);
+        ctx.lineTo(px, py);
+      }
+      ctx.lineTo(w, h-20); ctx.closePath(); ctx.fill();
+    }
+    // Curve
+    ctx.beginPath();
+    for (let px = 0; px <= w; px++) {
+      const x = xMin + (xMax - xMin) * px / w;
+      const y = pdf(x, d.mu, d.sigma);
+      const py = (h-20) - (y / peak) * (h - 40);
+      if (px === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.strokeStyle = d.color; ctx.lineWidth = 2.5; ctx.stroke();
+
+    // Vertical line at mu
+    const muPx = (d.mu - xMin) / (xMax - xMin) * w;
+    ctx.strokeStyle = d.color + 'aa';
+    ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(muPx, h-20); ctx.lineTo(muPx, 10); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Mu label
+    ctx.fillStyle = d.color; ctx.font = 'bold 12px ui-monospace,monospace';
+    ctx.fillText((d.label||'μ') + '=' + d.mu.toFixed(2), muPx + 5, 22);
+
+    // ordinal line (mu - 3sigma)
+    if (d.showOrdinal) {
+      const ord = d.mu - 3*d.sigma;
+      const ordPx = (ord - xMin) / (xMax - xMin) * w;
+      ctx.strokeStyle = 'rgba(245,158,11,.7)';
+      ctx.setLineDash([2,3]);
+      ctx.beginPath(); ctx.moveTo(ordPx, h-20); ctx.lineTo(ordPx, 30); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(245,158,11,1)'; ctx.font = '11px ui-monospace,monospace';
+      ctx.fillText('μ−3σ = ' + ord.toFixed(1), ordPx + 4, 45);
+    }
+  }
+}
+
+/* --- widget 1: distribution sliders --- */
+window.drawDist = () => {
+  const mu = parseFloat(document.getElementById('mu1').value);
+  const sigma = parseFloat(document.getElementById('sig1').value);
+  document.getElementById('mu1Val').textContent = mu.toFixed(2);
+  document.getElementById('sig1Val').textContent = sigma.toFixed(2);
+  document.getElementById('r-mu').textContent = mu.toFixed(2);
+  document.getElementById('r-sig').textContent = sigma.toFixed(2);
+  document.getElementById('r-ord').textContent = (mu-3*sigma).toFixed(2);
+  document.getElementById('r-at-least').textContent = (mu-3*sigma).toFixed(1);
+  const canvas = document.getElementById('dist1');
+  drawDistributions(canvas, [{ mu, sigma, color:'#10b981', label:'μ', shade:true, showOrdinal:true }]);
+};
+
+/* --- widget 3: simulation Alice vs Bob --- */
+const SIM_START = { aMu:25, aSigma:25/3, bMu:25, bSigma:25/3, history:[] };
+let SIM = structuredClone(SIM_START);
+
+function drawSim() {
+  const canvas = document.getElementById('dist2');
+  if (!canvas) return;
+  drawDistributions(canvas, [
+    { mu:SIM.aMu, sigma:SIM.aSigma, color:'#3b82f6', label:'Alice' },
+    { mu:SIM.bMu, sigma:SIM.bSigma, color:'#ef4444', label:'Bob' },
+  ]);
+  const readout = document.getElementById('sim-readout');
+  if (readout) {
+    readout.innerHTML = `
+      <div><div class="l">Alice μ</div><div class="v" style="color:#3b82f6">${SIM.aMu.toFixed(2)}</div></div>
+      <div><div class="l">Alice σ</div><div class="v" style="color:#3b82f6">${SIM.aSigma.toFixed(2)}</div></div>
+      <div><div class="l">Bob μ</div><div class="v" style="color:#ef4444">${SIM.bMu.toFixed(2)}</div></div>
+      <div><div class="l">Bob σ</div><div class="v" style="color:#ef4444">${SIM.bSigma.toFixed(2)}</div></div>
+      <div><div class="l">Partidas</div><div class="v">${SIM.history.length}</div></div>
+    `;
+  }
+}
+window.simWin = (who) => {
+  if (!osReady) return;
+  const a = window.os.rating({ mu: SIM.aMu, sigma: SIM.aSigma });
+  const b = window.os.rating({ mu: SIM.bMu, sigma: SIM.bSigma });
+  const ranks = who === 'A' ? [1,2] : [2,1];
+  const [na, nb] = window.os.rate([[a],[b]], { rank: ranks });
+  SIM.aMu = na[0].mu; SIM.aSigma = na[0].sigma;
+  SIM.bMu = nb[0].mu; SIM.bSigma = nb[0].sigma;
+  SIM.history.push(who);
+  drawSim();
+};
+window.simReset = () => { SIM = structuredClone(SIM_START); drawSim(); };
+
+/* --- widget 4: predict win --- */
+window.updatePredict = () => {
+  const aMu = parseFloat(document.getElementById('paMu').value);
+  const bMu = parseFloat(document.getElementById('pbMu').value);
+  document.getElementById('paMuV').textContent = aMu.toFixed(1);
+  document.getElementById('pbMuV').textContent = bMu.toFixed(1);
+  if (!osReady) return;
+  const a = window.os.rating({ mu: aMu, sigma: 3 });
+  const b = window.os.rating({ mu: bMu, sigma: 3 });
+  const [pA, pB] = window.os.predictWin([[a],[b]]);
+  document.getElementById('predict-A').style.width = (pA*100) + '%';
+  document.getElementById('predict-B').style.width = (pB*100) + '%';
+  document.getElementById('predict-A').textContent = (pA*100).toFixed(1) + '%';
+  document.getElementById('predict-B').textContent = (pB*100).toFixed(1) + '%';
+};
+
+/* --- widget 5: convergence --- */
+function drawConvergence(history) {
+  const canvas = document.getElementById('conv');
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth || canvas.width, h = 220;
+  canvas.width = w * dpr; canvas.height = h * dpr; canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
+  ctx.clearRect(0,0,w,h);
+
+  // axes
+  const padL = 36, padR = 14, padT = 14, padB = 28;
+  const cw = w - padL - padR, ch = h - padT - padB;
+  ctx.strokeStyle = 'rgba(255,255,255,.08)';
+  ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, h-padB); ctx.lineTo(w-padR, h-padB); ctx.stroke();
+
+  const points = [{mu:25, sigma:25/3}, ...history];
+  const N = points.length;
+  if (N < 2) {
+    ctx.fillStyle = 'rgba(167,176,200,.6)';
+    ctx.font = '12px Inter,sans-serif';
+    ctx.fillText('Pulsa "Simular" para ver evolución de μ y σ', padL + 10, h/2);
+    return;
+  }
+  const muMax = 55, muMin = 20;
+  const sigMax = 9, sigMin = 0;
+
+  // mu line
+  ctx.strokeStyle = '#10b981'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  points.forEach((p, i) => {
+    const px = padL + (i/(N-1)) * cw;
+    const py = padT + (1 - (p.mu - muMin)/(muMax-muMin)) * ch;
+    if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  });
+  ctx.stroke();
+
+  // sigma line
+  ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  points.forEach((p, i) => {
+    const px = padL + (i/(N-1)) * cw;
+    const py = padT + (1 - (p.sigma - sigMin)/(sigMax-sigMin)) * ch;
+    if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  });
+  ctx.stroke();
+
+  // labels
+  ctx.fillStyle = 'rgba(167,176,200,.6)'; ctx.font = '11px ui-monospace,monospace';
+  ctx.fillText('partidas →', w/2 - 25, h-8);
+  ctx.fillStyle = '#10b981'; ctx.fillText('μ', 6, padT + 14);
+  ctx.fillStyle = '#3b82f6'; ctx.fillText('σ', 6, h-padB-4);
+}
+let convAnim = null;
+window.runConvergence = () => {
+  if (!osReady) return;
+  if (convAnim) clearInterval(convAnim);
+  let mu = 25, sigma = 25/3;
+  const history = [];
+  let i = 0;
+  convAnim = setInterval(() => {
+    if (i >= 30) { clearInterval(convAnim); convAnim = null; return; }
+    const a = window.os.rating({ mu, sigma });
+    const b = window.os.rating({ mu: 25, sigma: 25/3 });
+    const [na] = window.os.rate([[a],[b]], { rank: [1,2] });
+    mu = na[0].mu; sigma = na[0].sigma;
+    history.push({ mu, sigma });
+    drawConvergence(history);
+    i++;
+  }, 90);
+};
+window.resetConvergence = () => {
+  if (convAnim) { clearInterval(convAnim); convAnim = null; }
+  drawConvergence([]);
+};
+
+/* --- widget 7: DomiRank Global calculator --- */
+window.updateGlobal = () => {
+  const muS = parseFloat(document.getElementById('gMuS').value);
+  const sigS = parseFloat(document.getElementById('gSigS').value);
+  const muD = parseFloat(document.getElementById('gMuD').value);
+  const sigD = parseFloat(document.getElementById('gSigD').value);
+  document.getElementById('gMuSV').textContent = muS.toFixed(1);
+  document.getElementById('gSigSV').textContent = sigS.toFixed(1);
+  document.getElementById('gMuDV').textContent = muD.toFixed(1);
+  document.getElementById('gSigDV').textContent = sigD.toFixed(1);
+  const pS = 1/(sigS*sigS), pD = 1/(sigD*sigD), pT = pS + pD;
+  const mu = (muS*pS + muD*pD) / pT;
+  const sigma = Math.sqrt(1/pT);
+  const ordinal = mu - 3*sigma;
+  document.getElementById('globalMu').textContent = mu.toFixed(2);
+  document.getElementById('globalSig').textContent = sigma.toFixed(2);
+  document.getElementById('globalOrdinal').textContent = ordinal.toFixed(1);
+  const wS = pS/pT*100, wD = pD/pT*100;
+  const dominant = wS > wD ? 'Singles' : 'Parejas';
+  document.getElementById('globalExplain').textContent =
+    `Peso: Singles ${wS.toFixed(0)}% · Parejas ${wD.toFixed(0)}% — ${dominant} domina porque tiene σ menor (más certeza).`;
+};
+
+/* ============================================================
+   RENDER ROUTER
+   ============================================================ */
+function render() {
+  renderNav();
+  const { path, query } = currentPath();
+  let html = '';
+  if (path === '/' || path === '') html = viewHome();
+  else if (path.startsWith('/leaderboard')) html = viewLeaderboard();
+  else if (path === '/dashboard') html = viewDashboard();
+  else if (path === '/login') html = viewLogin();
+  else if (path === '/onboarding') html = viewOnboarding();
+  else if (path === '/settings') html = viewSettings();
+  else if (path === '/como-funciona') html = viewExplainer();
+  else if (path === '/matches/new') html = viewNewMatch();
+  else if (path === '/matches/live') html = viewLiveMatch();
+  else if (path.startsWith('/matches/')) html = viewMatch(path.split('/')[2]);
+  else if (path.startsWith('/profile/')) html = viewProfile(path.split('/')[2]);
+  else if (path === '/tournaments') html = viewTournaments();
+  else if (path === '/tournaments/new') html = viewTournamentNew();
+  else if (path.match(/^\/tournaments\/[^/]+\/play$/)) html = viewTournamentPlay(path.split('/')[2]);
+  else if (path.startsWith('/tournaments/')) html = viewTournament(path.split('/')[2]);
+  else html = `<div class="empty">404 · <a class="link" onclick="go('/')">volver al inicio</a></div>`;
+  $('#app').innerHTML = `<div class="fade-in">${html}</div>`;
+
+  // Init widgets after DOM is in
+  setTimeout(() => {
+    if (path === '/como-funciona') {
+      if (document.getElementById('dist1')) drawDist();
+      if (document.getElementById('dist2')) drawSim();
+      if (document.getElementById('predict-A')) updatePredict();
+      if (document.getElementById('conv')) drawConvergence([]);
+      if (document.getElementById('gMuS')) updateGlobal();
+    }
+  }, 10);
+
+  window.scrollTo(0, 0);
+}
+
+window.loginAs = (id) => {
+  state.me = id;
+  saveState();
+  const u = playerById(id);
+  // Si no completó onboarding (país + modalidad), redirige
+  if (!u.onboarded || !u.country) go('/onboarding');
+  else go('/dashboard');
+};
+window.logout  = () => { state.me = null; saveState(); go('/'); };
+window.resetAll = resetAll;
+
+render();
+</script>
+
+</body>
+</html>
