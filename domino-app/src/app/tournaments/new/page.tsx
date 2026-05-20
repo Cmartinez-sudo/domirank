@@ -8,7 +8,7 @@ export default async function NewTournamentPage() {
   const profile: any = await getCurrentProfile();
   return (
     <div className="max-w-2xl mx-auto space-y-4">
-      <h1 className="text-3xl font-bold">Nueva polla</h1>
+      <h1 className="text-3xl font-bold">Nuevo torneo</h1>
       <p className="text-text-dim">Sistema de rotación: cada partida se eligen 4 jugadores, se sortean parejas y se juega.</p>
       <NewTournamentForm
         currentUser={{

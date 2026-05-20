@@ -41,7 +41,7 @@ export async function createTournament(input: z.infer<typeof CreateSchema>) {
     })
     .select("id")
     .single();
-  if (error || !t) return { ok: false as const, error: error?.message ?? "No se pudo crear la polla" };
+  if (error || !t) return { ok: false as const, error: error?.message ?? "No se pudo crear el torneo" };
 
   // Insertar jugadores (asegurando que el creador esté incluido)
   const playerIds = Array.from(new Set([user.id, ...f.player_ids]));

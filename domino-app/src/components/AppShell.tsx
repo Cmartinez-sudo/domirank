@@ -47,7 +47,7 @@ export function AppShell({
     { href: "/dashboard",    label: "Inicio",   icon: ICON.home },
     { href: "/leaderboard",  label: "Ranking",  icon: ICON.trophy },
     { href: "/matches/new",  label: "Jugar",    icon: ICON.plus, isCenter: true },
-    { href: "/tournaments",  label: "Pollas",   icon: ICON.pollas },
+    { href: "/tournaments",  label: "Torneos",  icon: ICON.pollas },
     { href: "/friends",      label: "Amigos",   icon: ICON.users },
   ];
 

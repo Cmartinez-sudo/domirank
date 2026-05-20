@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
   title: "DomiRank · Ranking oficial de dominó",
-  description: "DomiRank — ranking de dominó con OpenSkill (Plackett-Luce / Weng-Lin). Singles, parejas y pollas.",
+  description: "DomiRank — ranking de dominó con OpenSkill (Plackett-Luce / Weng-Lin). Singles, parejas y torneos.",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "DomiRank" },
 };

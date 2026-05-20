@@ -19,7 +19,7 @@ export default async function Home() {
           DomiRank — el ranking oficial de dominó
         </h1>
         <p className="text-text-dim text-lg max-w-2xl mx-auto">
-          Registra tus partidas y pollas. Tu rating <span className="text-primary font-medium">OpenSkill</span>{" "}
+          Registra tus partidas y torneos. Tu rating <span className="text-primary font-medium">OpenSkill</span>{" "}
           (Plackett-Luce con aproximaciones Weng-Lin) refleja tu nivel real en singles y parejas.
         </p>
         <div className="flex gap-3 justify-center mt-6 flex-wrap">

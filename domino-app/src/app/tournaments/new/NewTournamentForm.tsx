@@ -37,7 +37,7 @@ export function NewTournamentForm({ currentUser, defaultModality }: { currentUse
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
-    if (!name.trim()) return setErr("Pon un nombre a la polla.");
+    if (!name.trim()) return setErr("Pon un nombre al torneo.");
     if (players.length < 4) return setErr("Necesitas al menos 4 jugadores (te contamos a ti).");
 
     setPending(true);
@@ -70,7 +70,7 @@ export function NewTournamentForm({ currentUser, defaultModality }: { currentUse
       <section className="card space-y-3">
         <div>
           <label className="label">Nombre</label>
-          <input className="input" placeholder="Polla sabatina 🍻" value={name} onChange={(e) => setName(e.target.value)} />
+          <input className="input" placeholder="Torneo sabatino 🍻" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
 
         <div>
@@ -119,7 +119,7 @@ export function NewTournamentForm({ currentUser, defaultModality }: { currentUse
         <div className="grid grid-cols-2 gap-2">
           <label className="flex items-center gap-2 p-2.5 bg-surface-2 border border-border rounded-md cursor-pointer">
             <input type="checkbox" checked={continuous} onChange={(e) => setContinuous(e.target.checked)} />
-            <span className="text-sm"><strong>Continua ∞</strong> <span className="text-text-mute block text-xs">Polla sin fin (jornadas)</span></span>
+            <span className="text-sm"><strong>Continua ∞</strong> <span className="text-text-mute block text-xs">Torneo sin fin (jornadas)</span></span>
           </label>
           <label className="flex items-center gap-2 p-2.5 bg-surface-2 border border-border rounded-md cursor-pointer">
             <input type="checkbox" checked={rated} onChange={(e) => setRated(e.target.checked)} />
@@ -154,7 +154,7 @@ export function NewTournamentForm({ currentUser, defaultModality }: { currentUse
       {err && <div className="p-3 bg-danger/10 border border-danger/30 rounded text-danger text-sm">{err}</div>}
 
       <button type="submit" className="btn-primary w-full" disabled={pending}>
-        {pending ? "Creando…" : "Crear polla"}
+        {pending ? "Creando…" : "Crear torneo"}
       </button>
     </form>
   );

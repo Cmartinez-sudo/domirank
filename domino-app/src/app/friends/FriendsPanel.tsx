@@ -71,7 +71,7 @@ export function FriendsPanel({
           placeholder="Buscar por @usuario o nombre…"
           onSelect={(u) => run(() => sendFriendRequest(u.id))}
         />
-        <p className="text-text-mute text-xs mt-2">Al elegir un usuario le enviamos una solicitud. Cuando acepte, podrán ver perfiles, partidas y pollas mutuamente.</p>
+        <p className="text-text-mute text-xs mt-2">Al elegir un usuario le enviamos una solicitud. Cuando acepte, podrán ver perfiles, partidas y torneos mutuamente.</p>
       </section>
 
       <div className="flex gap-1 bg-surface rounded-md p-1 border border-border">

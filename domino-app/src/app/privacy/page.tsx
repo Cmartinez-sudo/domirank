@@ -14,7 +14,7 @@ export default function PrivacyPage() {
         <h2 className="text-xl font-semibold text-text mt-6">1. Qué datos guardamos</h2>
         <p>
           Para que DomiRank funcione, guardamos: tu correo, nombre, fecha de nacimiento, país, avatar
-          (opcional), historial de partidas, pollas, amigos, y los datos derivados del rating (μ, σ por
+          (opcional), historial de partidas, torneos, amigos, y los datos derivados del rating (μ, σ por
           formato). Si te autenticas con Google o Apple, recibimos tu nombre y correo de ese proveedor.
         </p>
 
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
         <p>
           Tu username, nombre mostrado, avatar, país y rating son <strong>públicos</strong> dentro de DomiRank
           (cualquier usuario puede verlos en leaderboards y al buscar). Tu correo y fecha de nacimiento
-          son privados. Pollas marcadas como "privadas" solo las ven sus participantes; las "de amigos"
+          son privados. Torneos marcados como "privados" solo los ven sus participantes; los "de amigos"
           solo tus amigos; las "públicas" cualquiera.
         </p>
 

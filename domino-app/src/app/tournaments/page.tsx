@@ -18,11 +18,11 @@ export default async function TournamentsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-3xl font-bold">Pollas</h1>
-        {user && <Link href="/tournaments/new" className="btn-primary">+ Nueva polla</Link>}
+        <h1 className="text-3xl font-bold">Torneos</h1>
+        {user && <Link href="/tournaments/new" className="btn-primary">+ Nuevo torneo</Link>}
       </div>
 
-      <Section title="Activas" empty="No hay pollas activas." rows={active} />
+      <Section title="Activas" empty="No hay torneos activos." rows={active} />
       {finished.length > 0 && <Section title="Finalizadas" empty="" rows={finished} />}
     </div>
   );

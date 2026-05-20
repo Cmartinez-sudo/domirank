@@ -72,7 +72,7 @@ export default async function TournamentDetail({
       <section className="card p-0 overflow-hidden">
         <h2 className="px-4 py-3 border-b border-border font-semibold">Standings</h2>
         {sorted.length === 0 ? (
-          <div className="p-6 text-center text-text-mute">Aún no se han jugado partidas en esta polla.</div>
+          <div className="p-6 text-center text-text-mute">Aún no se han jugado partidas en este torneo.</div>
         ) : (
           <div className="divide-y divide-border">
             {sorted.map((s: any, i: number) => (
