@@ -3,6 +3,7 @@ import { Avatar } from "@/components/Avatar";
 import { supabaseServer } from "@/lib/supabase/server";
 import { DOMIRANK_MIN_GAMES } from "@/lib/rating";
 import { PageTransition } from "@/components/Motion";
+import { TierBadge } from "@/components/RatingInfo";
 
 export const dynamic = "force-dynamic";
 
@@ -57,7 +58,7 @@ export default async function Leaderboard({
             <tr className="text-left text-text-mute text-xs uppercase tracking-wider border-b border-border">
               <th className="px-4 py-3 w-12">#</th>
               <th className="px-4 py-3">Jugador</th>
-              <th className="px-4 py-3 text-right">Rating</th>
+              <th className="px-4 py-3 text-right">DomiRank</th>
               <th className="px-4 py-3 text-right hidden md:table-cell">μ</th>
               <th className="px-4 py-3 text-right hidden md:table-cell">σ</th>
               <th className="px-4 py-3 text-right">Partidas</th>
@@ -75,6 +76,8 @@ export default async function Leaderboard({
               </td></tr>
             ) : rows.map((r, i) => {
               const isGlobal = tab === "global";
+              const display = isGlobal ? r.global_display
+                : tab === "singles" ? r.d6_singles_display : r.d6_doubles_display;
               const ordinal = isGlobal ? r.global_ordinal
                 : tab === "singles" ? r.d6_singles_ordinal : r.d6_doubles_ordinal;
               const mu      = isGlobal ? r.global_mu
@@ -108,8 +111,11 @@ export default async function Leaderboard({
                       </div>
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-right font-mono font-bold text-primary">
-                    {Number(ordinal).toFixed(1)}
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className="font-mono font-bold text-primary">{Number(display ?? ordinal).toFixed(1)}</span>
+                      {display != null && <TierBadge display={Number(display)} />}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right hidden md:table-cell font-mono text-text-dim text-sm">
                     {Number(mu).toFixed(2)}

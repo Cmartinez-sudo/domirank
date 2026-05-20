@@ -174,6 +174,36 @@ export function updateRatings(teams: TeamInput[]): PlayerRatingUpdate[] {
 }
 
 /**
+ * Mapea el ordinal de OpenSkill (μ-3σ, rango ~0-50) a escala DomiRank 1-20.
+ * Anclas: ordinal 0 → 1.0 · ordinal 35 → 20.0
+ */
+export function toDisplayRating(ordinal: number): number {
+  if (!isFinite(ordinal)) return 1.0;
+  const raw = 1 + (ordinal / 35) * 19;
+  return Math.max(1.0, Math.min(20.0, Math.round(raw * 10) / 10));
+}
+
+export function displayToOrdinal(display: number): number {
+  return ((display - 1) / 19) * 35;
+}
+
+export const SKILL_TIERS = [
+  { min: 1,    max: 3.9,  name: "Aprendiz",   color: "#94a3b8" },
+  { min: 4,    max: 6.9,  name: "Casual",     color: "#10b981" },
+  { min: 7,    max: 9.9,  name: "Habilidoso", color: "#3b82f6" },
+  { min: 10,   max: 12.9, name: "Veterano",   color: "#8b5cf6" },
+  { min: 13,   max: 15.9, name: "Maestro",    color: "#f59e0b" },
+  { min: 16,   max: 17.9, name: "Élite",      color: "#ef4444" },
+  { min: 18,   max: 20,   name: "Leyenda",    color: "#fbbf24" },
+] as const;
+
+export type SkillTier = typeof SKILL_TIERS[number];
+
+export function tierFor(display: number): SkillTier {
+  return SKILL_TIERS.find((t) => display >= t.min && display <= t.max) ?? SKILL_TIERS[0];
+}
+
+/**
  * Mapea puntos del skill assessment (0-12) a (μ, σ) iniciales.
  * Veteranos arrancan más arriba y con menos incertidumbre.
  */

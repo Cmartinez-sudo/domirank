@@ -3,7 +3,8 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { supabaseServer } from "@/lib/supabase/server";
 import { COUNTRIES } from "@/lib/modalidades";
-import { DOMIRANK_MIN_GAMES } from "@/lib/rating";
+import { DOMIRANK_MIN_GAMES, toDisplayRating } from "@/lib/rating";
+import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,10 @@ export default async function PublicProfile({
             </div>
           </div>
           <div className="text-right">
-            <div className="text-text-mute text-xs uppercase tracking-wider">DomiRank Global</div>
+            <div className="flex items-center justify-end gap-2">
+              <div className="text-text-mute text-xs uppercase tracking-wider">DomiRank Global</div>
+              <RatingInfoTooltip />
+            </div>
             <div
               className="font-mono font-extrabold"
               style={{
@@ -66,8 +70,15 @@ export default async function PublicProfile({
                 backgroundClip: "text",
               }}
             >
-              {qualified ? Number(p.global_ordinal).toFixed(1) : "—"}
+              {qualified
+                ? Number(p.global_display ?? toDisplayRating(Number(p.global_ordinal))).toFixed(1)
+                : "—"}
             </div>
+            {qualified && (
+              <div className="flex justify-end mt-1">
+                <TierBadge display={Number(p.global_display ?? toDisplayRating(Number(p.global_ordinal)))} />
+              </div>
+            )}
             <div className="text-text-mute text-xs mt-1">
               {p.total_games} partidas totales
               {!qualified && ` · faltan ${DOMIRANK_MIN_GAMES - p.total_games}`}
@@ -78,6 +89,7 @@ export default async function PublicProfile({
         <div className="grid md:grid-cols-2 gap-4 mt-6">
           <StatBlock
             title="Singles (6-6)"
+            display={Number(p.d6_singles_display ?? toDisplayRating(Number(p.d6_singles_ordinal)))}
             ordinal={Number(p.d6_singles_ordinal)}
             games={p.d6_singles_games}
             wins={p.d6_singles_wins}
@@ -85,6 +97,7 @@ export default async function PublicProfile({
           />
           <StatBlock
             title="Parejas (6-6)"
+            display={Number(p.d6_doubles_display ?? toDisplayRating(Number(p.d6_doubles_ordinal)))}
             ordinal={Number(p.d6_doubles_ordinal)}
             games={p.d6_doubles_games}
             wins={p.d6_doubles_wins}
@@ -96,6 +109,7 @@ export default async function PublicProfile({
           <div className="grid md:grid-cols-2 gap-4 mt-4">
             <StatBlock
               title="Singles (9-9)"
+              display={Number(p.d9_singles_display ?? toDisplayRating(Number(p.d9_singles_ordinal)))}
               ordinal={Number(p.d9_singles_ordinal)}
               games={p.d9_singles_games}
               wins={p.d9_singles_wins}
@@ -103,6 +117,7 @@ export default async function PublicProfile({
             />
             <StatBlock
               title="Parejas (9-9)"
+              display={Number(p.d9_doubles_display ?? toDisplayRating(Number(p.d9_doubles_ordinal)))}
               ordinal={Number(p.d9_doubles_ordinal)}
               games={p.d9_doubles_games}
               wins={p.d9_doubles_wins}
@@ -149,16 +164,20 @@ export default async function PublicProfile({
   );
 }
 
-function StatBlock({ title, ordinal, games, wins, losses }: {
-  title: string; ordinal: number; games: number; wins: number; losses: number;
+function StatBlock({ title, display, ordinal, games, wins, losses }: {
+  title: string; display: number; ordinal: number; games: number; wins: number; losses: number;
 }) {
   const winRate = games > 0 ? Math.round((wins / games) * 100) : null;
   return (
     <div className="bg-surface-2 rounded-md p-4">
       <div className="text-text-mute text-sm">{title}</div>
-      <div className="text-3xl font-bold text-primary font-mono mt-1">
-        {games > 0 ? ordinal.toFixed(1) : "—"}
+      <div className="flex items-baseline gap-2 mt-1 flex-wrap">
+        <span className="text-3xl font-bold text-primary font-mono">
+          {games > 0 ? display.toFixed(1) : "—"}
+        </span>
+        {games > 0 && <TierBadge display={display} />}
       </div>
+      {games > 0 && <div className="text-text-mute text-xs mt-0.5">ordinal {ordinal.toFixed(2)}</div>}
       <div className="flex items-center gap-3 mt-2 text-sm">
         <span className="text-text-dim">{games} partidas</span>
         <span className="text-primary">{wins}G</span>

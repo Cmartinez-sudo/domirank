@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { requireUser, getCurrentProfile } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
-import { globalRating, DOMIRANK_MIN_GAMES, DEFAULT_MU, DEFAULT_SIGMA } from "@/lib/rating";
+import { globalRating, toDisplayRating, tierFor, DOMIRANK_MIN_GAMES, DEFAULT_MU, DEFAULT_SIGMA } from "@/lib/rating";
 import { PageTransition, StaggerChildren, StaggerItem } from "@/components/Motion";
+import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,9 @@ export default async function Dashboard() {
 
   const singlesOrdinal = Number(profile.d6_singles_mu ?? DEFAULT_MU) - 3 * Number(profile.d6_singles_sigma ?? DEFAULT_SIGMA);
   const doublesOrdinal = Number(profile.d6_doubles_mu ?? DEFAULT_MU) - 3 * Number(profile.d6_doubles_sigma ?? DEFAULT_SIGMA);
+  const globalDisplay  = toDisplayRating(gr.ordinal);
+  const singlesDisplay = toDisplayRating(singlesOrdinal);
+  const doublesDisplay = toDisplayRating(doublesOrdinal);
 
   return (
     <PageTransition>
@@ -55,7 +59,10 @@ export default async function Dashboard() {
               borderColor: "rgba(16,185,129,.2)",
             }}
           >
-            <div className="text-text-mute text-xs uppercase tracking-wider">DomiRank Global</div>
+            <div className="flex items-center gap-2">
+              <div className="text-text-mute text-xs uppercase tracking-wider">DomiRank Global</div>
+              <RatingInfoTooltip />
+            </div>
             <div className="flex items-baseline gap-3 mt-1 flex-wrap">
               <span
                 className="font-mono font-extrabold"
@@ -68,12 +75,13 @@ export default async function Dashboard() {
                   backgroundClip: "text",
                 }}
               >
-                {qualified ? gr.ordinal.toFixed(1) : "—"}
+                {qualified ? globalDisplay.toFixed(1) : "—"}
               </span>
               {qualified ? (
-                <span className="text-text-mute text-sm">
-                  rating · μ {gr.mu.toFixed(2)} · σ {gr.sigma.toFixed(2)}
-                </span>
+                <div className="flex flex-col gap-1">
+                  <TierBadge display={globalDisplay} />
+                  <span className="text-text-mute text-xs">ordinal {gr.ordinal.toFixed(2)}</span>
+                </div>
               ) : (
                 <span className="text-text-mute text-sm">
                   faltan {DOMIRANK_MIN_GAMES - totalGames} partidas para calificar
@@ -81,9 +89,9 @@ export default async function Dashboard() {
               )}
             </div>
             <div className="text-text-dim text-sm mt-2">
-              {totalGames} partidas totales · ponderado por certeza (1/σ²) ·{" "}
+              {totalGames} partidas totales · μ {gr.mu.toFixed(2)} · σ {gr.sigma.toFixed(2)} ·{" "}
               <Link href="/como-funciona" className="text-primary hover:underline">
-                ver cómo se calcula
+                cómo se calcula
               </Link>
             </div>
           </div>
@@ -93,6 +101,7 @@ export default async function Dashboard() {
           <div className="grid md:grid-cols-2 gap-4">
             <RatingCard
               title="Singles (1v1)"
+              display={singlesDisplay}
               ordinal={singlesOrdinal}
               mu={Number(profile.d6_singles_mu ?? DEFAULT_MU)}
               sigma={Number(profile.d6_singles_sigma ?? DEFAULT_SIGMA)}
@@ -102,6 +111,7 @@ export default async function Dashboard() {
             />
             <RatingCard
               title="Parejas (2v2)"
+              display={doublesDisplay}
               ordinal={doublesOrdinal}
               mu={Number(profile.d6_doubles_mu ?? DEFAULT_MU)}
               sigma={Number(profile.d6_doubles_sigma ?? DEFAULT_SIGMA)}
@@ -157,18 +167,19 @@ export default async function Dashboard() {
   );
 }
 
-function RatingCard({ title, ordinal, mu, sigma, games, wins, losses }: {
-  title: string; ordinal: number; mu: number; sigma: number;
+function RatingCard({ title, display, ordinal, mu, sigma, games, wins, losses }: {
+  title: string; display: number; ordinal: number; mu: number; sigma: number;
   games: number; wins: number; losses: number;
 }) {
   const winRate = games > 0 ? Math.round((wins / games) * 100) : null;
   return (
     <div className="card">
       <div className="text-text-mute text-sm">{title}</div>
-      <div className="flex items-baseline gap-2 mt-1">
-        <span className="text-4xl font-bold text-primary font-mono">{games > 0 ? ordinal.toFixed(1) : "—"}</span>
-        {games > 0 && <span className="text-text-mute text-sm">rating</span>}
+      <div className="flex items-baseline gap-2 mt-1 flex-wrap">
+        <span className="text-4xl font-bold text-primary font-mono">{games > 0 ? display.toFixed(1) : "—"}</span>
+        {games > 0 && <TierBadge display={display} />}
       </div>
+      {games > 0 && <div className="text-text-mute text-xs mt-0.5">ordinal {ordinal.toFixed(2)}</div>}
       <div className="grid grid-cols-4 gap-3 mt-4 text-sm">
         <div>
           <div className="text-text-mute text-xs">μ</div>

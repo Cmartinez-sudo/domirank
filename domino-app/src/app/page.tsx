@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/server";
 import { Avatar } from "@/components/Avatar";
-import { DOMIRANK_MIN_GAMES } from "@/lib/rating";
+import { DOMIRANK_MIN_GAMES, toDisplayRating } from "@/lib/rating";
+import { TierBadge } from "@/components/RatingInfo";
 
 export default async function Home() {
   const supabase = await supabaseServer();
   const { data: top } = await supabase
     .from("profile_ratings")
-    .select("username, display_name, avatar_url, global_ordinal, total_games")
+    .select("username, display_name, avatar_url, global_ordinal, global_display, total_games")
     .gte("total_games", DOMIRANK_MIN_GAMES)
     .order("global_ordinal", { ascending: false })
     .limit(5);
@@ -48,10 +49,11 @@ export default async function Home() {
                   </Link>
                   <span className="text-text-mute text-sm hidden sm:inline">@{p.username}</span>
                 </div>
-                <div className="flex items-center gap-4 text-sm flex-shrink-0">
+                <div className="flex items-center gap-3 text-sm flex-shrink-0">
                   <span className="text-text-dim">{p.total_games} p.</span>
+                  <TierBadge display={Number((p as any).global_display ?? toDisplayRating(Number(p.global_ordinal)))} />
                   <span className="font-mono font-semibold text-primary">
-                    {Number(p.global_ordinal).toFixed(1)}
+                    {Number((p as any).global_display ?? toDisplayRating(Number(p.global_ordinal))).toFixed(1)}
                   </span>
                 </div>
               </li>
