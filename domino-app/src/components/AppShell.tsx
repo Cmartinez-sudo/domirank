@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { NavigationLoader } from "@/components/NavigationLoader";
+import { RealtimeNotifications } from "@/components/RealtimeNotifications";
 
 type NavItem = { href: string; label: string; icon: React.ReactNode; isCenter?: boolean; beta?: boolean; badge?: number };
 
@@ -69,6 +70,7 @@ export function AppShell({
   return (
     <div className="min-h-screen md:flex">
       <NavigationLoader />
+      {user && <RealtimeNotifications userId={user.id} />}
 
       {/* SIDEBAR DESKTOP */}
       {user && (
