@@ -28,8 +28,11 @@ const config: Config = {
       borderRadius: {
         sm: "10px",
         DEFAULT: "14px",
+        md: "16px",
         lg: "20px",
-        xl: "28px",
+        xl: "24px",
+        "2xl": "28px",
+        "3xl": "36px",
       },
       boxShadow: {
         card: "0 1px 0 rgba(255,255,255,.04) inset, 0 10px 30px -12px rgba(0,0,0,.6)",

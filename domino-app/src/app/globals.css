@@ -33,7 +33,7 @@ html, body {
   min-height: 100vh;
 }
 
-/* Keyboard focus ring — only visible via keyboard, invisible on mouse click */
+/* Keyboard focus ring */
 *:focus { outline: none; }
 *:focus-visible {
   outline: 2px solid rgba(16, 185, 129, 0.6);
@@ -42,36 +42,43 @@ html, body {
 }
 
 @layer components {
+  /* Buttons — min 44px touch target */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md font-medium
-           transition-all duration-150 cursor-pointer select-none;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px]
+           rounded-lg font-semibold text-sm transition-all duration-150 cursor-pointer select-none;
   }
   .btn-primary {
     @apply btn bg-primary text-black hover:bg-primary-2 active:scale-[.97]
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50;
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50
+           shadow-[0_2px_12px_rgba(16,185,129,.35)];
   }
   .btn-ghost {
     @apply btn bg-surface-2 text-text hover:bg-surface-3 border border-border active:scale-[.97]
            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/15;
   }
+
+  /* Cards — rounder, more breathing room on mobile */
   .card {
-    @apply bg-surface border border-border rounded-lg shadow-card p-5;
+    @apply bg-surface border border-border rounded-2xl shadow-card p-4 md:p-5;
   }
+
+  /* Inputs — taller for easy tap */
   .input {
-    @apply w-full bg-surface-2 border border-border rounded-md px-3 py-2 text-text
+    @apply w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-text text-[15px]
            placeholder:text-text-mute focus:outline-none focus:border-primary
-           transition-colors duration-150;
+           transition-colors duration-150 min-h-[48px];
   }
+
   .label {
-    @apply block text-sm text-text-dim mb-1;
+    @apply block text-sm font-medium text-text-dim mb-1.5;
   }
   .nav-link {
-    @apply px-3 py-2 rounded-md text-text-dim hover:text-text hover:bg-surface-2 transition-colors;
+    @apply px-3 py-2 rounded-xl text-text-dim hover:text-text hover:bg-surface-2 transition-colors;
   }
   .nav-link-active {
     @apply text-text bg-surface-2;
   }
   .badge {
-    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-semibold;
   }
 }
