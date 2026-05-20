@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth";
+import { VoidMatchButton } from "./VoidMatchButton";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,8 @@ export default async function MatchDetail({
 }) {
   const { id } = await params;
   const supabase = await supabaseServer();
+  let currentUserId: string | null = null;
+  try { const u = await requireUser(); currentUserId = u.id; } catch {}
 
   const { data: match } = await supabase
     .from("match_feed")
@@ -28,14 +32,28 @@ export default async function MatchDetail({
   }
   const teamList = Array.from(teams.entries()).sort(([a], [b]) => a - b);
 
+  const isVoided   = match.status === "voided";
+  const isCreator  = currentUserId && match.created_by === currentUserId;
+  const canVoid    = isCreator && match.status === "completed";
+
   return (
     <div className="space-y-6">
-      <div>
-        <div className="text-text-mute text-sm">
-          {match.format === "singles" ? "Singles" : "Parejas"} · a {match.target_points} pts ·{" "}
-          {new Date(match.created_at).toLocaleString("es")}
+      {isVoided && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-danger/10 border border-danger/30 text-danger text-sm font-medium">
+          <span>⚠</span>
+          <span>Esta partida fue anulada. Los ratings han sido revertidos.</span>
         </div>
-        <h1 className="text-3xl font-bold mt-1">Partida</h1>
+      )}
+
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <div className="text-text-mute text-sm">
+            {match.format === "singles" ? "Singles" : "Parejas"} · a {match.target_points} pts ·{" "}
+            {new Date(match.created_at).toLocaleString("es")}
+          </div>
+          <h1 className="text-3xl font-bold mt-1">Partida</h1>
+        </div>
+        {canVoid && <VoidMatchButton matchId={id} />}
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">

@@ -20,8 +20,16 @@ export default async function TournamentsPage() {
     <PageTransition>
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <h1 className="text-3xl font-bold">Torneos</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold">Torneos</h1>
+            <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ background: "rgba(251,191,36,.15)", color: "#fbbf24", border: "1px solid rgba(251,191,36,.3)" }}>beta</span>
+          </div>
           {user && <Link href="/tournaments/new" className="btn-primary">+ Nuevo torneo</Link>}
+        </div>
+
+        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-yellow-400/5 border border-yellow-400/20 text-sm text-yellow-200/70">
+          <span className="shrink-0 mt-0.5">🧪</span>
+          <span>Los torneos están en fase beta. Puede haber cambios en el flujo. Tu feedback es bienvenido.</span>
         </div>
 
         <Section title="Activas" empty="No hay torneos activos." rows={active} />

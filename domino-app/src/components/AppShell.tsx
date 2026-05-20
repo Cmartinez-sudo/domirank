@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { NavigationLoader } from "@/components/NavigationLoader";
 
-type NavItem = { href: string; label: string; icon: React.ReactNode; isCenter?: boolean };
+type NavItem = { href: string; label: string; icon: React.ReactNode; isCenter?: boolean; beta?: boolean };
 
 const ICON = {
   home: (
@@ -48,7 +48,7 @@ export function AppShell({
     { href: "/dashboard",    label: "Inicio",   icon: ICON.home },
     { href: "/leaderboard",  label: "Ranking",  icon: ICON.trophy },
     { href: "/matches/new",  label: "Jugar",    icon: ICON.plus, isCenter: true },
-    { href: "/tournaments",  label: "Torneos",  icon: ICON.pollas },
+    { href: "/tournaments",  label: "Torneos",  icon: ICON.pollas, beta: true },
     { href: "/friends",      label: "Amigos",   icon: ICON.users },
   ];
 
@@ -86,6 +86,9 @@ export function AppShell({
                 >
                   <span className={active ? "opacity-100 text-primary" : "opacity-50"}>{it.icon}</span>
                   <span className={`text-[14px] ${active ? "font-semibold" : ""}`}>{it.label}</span>
+                  {it.beta && (
+                    <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(251,191,36,.15)", color: "#fbbf24" }}>beta</span>
+                  )}
                 </Link>
               );
             })}
@@ -177,8 +180,11 @@ export function AppShell({
                       {it.icon}
                     </span>
                   ) : (
-                    <span className={`transition-transform ${active ? "scale-110" : "opacity-50"}`}>
+                    <span className={`relative transition-transform ${active ? "scale-110" : "opacity-50"}`}>
                       {it.icon}
+                      {it.beta && (
+                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-yellow-400 border border-bg" />
+                      )}
                     </span>
                   )}
                   {!it.isCenter && (
