@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { LoginPanel } from "./LoginPanel";
+import { SignupForm } from "./SignupForm";
 
 export const metadata = {
-  title: "Entrar · DomiRank",
+  title: "Crear cuenta · DomiRank",
 };
 
-export default function LoginPage() {
+export default function SignupPage() {
   return (
     <div className="max-w-md mx-auto py-6">
       <div className="text-center mb-6">
@@ -15,15 +15,15 @@ export default function LoginPage() {
         >
           DR
         </div>
-        <h1 className="text-2xl font-bold tracking-tight">Entrar a DomiRank</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Crear tu cuenta DomiRank</h1>
         <p className="text-text-dim text-sm mt-1">
-          ¿No tienes cuenta?{" "}
-          <Link href="/signup" className="text-primary hover:underline">
-            Crear una
+          ¿Ya tienes cuenta?{" "}
+          <Link href="/login" className="text-primary hover:underline">
+            Entrar
           </Link>
         </p>
       </div>
-      <LoginPanel />
+      <SignupForm />
     </div>
   );
 }

@@ -108,6 +108,14 @@ export function AppShell({
         <main className={`max-w-4xl mx-auto px-4 py-6 ${user ? "pb-24 md:pb-8" : "pb-8"}`}>
           {children}
         </main>
+
+        {!user && (
+          <footer className="max-w-4xl mx-auto px-4 py-6 text-center text-text-mute text-xs space-x-4">
+            <Link href="/terms" className="hover:text-text">Términos</Link>
+            <Link href="/privacy" className="hover:text-text">Privacidad</Link>
+            <Link href="/como-funciona" className="hover:text-text">Cómo funciona</Link>
+          </footer>
+        )}
       </div>
 
       {/* BOTTOM NAV (mobile only) */}
