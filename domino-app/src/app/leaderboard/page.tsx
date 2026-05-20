@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { supabaseServer } from "@/lib/supabase/server";
 import { DOMIRANK_MIN_GAMES } from "@/lib/rating";
+import { PageTransition } from "@/components/Motion";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,7 @@ export default async function Leaderboard({
   }
 
   return (
+    <PageTransition>
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-3xl font-bold">Ranking</h1>
@@ -136,6 +138,7 @@ export default async function Leaderboard({
           : "Rating = μ − 3σ (OpenSkill ordinal). W% = partidas ganadas. μ es el skill estimado, σ la incertidumbre."}
       </p>
     </div>
+    </PageTransition>
   );
 }
 

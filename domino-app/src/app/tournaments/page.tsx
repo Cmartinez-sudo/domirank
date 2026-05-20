@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
+import { PageTransition } from "@/components/Motion";
 
 export const dynamic = "force-dynamic";
 
@@ -16,15 +17,17 @@ export default async function TournamentsPage() {
   const finished = (tournaments ?? []).filter(t => t.status !== "active");
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-3xl font-bold">Torneos</h1>
-        {user && <Link href="/tournaments/new" className="btn-primary">+ Nuevo torneo</Link>}
-      </div>
+    <PageTransition>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h1 className="text-3xl font-bold">Torneos</h1>
+          {user && <Link href="/tournaments/new" className="btn-primary">+ Nuevo torneo</Link>}
+        </div>
 
-      <Section title="Activas" empty="No hay torneos activos." rows={active} />
-      {finished.length > 0 && <Section title="Finalizadas" empty="" rows={finished} />}
-    </div>
+        <Section title="Activas" empty="No hay torneos activos." rows={active} />
+        {finished.length > 0 && <Section title="Finalizadas" empty="" rows={finished} />}
+      </div>
+    </PageTransition>
   );
 }
 

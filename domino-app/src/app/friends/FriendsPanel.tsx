@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { UserSearch } from "@/components/UserSearch";
 import { COUNTRIES } from "@/lib/modalidades";
+import { PageTransition } from "@/components/Motion";
 import {
   sendFriendRequest,
   acceptFriendRequest,
@@ -61,6 +62,7 @@ export function FriendsPanel({
   };
 
   return (
+    <PageTransition>
     <div className="space-y-5">
       <h1 className="text-3xl font-bold">Amigos</h1>
 
@@ -136,6 +138,7 @@ export function FriendsPanel({
         </div>
       )}
     </div>
+    </PageTransition>
   );
 }
 

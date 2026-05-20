@@ -6,6 +6,22 @@
   color-scheme: dark;
 }
 
+/* Native mobile feel */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+input, textarea, select, button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
 html, body {
   background-color: #0a1020;
   color: #eef2ff;

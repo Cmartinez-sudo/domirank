@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
+import { NavigationLoader } from "@/components/NavigationLoader";
 
 type NavItem = { href: string; label: string; icon: React.ReactNode; isCenter?: boolean };
 
@@ -53,6 +54,7 @@ export function AppShell({
 
   return (
     <div className="min-h-screen md:flex">
+      <NavigationLoader />
       {/* SIDEBAR DESKTOP */}
       {user && (
         <aside className="hidden md:flex md:flex-col w-64 shrink-0 border-r border-border bg-bg-2/40">
