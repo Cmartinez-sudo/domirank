@@ -174,6 +174,18 @@ export function updateRatings(teams: TeamInput[]): PlayerRatingUpdate[] {
 }
 
 /**
+ * Mapea puntos del skill assessment (0-12) a (μ, σ) iniciales.
+ * Veteranos arrancan más arriba y con menos incertidumbre.
+ */
+export function initialRatingFromAssessment(points: number): { mu: number; sigma: number; estimatedDisplay: number } {
+  if (points <= 2)  return { mu: 22,   sigma: 7.5, estimatedDisplay: 3  };
+  if (points <= 5)  return { mu: 25,   sigma: 7.0, estimatedDisplay: 6  };
+  if (points <= 8)  return { mu: 28,   sigma: 6.5, estimatedDisplay: 9  };
+  if (points <= 10) return { mu: 31,   sigma: 5.5, estimatedDisplay: 13 };
+  return               { mu: 33,   sigma: 4.5, estimatedDisplay: 16 };
+}
+
+/**
  * Probabilidad de que el equipo A le gane al equipo B, según los ratings actuales.
  * Útil para mostrar "favorito" antes de la partida.
  */
