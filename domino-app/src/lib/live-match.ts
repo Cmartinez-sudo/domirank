@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
 import { updateRatings, type TeamInput } from "@/lib/rating";
 import { MODALIDADES, modalityByCode, type ModalityCode, type SetCode, type FormatCode } from "@/lib/modalidades";
+import { rl, checkLimit } from "@/lib/ratelimit";
 
 /* ============================================================
    START LIVE MATCH
@@ -38,6 +39,9 @@ export async function startLiveMatch(input: StartLiveMatchInput): Promise<{ ok: 
   const supabase = await supabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado." };
+
+  const limit = await checkLimit(rl.matchStart, `match:${user.id}`);
+  if (!limit.allowed) return { ok: false, error: limit.error };
 
   // Si ya hay una partida in_progress del usuario, cancelarla primero
   await supabase.from("matches").update({ status: "cancelled" }).eq("created_by", user.id).eq("status", "in_progress");

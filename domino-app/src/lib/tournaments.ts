@@ -4,6 +4,7 @@ import { z } from "zod";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
+import { rl, checkLimit } from "@/lib/ratelimit";
 
 const CreateSchema = z.object({
   name: z.string().min(2).max(80),
@@ -25,6 +26,9 @@ export async function createTournament(input: z.infer<typeof CreateSchema>) {
   const supabase = await supabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "No autenticado" };
+
+  const limit = await checkLimit(rl.tournament, `tournament:${user.id}`);
+  if (!limit.allowed) return { ok: false as const, error: limit.error };
 
   // Crear el tournament
   const { data: t, error } = await supabase

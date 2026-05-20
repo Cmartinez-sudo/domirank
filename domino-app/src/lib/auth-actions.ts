@@ -2,7 +2,18 @@
 
 import { z } from "zod";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { supabaseServer } from "@/lib/supabase/server";
+import { rl, checkLimit } from "@/lib/ratelimit";
+
+function getIp(): string {
+  const h = headers();
+  return (
+    h.get("x-forwarded-for")?.split(",")[0].trim() ??
+    h.get("x-real-ip") ??
+    "anon"
+  );
+}
 
 const PasswordRules = z.string().min(8, "Mínimo 8 caracteres").max(72, "Máximo 72 caracteres");
 
@@ -21,6 +32,9 @@ const SignupSchema = z.object({
 });
 
 export async function signUpWithPassword(formData: FormData) {
+  const limit = await checkLimit(rl.auth, `signup:${getIp()}`);
+  if (!limit.allowed) return { ok: false as const, error: limit.error };
+
   const parsed = SignupSchema.safeParse({
     full_name:      formData.get("full_name"),
     email:          formData.get("email"),
@@ -57,6 +71,9 @@ const LoginSchema = z.object({
 });
 
 export async function signInWithPassword(formData: FormData) {
+  const limit = await checkLimit(rl.auth, `signin:${getIp()}`);
+  if (!limit.allowed) return { ok: false as const, error: limit.error };
+
   const parsed = LoginSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -72,6 +89,9 @@ export async function signInWithPassword(formData: FormData) {
 const MagicSchema = z.object({ email: z.string().email() });
 
 export async function signInWithMagicLink(formData: FormData) {
+  const limit = await checkLimit(rl.auth, `magic:${getIp()}`);
+  if (!limit.allowed) return { ok: false as const, error: limit.error };
+
   const parsed = MagicSchema.safeParse({ email: formData.get("email") });
   if (!parsed.success) return { ok: false as const, error: "Correo inválido" };
 
@@ -103,6 +123,9 @@ export async function signInWithOAuth(provider: "google" | "apple") {
 
 const ResetReqSchema = z.object({ email: z.string().email() });
 export async function requestPasswordReset(formData: FormData) {
+  const limit = await checkLimit(rl.auth, `reset:${getIp()}`);
+  if (!limit.allowed) return { ok: false as const, error: limit.error };
+
   const parsed = ResetReqSchema.safeParse({ email: formData.get("email") });
   if (!parsed.success) return { ok: false as const, error: "Correo inválido" };
 

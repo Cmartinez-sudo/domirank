@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
+import { rl, checkLimit } from "@/lib/ratelimit";
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -16,6 +17,9 @@ export async function sendFriendRequest(toUserId: string, message?: string): Pro
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
   if (user.id === parsed.data) return { ok: false, error: "No puedes pedirte amistad a ti mismo" };
+
+  const limit = await checkLimit(rl.friendReq, `friend:${user.id}`);
+  if (!limit.allowed) return { ok: false, error: limit.error };
 
   // ¿Ya son amigos?
   const { data: existing } = await supabase
