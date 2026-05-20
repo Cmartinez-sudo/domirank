@@ -95,10 +95,12 @@ export function OnboardingForm({
       fd.set("modality", modality);
       if (skillPoints !== undefined) fd.set("skill_points", String(skillPoints));
       const res = await saveOnboarding(fd);
-      if (res && !res.ok) {
+      if (!res.ok) {
         setErr(res.error);
         setPending(false);
+        return;
       }
+      window.location.assign(res.next);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Error");
       setPending(false);

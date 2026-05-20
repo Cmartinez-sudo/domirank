@@ -20,15 +20,23 @@ export function LoginPanel() {
       const fd = new FormData(e.currentTarget);
       if (mode === "password") {
         const r = await signInWithPassword(fd);
-        if (r && !r.ok) setError(r.error);
-        // si ok, redirect a /dashboard (lo hace el server action)
+        if (!r.ok) {
+          setError(r.error);
+          setPending(false);
+          return;
+        }
+        // Full-reload garantiza que el middleware refresque las cookies de sesión
+        // y los server components vean al usuario autenticado desde el primer render.
+        window.location.assign(r.next);
+        return; // dejamos el spinner mientras navega
       } else {
         const r = await signInWithMagicLink(fd);
         if (!r.ok) setError(r.error);
         else setMagicSent(String(fd.get("email") ?? ""));
       }
     } finally {
-      setPending(false);
+      // No reseteamos pending si la navegación está en curso (window.location.assign)
+      if (mode !== "password") setPending(false);
     }
   }
 

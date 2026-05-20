@@ -11,13 +11,13 @@ export function ResetForm() {
     e.preventDefault();
     setError(null);
     setPending(true);
-    try {
-      const r = await updatePassword(new FormData(e.currentTarget));
-      if (r && !r.ok) setError(r.error ?? "Error");
-      // Si ok, redirige a /dashboard desde la server action
-    } finally {
+    const r = await updatePassword(new FormData(e.currentTarget));
+    if (!r.ok) {
+      setError(r.error ?? "Error");
       setPending(false);
+      return;
     }
+    window.location.assign(r.next);
   }
 
   return (

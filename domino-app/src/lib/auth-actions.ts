@@ -95,7 +95,22 @@ export async function signInWithPassword(formData: FormData) {
     console.error("signInWithPassword failed:", error.message);
     return { ok: false as const, error: "Correo o contraseña inválidos" };
   }
-  redirect("/dashboard");
+
+  // Devolvemos el destino al cliente para que haga full-reload (más confiable
+  // que redirect() desde Server Action — Next 14.2 puede perder cookies recién
+  // seteadas en algunos casos). El cliente hace window.location.assign(next),
+  // garantizando que el middleware refresque el estado de sesión.
+  const { data: { user } } = await supabase.auth.getUser();
+  let next: string = "/dashboard";
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("onboarded")
+      .eq("id", user.id)
+      .single();
+    if (profile && profile.onboarded === false) next = "/onboarding";
+  }
+  return { ok: true as const, next };
 }
 
 const MagicSchema = z.object({ email: z.string().email() });
@@ -152,12 +167,12 @@ export async function requestPasswordReset(formData: FormData) {
 const UpdatePwSchema = z.object({ password: PasswordRules });
 export async function updatePassword(formData: FormData) {
   const parsed = UpdatePwSchema.safeParse({ password: formData.get("password") });
-  if (!parsed.success) return { ok: false as const, error: parsed.error.issues[0]?.message };
+  if (!parsed.success) return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Contraseña inválida" };
 
   const supabase = await supabaseServer();
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) return { ok: false as const, error: error.message };
-  redirect("/dashboard");
+  return { ok: true as const, next: "/dashboard" };
 }
 
 const getOrigin = getAppUrl;

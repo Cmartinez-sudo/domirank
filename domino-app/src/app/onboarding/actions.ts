@@ -1,7 +1,6 @@
 "use server";
 
 import { z } from "zod";
-import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { initialRatingFromAssessment } from "@/lib/rating";
 
@@ -56,5 +55,5 @@ export async function saveOnboarding(formData: FormData) {
     .eq("id", user.id);
 
   if (error) return { ok: false, error: error.message } as const;
-  redirect("/dashboard");
+  return { ok: true as const, next: "/dashboard" };
 }
