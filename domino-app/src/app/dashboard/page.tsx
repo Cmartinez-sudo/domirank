@@ -117,16 +117,16 @@ export default async function Dashboard() {
               const won = r.rank === 1;
               const delta = Number(r.mu_after) - Number(r.mu_before);
               return (
-                <li key={`${r.match_id}-${r.team}`} className="py-3 flex items-center justify-between">
-                  <div>
-                    <Link href={`/matches/${r.match_id}`} className="font-medium hover:text-primary">
-                      {r.matches?.format === "singles" ? "Singles" : "Parejas"} a {r.matches?.target_points} pts
+                <li key={`${r.match_id}-${r.team}`} className="py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <Link href={`/matches/${r.match_id}`} className="font-medium hover:text-primary truncate block">
+                      {r.matches?.format === "singles" ? "Singles" : "Parejas"} · {r.matches?.target_points} pts
                     </Link>
                     <div className="text-text-mute text-xs">
                       {new Date(r.created_at).toLocaleString("es")}
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-3 text-sm flex-shrink-0">
                     <span className={`badge ${won ? "bg-primary/15 text-primary" : "bg-danger/15 text-danger"}`}>
                       {won ? "Ganó" : "Perdió"}
                     </span>
@@ -139,7 +139,12 @@ export default async function Dashboard() {
             })}
           </ul>
         ) : (
-          <p className="text-text-mute">Aún no has jugado. <Link href="/matches/new" className="text-primary hover:underline">Crea tu primera partida.</Link></p>
+          <div className="text-center py-10">
+            <div className="text-5xl mb-3 select-none">🎲</div>
+            <p className="text-text-dim font-medium mb-1">Aún no has jugado ninguna partida.</p>
+            <p className="text-text-mute text-sm mb-5">Registra tu primera partida y empieza a construir tu DomiRank.</p>
+            <Link href="/matches/new" className="btn-primary">+ Nueva partida</Link>
+          </div>
         )}
       </div>
     </div>
@@ -150,14 +155,15 @@ function RatingCard({ title, ordinal, mu, sigma, games, wins, losses }: {
   title: string; ordinal: number; mu: number; sigma: number;
   games: number; wins: number; losses: number;
 }) {
+  const winRate = games > 0 ? Math.round((wins / games) * 100) : null;
   return (
     <div className="card">
       <div className="text-text-mute text-sm">{title}</div>
       <div className="flex items-baseline gap-2 mt-1">
-        <span className="text-4xl font-bold text-primary font-mono">{ordinal.toFixed(1)}</span>
-        <span className="text-text-mute text-sm">rating</span>
+        <span className="text-4xl font-bold text-primary font-mono">{games > 0 ? ordinal.toFixed(1) : "—"}</span>
+        {games > 0 && <span className="text-text-mute text-sm">rating</span>}
       </div>
-      <div className="grid grid-cols-3 gap-3 mt-4 text-sm">
+      <div className="grid grid-cols-4 gap-3 mt-4 text-sm">
         <div>
           <div className="text-text-mute text-xs">μ</div>
           <div className="font-mono">{mu.toFixed(2)}</div>
@@ -170,9 +176,15 @@ function RatingCard({ title, ordinal, mu, sigma, games, wins, losses }: {
           <div className="text-text-mute text-xs">Partidas</div>
           <div className="font-mono">{games}</div>
         </div>
+        <div>
+          <div className="text-text-mute text-xs">W%</div>
+          <div className="font-mono">{winRate !== null ? `${winRate}%` : "—"}</div>
+        </div>
       </div>
-      <div className="mt-3 text-sm text-text-dim">
-        <span className="text-primary">{wins} G</span> · <span className="text-danger">{losses} P</span>
+      <div className="mt-3 text-sm">
+        <span className="text-primary">{wins}G</span>
+        <span className="text-text-mute"> · </span>
+        <span className="text-danger">{losses}P</span>
       </div>
     </div>
   );

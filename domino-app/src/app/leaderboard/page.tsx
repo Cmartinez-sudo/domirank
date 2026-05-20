@@ -5,18 +5,6 @@ import { DOMIRANK_MIN_GAMES } from "@/lib/rating";
 
 export const dynamic = "force-dynamic";
 
-type Row = {
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  singles_mu: number; singles_sigma: number; singles_games: number; singles_wins: number; singles_losses: number;
-  singles_ordinal: number;
-  doubles_mu: number; doubles_sigma: number; doubles_games: number; doubles_wins: number; doubles_losses: number;
-  doubles_ordinal: number;
-  global_mu: number; global_sigma: number; global_ordinal: number;
-  total_games: number;
-};
-
 export default async function Leaderboard({
   searchParams,
 }: {
@@ -29,7 +17,7 @@ export default async function Leaderboard({
 
   const supabase = await supabaseServer();
 
-  let rows: Row[] = [];
+  let rows: any[] = [];
   if (tab === "global") {
     const { data } = await supabase
       .from("profile_ratings")
@@ -37,17 +25,17 @@ export default async function Leaderboard({
       .gte("total_games", DOMIRANK_MIN_GAMES)
       .order("global_ordinal", { ascending: false })
       .limit(100);
-    rows = (data as Row[]) ?? [];
+    rows = data ?? [];
   } else {
-    const orderCol = tab === "singles" ? "singles_ordinal" : "doubles_ordinal";
-    const gamesCol = tab === "singles" ? "singles_games"   : "doubles_games";
+    const orderCol = tab === "singles" ? "d6_singles_ordinal" : "d6_doubles_ordinal";
+    const gamesCol = tab === "singles" ? "d6_singles_games"   : "d6_doubles_games";
     const { data } = await supabase
       .from("profile_ratings")
       .select("*")
       .gt(gamesCol, 0)
       .order(orderCol, { ascending: false })
       .limit(100);
-    rows = (data as Row[]) ?? [];
+    rows = data ?? [];
   }
 
   return (
@@ -55,9 +43,9 @@ export default async function Leaderboard({
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-3xl font-bold">Ranking</h1>
         <div className="flex gap-1 bg-surface rounded-md p-1 border border-border">
-          <TabLink href="/leaderboard?tab=global"  active={tab==="global"}>DomiRank Global</TabLink>
-          <TabLink href="/leaderboard?tab=singles" active={tab==="singles"}>Singles</TabLink>
-          <TabLink href="/leaderboard?tab=doubles" active={tab==="doubles"}>Parejas</TabLink>
+          <TabLink href="/leaderboard?tab=global"  active={tab === "global"}>DomiRank Global</TabLink>
+          <TabLink href="/leaderboard?tab=singles" active={tab === "singles"}>Singles</TabLink>
+          <TabLink href="/leaderboard?tab=doubles" active={tab === "doubles"}>Parejas</TabLink>
         </div>
       </div>
 
@@ -72,7 +60,7 @@ export default async function Leaderboard({
               <th className="px-4 py-3 text-right hidden md:table-cell">σ</th>
               <th className="px-4 py-3 text-right">Partidas</th>
               <th className="px-4 py-3 text-right hidden sm:table-cell">
-                {tab === "global" ? "S / P" : "G-P"}
+                {tab === "global" ? "S / P" : "W%"}
               </th>
             </tr>
           </thead>
@@ -85,15 +73,30 @@ export default async function Leaderboard({
               </td></tr>
             ) : rows.map((r, i) => {
               const isGlobal = tab === "global";
-              const ordinal = isGlobal ? r.global_ordinal : tab === "singles" ? r.singles_ordinal : r.doubles_ordinal;
-              const mu      = isGlobal ? r.global_mu      : tab === "singles" ? r.singles_mu      : r.doubles_mu;
-              const sigma   = isGlobal ? r.global_sigma   : tab === "singles" ? r.singles_sigma   : r.doubles_sigma;
-              const games   = isGlobal ? r.total_games    : tab === "singles" ? r.singles_games   : r.doubles_games;
-              const wins    = tab === "singles" ? r.singles_wins : tab === "doubles" ? r.doubles_wins : 0;
-              const losses  = tab === "singles" ? r.singles_losses : tab === "doubles" ? r.doubles_losses : 0;
+              const ordinal = isGlobal ? r.global_ordinal
+                : tab === "singles" ? r.d6_singles_ordinal : r.d6_doubles_ordinal;
+              const mu      = isGlobal ? r.global_mu
+                : tab === "singles" ? r.d6_singles_mu : r.d6_doubles_mu;
+              const sigma   = isGlobal ? r.global_sigma
+                : tab === "singles" ? r.d6_singles_sigma : r.d6_doubles_sigma;
+              const games   = isGlobal ? r.total_games
+                : tab === "singles" ? r.d6_singles_games : r.d6_doubles_games;
+              const wins    = tab === "singles" ? r.d6_singles_wins
+                : tab === "doubles" ? r.d6_doubles_wins : 0;
+              const losses  = tab === "singles" ? r.d6_singles_losses
+                : tab === "doubles" ? r.d6_doubles_losses : 0;
+              const winRate = games > 0 ? Math.round((wins / games) * 100) : null;
+
               return (
-                <tr key={r.username} className="border-b border-border/50 hover:bg-surface-2/60">
-                  <td className="px-4 py-3 text-text-mute">{i + 1}</td>
+                <tr
+                  key={r.username}
+                  className={`border-b border-border/50 hover:bg-surface-2/60 transition-colors ${
+                    i === 0 ? "bg-yellow-400/[.025]" : ""
+                  }`}
+                >
+                  <td className="px-4 py-3">
+                    <RankCell rank={i + 1} />
+                  </td>
                   <td className="px-4 py-3">
                     <Link href={`/profile/${r.username}`} className="flex items-center gap-2 hover:text-primary">
                       <Avatar player={{ username: r.username, display_name: r.display_name, avatar_url: r.avatar_url }} size={32} />
@@ -113,10 +116,12 @@ export default async function Leaderboard({
                     {Number(sigma).toFixed(2)}
                   </td>
                   <td className="px-4 py-3 text-right">{games}</td>
-                  <td className="px-4 py-3 text-right hidden sm:table-cell text-text-dim text-sm">
+                  <td className="px-4 py-3 text-right hidden sm:table-cell text-sm">
                     {isGlobal
-                      ? <span>{r.singles_games} <span className="text-text-mute">·</span> {r.doubles_games}</span>
-                      : <span><span className="text-primary">{wins}</span>-<span className="text-danger">{losses}</span></span>}
+                      ? <span className="text-text-dim">{r.d6_singles_games ?? r.singles_games ?? 0} <span className="text-text-mute">·</span> {r.d6_doubles_games ?? r.doubles_games ?? 0}</span>
+                      : <span className={winRate !== null && winRate >= 50 ? "text-primary" : "text-text-dim"}>
+                          {winRate !== null ? `${winRate}%` : "—"}
+                        </span>}
                   </td>
                 </tr>
               );
@@ -128,17 +133,44 @@ export default async function Leaderboard({
       <p className="text-text-mute text-xs text-center">
         {tab === "global"
           ? `DomiRank Global combina tus ratings de singles y parejas ponderando por certeza (1/σ²). Cuanto más juegas un formato, más pesa. Mínimo ${DOMIRANK_MIN_GAMES} partidas totales.`
-          : "Rating = μ − 3σ (OpenSkill ordinal). μ es el skill estimado, σ la incertidumbre."}
+          : "Rating = μ − 3σ (OpenSkill ordinal). W% = partidas ganadas. μ es el skill estimado, σ la incertidumbre."}
       </p>
     </div>
   );
+}
+
+function RankCell({ rank }: { rank: number }) {
+  if (rank === 1) {
+    return (
+      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-yellow-400/15 text-yellow-400 font-bold text-sm">
+        1
+      </span>
+    );
+  }
+  if (rank === 2) {
+    return (
+      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-300/15 text-slate-300 font-bold text-sm">
+        2
+      </span>
+    );
+  }
+  if (rank === 3) {
+    return (
+      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-600/15 text-amber-500 font-bold text-sm">
+        3
+      </span>
+    );
+  }
+  return <span className="text-text-mute text-sm pl-1">{rank}</span>;
 }
 
 function TabLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
   return (
     <Link
       href={href}
-      className={`px-4 py-1.5 rounded text-sm ${active ? "bg-surface-3 text-text" : "text-text-dim hover:text-text"}`}
+      className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${
+        active ? "bg-primary/15 text-primary" : "text-text-dim hover:text-text"
+      }`}
     >
       {children}
     </Link>

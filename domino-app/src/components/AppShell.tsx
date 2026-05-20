@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 
 type NavItem = { href: string; label: string; icon: React.ReactNode; isCenter?: boolean };
@@ -16,11 +19,11 @@ const ICON = {
   users: (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
   ),
-  user: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-  ),
   pollas: (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v6"/><path d="M5 9V7l1.5-3h11L19 7v2"/><path d="M5 9h14v8a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4Z"/></svg>
+  ),
+  book: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
   ),
 };
 
@@ -33,6 +36,13 @@ export function AppShell({
   profile: { username?: string; display_name?: string | null; avatar_url?: string | null } | null;
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+
+  const isActive = (href: string) => {
+    if (href === "/matches/new") return pathname.startsWith("/matches");
+    return pathname === href || pathname.startsWith(href + "/");
+  };
+
   const items: NavItem[] = [
     { href: "/dashboard",    label: "Inicio",   icon: ICON.home },
     { href: "/leaderboard",  label: "Ranking",  icon: ICON.trophy },
@@ -57,15 +67,34 @@ export function AppShell({
               <span>DomiRank</span>
             </Link>
           </div>
-          <nav className="flex-1 px-3 space-y-1 py-3">
-            {items.map((it) => (
-              <Link key={it.href} href={it.href} className="flex items-center gap-3 px-3 py-2.5 rounded-md text-text-dim hover:text-text hover:bg-surface-2 transition-colors">
-                <span className="opacity-80">{it.icon}</span>
-                <span className="text-sm">{it.label}</span>
-              </Link>
-            ))}
-            <Link href="/como-funciona" className="flex items-center gap-3 px-3 py-2.5 rounded-md text-text-dim hover:text-text hover:bg-surface-2 transition-colors mt-4">
-              <span className="text-base">📖</span>
+          <nav className="flex-1 px-3 space-y-0.5 py-3">
+            {items.map((it) => {
+              const active = isActive(it.href);
+              return (
+                <Link
+                  key={it.href}
+                  href={it.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors ${
+                    active
+                      ? "bg-surface-2 text-text"
+                      : "text-text-dim hover:text-text hover:bg-surface-2"
+                  }`}
+                >
+                  <span className={active ? "opacity-100" : "opacity-60"}>{it.icon}</span>
+                  <span className={`text-sm ${active ? "font-medium" : ""}`}>{it.label}</span>
+                </Link>
+              );
+            })}
+            <Link
+              href="/como-funciona"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors mt-2 ${
+                pathname === "/como-funciona"
+                  ? "bg-surface-2 text-text"
+                  : "text-text-dim hover:text-text hover:bg-surface-2"
+              }`}
+            >
+              <span className="opacity-60">{ICON.book}</span>
               <span className="text-sm">Cómo funciona</span>
             </Link>
           </nav>
@@ -83,7 +112,7 @@ export function AppShell({
 
       {/* MAIN COLUMN */}
       <div className="flex-1 min-w-0">
-        {/* TOPBAR (mobile only, for non-auth users or as breadcrumb header) */}
+        {/* TOPBAR mobile */}
         <header className="md:hidden border-b border-border bg-bg-2/85 backdrop-blur sticky top-0 z-30">
           <div className="px-4 h-14 flex items-center justify-between gap-3">
             <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2 font-bold tracking-tight">
@@ -118,32 +147,38 @@ export function AppShell({
         )}
       </div>
 
-      {/* BOTTOM NAV (mobile only) */}
+      {/* BOTTOM NAV mobile */}
       {user && (
         <nav
           className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-bg-2/95 backdrop-blur border-t border-border"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           <div className="grid grid-cols-5 max-w-md mx-auto">
-            {items.map((it) => (
-              <Link
-                key={it.href}
-                href={it.href}
-                className="flex flex-col items-center justify-center gap-1 py-2.5 text-text-mute hover:text-text"
-              >
-                {it.isCenter ? (
-                  <span
-                    className="grid place-items-center w-12 h-12 rounded-full text-black -mt-6 shadow-lg"
-                    style={{ background: "linear-gradient(135deg,#10b981,#059669)" }}
-                  >
-                    {it.icon}
-                  </span>
-                ) : (
-                  <span>{it.icon}</span>
-                )}
-                <span className="text-[10px] font-medium">{it.label}</span>
-              </Link>
-            ))}
+            {items.map((it) => {
+              const active = isActive(it.href);
+              return (
+                <Link
+                  key={it.href}
+                  href={it.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex flex-col items-center justify-center gap-1 py-2.5 transition-colors ${
+                    it.isCenter ? "" : active ? "text-primary" : "text-text-mute hover:text-text"
+                  }`}
+                >
+                  {it.isCenter ? (
+                    <span
+                      className="grid place-items-center w-12 h-12 rounded-full text-black -mt-6 shadow-lg transition-transform active:scale-95"
+                      style={{ background: active ? "linear-gradient(135deg,#059669,#047857)" : "linear-gradient(135deg,#10b981,#059669)" }}
+                    >
+                      {it.icon}
+                    </span>
+                  ) : (
+                    <span className={active ? "opacity-100" : "opacity-60"}>{it.icon}</span>
+                  )}
+                  <span className={`text-[10px] font-medium ${it.isCenter ? "text-text-mute" : ""}`}>{it.label}</span>
+                </Link>
+              );
+            })}
           </div>
         </nav>
       )}
