@@ -7,12 +7,18 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { rl, checkLimit } from "@/lib/ratelimit";
 
 function getIp(): string {
+  // Trustworthy on Vercel: x-real-ip set from the TCP source, immune to client spoofing.
+  // x-forwarded-for fallback uses the LAST value (Vercel appends its observed IP),
+  // not the first (which the client controls).
   const h = headers();
-  return (
-    h.get("x-forwarded-for")?.split(",")[0].trim() ??
-    h.get("x-real-ip") ??
-    "anon"
-  );
+  const real = h.get("x-real-ip");
+  if (real) return real;
+  const xff = h.get("x-forwarded-for");
+  if (xff) {
+    const parts = xff.split(",").map((s) => s.trim()).filter(Boolean);
+    return parts[parts.length - 1] ?? "anon";
+  }
+  return "anon";
 }
 
 const PasswordRules = z.string().min(8, "Mínimo 8 caracteres").max(72, "Máximo 72 caracteres");
@@ -82,7 +88,12 @@ export async function signInWithPassword(formData: FormData) {
 
   const supabase = await supabaseServer();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
-  if (error) return { ok: false as const, error: error.message };
+  if (error) {
+    // Anti-enumeration: nunca distinguir "email no existe" vs "contraseña incorrecta"
+    // ni "email no confirmado". Log real server-side, mensaje genérico al cliente.
+    console.error("signInWithPassword failed:", error.message);
+    return { ok: false as const, error: "Correo o contraseña inválidos" };
+  }
   redirect("/dashboard");
 }
 
