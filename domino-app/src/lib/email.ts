@@ -60,9 +60,20 @@ export async function sendEmail({ to, subject, html, text }: SendEmailInput): Pr
    URL helper compartido entre auth-actions y email templates
    ============================================================ */
 
+/**
+ * URL base del app. Resolución:
+ *   - NEXT_PUBLIC_APP_URL si está set (override manual)
+ *   - https://domirank.app si es producción (siempre canónico, sin importar
+ *     desde qué hostname de Vercel se sirva la request — esto previene que
+ *     OAuth redirige a vercel.app cuando el usuario está en .app)
+ *   - VERCEL_URL para preview deployments
+ *   - localhost para dev
+ */
+const PROD_URL = "https://domirank.app";
+
 export function getAppUrl(): string {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  if (process.env.VERCEL_ENV === "production") return PROD_URL;
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   return "http://localhost:3000";
 }
