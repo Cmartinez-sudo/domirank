@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { NavigationLoader } from "@/components/NavigationLoader";
 
-type NavItem = { href: string; label: string; icon: React.ReactNode; isCenter?: boolean; beta?: boolean };
+type NavItem = { href: string; label: string; icon: React.ReactNode; isCenter?: boolean; beta?: boolean; badge?: number };
 
 const ICON = {
   home: (
@@ -31,10 +31,12 @@ const ICON = {
 export function AppShell({
   user,
   profile,
+  counts,
   children,
 }: {
   user: { id: string } | null;
   profile: { username?: string; display_name?: string | null; avatar_url?: string | null } | null;
+  counts?: { friendRequests: number } | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -55,12 +57,13 @@ export function AppShell({
     return pathname === href || pathname.startsWith(href + "/");
   };
 
+  const friendBadge = counts?.friendRequests ?? 0;
   const items: NavItem[] = [
     { href: "/dashboard",    label: "Inicio",   icon: ICON.home },
     { href: "/leaderboard",  label: "Ranking",  icon: ICON.trophy },
     { href: "/matches/new",  label: "Jugar",    icon: ICON.plus, isCenter: true },
     { href: "/tournaments",  label: "Torneos",  icon: ICON.pollas, beta: true },
-    { href: "/friends",      label: "Amigos",   icon: ICON.users },
+    { href: "/friends",      label: "Amigos",   icon: ICON.users, badge: friendBadge },
   ];
 
   return (
@@ -95,7 +98,14 @@ export function AppShell({
                       : "text-text-dim hover:text-text hover:bg-surface-2"
                   }`}
                 >
-                  <span className={active ? "opacity-100 text-primary" : "opacity-50"}>{it.icon}</span>
+                  <span className={`relative ${active ? "opacity-100 text-primary" : "opacity-50"}`}>
+                    {it.icon}
+                    {it.badge != null && it.badge > 0 && (
+                      <span className="absolute -top-1 -right-1.5 grid place-items-center min-w-[18px] h-[18px] px-1 rounded-full bg-danger text-white text-[10px] font-bold leading-none border border-bg-2">
+                        {it.badge > 9 ? "9+" : it.badge}
+                      </span>
+                    )}
+                  </span>
                   <span className={`text-[14px] ${active ? "font-semibold" : ""}`}>{it.label}</span>
                   {it.beta && (
                     <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(251,191,36,.15)", color: "#fbbf24" }}>beta</span>
@@ -195,6 +205,11 @@ export function AppShell({
                       {it.icon}
                       {it.beta && (
                         <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-yellow-400 border border-bg" />
+                      )}
+                      {it.badge != null && it.badge > 0 && (
+                        <span className="absolute -top-1.5 -right-2 grid place-items-center min-w-[18px] h-[18px] px-1 rounded-full bg-danger text-white text-[10px] font-bold leading-none border border-bg">
+                          {it.badge > 9 ? "9+" : it.badge}
+                        </span>
                       )}
                     </span>
                   )}

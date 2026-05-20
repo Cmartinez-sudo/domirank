@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { getCurrentUser, getCurrentProfile } from "@/lib/auth";
+import { getNotificationCounts, type NotificationCounts } from "@/lib/notifications";
 import { AppShell } from "@/components/AppShell";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
@@ -23,11 +24,12 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   const profile = user ? (await getCurrentProfile() as any) : null;
+  const counts: NotificationCounts | null = user ? await getNotificationCounts(user.id) : null;
 
   return (
     <html lang="es" className={inter.className}>
       <body>
-        <AppShell user={user ? { id: user.id } : null} profile={profile}>
+        <AppShell user={user ? { id: user.id } : null} profile={profile} counts={counts}>
           {children}
         </AppShell>
       </body>
