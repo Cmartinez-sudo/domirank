@@ -4,6 +4,31 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
 import { rl, checkLimit } from "@/lib/ratelimit";
+import { sendEmail } from "@/lib/email";
+import { friendRequestEmail, friendAcceptedEmail } from "@/lib/email-templates";
+
+/**
+ * Envía un email transaccional sin bloquear la operación principal.
+ * Cualquier error se loguea y se ignora.
+ */
+async function notifyByEmail(
+  supabase: Awaited<ReturnType<typeof supabaseServer>>,
+  recipientUserId: string,
+  buildTemplate: () => { subject: string; html: string; text: string },
+) {
+  try {
+    const { data: email, error } = await supabase.rpc("get_user_email", { p_user_id: recipientUserId });
+    if (error) {
+      console.warn("[notifyByEmail] get_user_email failed:", error.message);
+      return;
+    }
+    if (!email) return; // opted out or missing
+    const tpl = buildTemplate();
+    await sendEmail({ to: email, ...tpl });
+  } catch (e) {
+    console.error("[notifyByEmail] unexpected error:", e);
+  }
+}
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -30,10 +55,17 @@ export async function sendFriendRequest(toUserId: string, message?: string): Pro
     .maybeSingle();
   if (existing) return { ok: false, error: "Ya son amigos" };
 
+  // Cargar perfil del sender (para el email template)
+  const { data: senderProfile } = await supabase
+    .from("profiles")
+    .select("username, display_name")
+    .eq("id", user.id)
+    .single();
+
   // ¿Hay request inversa pendiente? Si sí, la aceptamos directamente.
   const { data: inverse } = await supabase
     .from("friend_requests")
-    .select("id, status")
+    .select("id, status, from_user")
     .eq("from_user", parsed.data)
     .eq("to_user", user.id)
     .eq("status", "pending")
@@ -42,6 +74,15 @@ export async function sendFriendRequest(toUserId: string, message?: string): Pro
     const { error: ackErr } = await supabase.rpc("accept_friend_request", { req_id: inverse.id });
     if (ackErr) return { ok: false, error: ackErr.message };
     revalidatePath("/friends");
+    // Email "tu solicitud fue aceptada" al sender original
+    if (senderProfile) {
+      void notifyByEmail(supabase, inverse.from_user, () =>
+        friendAcceptedEmail({
+          fromUsername:    senderProfile.username,
+          fromDisplayName: senderProfile.display_name,
+        })
+      );
+    }
     return { ok: true };
   }
 
@@ -54,6 +95,16 @@ export async function sendFriendRequest(toUserId: string, message?: string): Pro
     );
   if (error) return { ok: false, error: error.message };
   revalidatePath("/friends");
+
+  // Email "tienes una solicitud" al receptor
+  if (senderProfile) {
+    void notifyByEmail(supabase, parsed.data, () =>
+      friendRequestEmail({
+        fromUsername:    senderProfile.username,
+        fromDisplayName: senderProfile.display_name,
+      })
+    );
+  }
   return { ok: true };
 }
 
@@ -61,9 +112,36 @@ export async function acceptFriendRequest(requestId: string): Promise<Result> {
   const parsed = Uuid.safeParse(requestId);
   if (!parsed.success) return { ok: false, error: "Request inválido" };
   const supabase = await supabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "No autenticado" };
+
+  // Cargar la request para saber a quién notificar
+  const { data: req } = await supabase
+    .from("friend_requests")
+    .select("from_user, to_user")
+    .eq("id", parsed.data)
+    .single();
+
   const { error } = await supabase.rpc("accept_friend_request", { req_id: parsed.data });
   if (error) return { ok: false, error: error.message };
   revalidatePath("/friends");
+
+  // Notificar al sender original (yo soy el to_user que acabó de aceptar)
+  if (req?.from_user && req?.to_user === user.id) {
+    const { data: meProfile } = await supabase
+      .from("profiles")
+      .select("username, display_name")
+      .eq("id", user.id)
+      .single();
+    if (meProfile) {
+      void notifyByEmail(supabase, req.from_user, () =>
+        friendAcceptedEmail({
+          fromUsername:    meProfile.username,
+          fromDisplayName: meProfile.display_name,
+        })
+      );
+    }
+  }
   return { ok: true };
 }
 

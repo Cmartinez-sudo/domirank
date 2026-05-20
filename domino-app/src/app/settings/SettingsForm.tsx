@@ -13,6 +13,7 @@ type Profile = {
   avatar_url: string | null;
   country: CountryCode | null;
   default_modality: ModalityCode;
+  email_notifications: boolean;
 };
 
 export function SettingsForm({ email, profile }: { email: string; profile: Profile }) {
@@ -20,6 +21,7 @@ export function SettingsForm({ email, profile }: { email: string; profile: Profi
   const [name, setName] = useState(profile.display_name ?? "");
   const [country, setCountry] = useState<CountryCode | null>(profile.country);
   const [modality, setModality] = useState<ModalityCode>(profile.default_modality);
+  const [emailNotif, setEmailNotif] = useState<boolean>(profile.email_notifications);
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url);
   const [msg, setMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -32,6 +34,7 @@ export function SettingsForm({ email, profile }: { email: string; profile: Profi
         display_name: name.trim() || undefined,
         country: country ?? undefined,
         default_modality: modality,
+        email_notifications: emailNotif,
       });
       if (r.ok) setMsg({ kind: "ok", text: "Cambios guardados" });
       else setMsg({ kind: "error", text: r.error });
@@ -117,6 +120,23 @@ export function SettingsForm({ email, profile }: { email: string; profile: Profi
             ))}
           </select>
         </div>
+      </section>
+
+      <section className="card">
+        <label className="flex items-center justify-between gap-3 cursor-pointer">
+          <div className="flex-1">
+            <div className="font-medium">Notificaciones por correo</div>
+            <div className="text-text-mute text-xs mt-0.5">
+              Solicitudes de amistad y confirmaciones de partidas.
+            </div>
+          </div>
+          <input
+            type="checkbox"
+            checked={emailNotif}
+            onChange={(e) => setEmailNotif(e.target.checked)}
+            className="w-5 h-5 accent-primary"
+          />
+        </label>
       </section>
 
       {msg && (

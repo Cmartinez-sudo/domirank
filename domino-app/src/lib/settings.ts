@@ -9,6 +9,7 @@ const ProfileSchema = z.object({
   display_name: z.string().min(1).max(80).optional(),
   country: z.string().length(2).optional(),
   default_modality: z.enum(["ven", "dom", "cub", "pri", "custom"]).optional(),
+  email_notifications: z.boolean().optional(),
 });
 
 export async function updateProfile(input: z.infer<typeof ProfileSchema>) {

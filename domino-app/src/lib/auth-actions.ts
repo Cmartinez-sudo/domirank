@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { supabaseServer } from "@/lib/supabase/server";
 import { rl, checkLimit } from "@/lib/ratelimit";
+import { getAppUrl } from "@/lib/email";
 
 function getIp(): string {
   // Trustworthy on Vercel: x-real-ip set from the TCP source, immune to client spoofing.
@@ -159,10 +160,4 @@ export async function updatePassword(formData: FormData) {
   redirect("/dashboard");
 }
 
-function getOrigin(): string {
-  // NEXT_PUBLIC_APP_URL → Vercel production URL → Vercel preview URL → localhost
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return "http://localhost:3000";
-}
+const getOrigin = getAppUrl;

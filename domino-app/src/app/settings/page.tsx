@@ -18,6 +18,7 @@ export default async function SettingsPage() {
           avatar_url: profile.avatar_url,
           country: profile.country,
           default_modality: profile.default_modality ?? "ven",
+          email_notifications: profile.email_notifications ?? true,
         }}
       />
     </div>
