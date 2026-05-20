@@ -39,6 +39,17 @@ export function AppShell({
 }) {
   const pathname = usePathname();
 
+  // El landing en "/" renderiza su propio layout (Topnav + Footer). AppShell
+  // se hace a un lado para no duplicar chrome.
+  if (!user && pathname === "/") {
+    return (
+      <>
+        <NavigationLoader />
+        {children}
+      </>
+    );
+  }
+
   const isActive = (href: string) => {
     if (href === "/matches/new") return pathname.startsWith("/matches");
     return pathname === href || pathname.startsWith(href + "/");

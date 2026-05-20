@@ -1,68 +1,56 @@
-import Link from "next/link";
-import { supabaseServer } from "@/lib/supabase/server";
-import { Avatar } from "@/components/Avatar";
-import { DOMIRANK_MIN_GAMES, toDisplayRating } from "@/lib/rating";
-import { TierBadge } from "@/components/RatingInfo";
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/auth";
+import { Topnav } from "@/components/landing/Topnav";
+import { Hero } from "@/components/landing/Hero";
+import { Features } from "@/components/landing/Features";
+import { HowItWorks } from "@/components/landing/HowItWorks";
+import { Modalities } from "@/components/landing/Modalities";
+import { FAQ } from "@/components/landing/FAQ";
+import { FinalCTA } from "@/components/landing/FinalCTA";
+import { Footer } from "@/components/landing/Footer";
 
-export default async function Home() {
-  const supabase = await supabaseServer();
-  const { data: top } = await supabase
-    .from("profile_ratings")
-    .select("username, display_name, avatar_url, global_ordinal, global_display, total_games")
-    .gte("total_games", DOMIRANK_MIN_GAMES)
-    .order("global_ordinal", { ascending: false })
-    .limit(5);
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "DomiRank · Ranking oficial de dominó por modalidad",
+  description:
+    "La primera plataforma para llevar tu nivel real de dominó. Registra partidas, compite con tus amigos y arma torneos en tus modalidades favoritas: Venezolano, Dominicano, Cubano y Puertorriqueño.",
+  openGraph: {
+    title: "DomiRank · Ranking oficial de dominó por modalidad",
+    description:
+      "Registra partidas, compite con tus amigos y arma torneos con rating real por modalidad.",
+    url: "https://domirank.app",
+    siteName: "DomiRank",
+    locale: "es_LA",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DomiRank · Ranking oficial de dominó",
+    description:
+      "Registra partidas, compite con tus amigos y arma torneos con rating real por modalidad.",
+  },
+};
+
+export default async function HomePage() {
+  // Si ya está autenticado, va directo al dashboard. El landing es solo para
+  // visitantes que aún no tienen cuenta.
+  const user = await getCurrentUser();
+  if (user) redirect("/dashboard");
 
   return (
-    <div className="space-y-10">
-      <section className="text-center py-10">
-        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-3">
-          DomiRank — el ranking oficial de dominó
-        </h1>
-        <p className="text-text-dim text-lg max-w-2xl mx-auto">
-          Registra tus partidas y torneos. Tu rating <span className="text-primary font-medium">OpenSkill</span>{" "}
-          (Plackett-Luce con aproximaciones Weng-Lin) refleja tu nivel real en singles y parejas.
-        </p>
-        <div className="flex gap-3 justify-center mt-6 flex-wrap">
-          <Link href="/login" className="btn-primary">Crear cuenta gratis</Link>
-          <Link href="/leaderboard" className="btn-ghost">Ver ranking</Link>
-          <Link href="/como-funciona" className="btn-ghost">Cómo funciona →</Link>
-        </div>
-      </section>
-
-      <section className="card">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Top 5 · DomiRank Global</h2>
-          <Link href="/leaderboard" className="text-primary text-sm hover:underline">
-            Ver completo →
-          </Link>
-        </div>
-        {top && top.length > 0 ? (
-          <ol className="space-y-2">
-            {top.map((p, i) => (
-              <li key={p.username} className="flex items-center justify-between p-3 bg-surface-2 rounded-md">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-text-mute w-6 text-right">{i + 1}</span>
-                  <Avatar player={{ username: p.username, display_name: p.display_name, avatar_url: (p as any).avatar_url }} size={28} />
-                  <Link href={`/profile/${p.username}`} className="font-medium hover:text-primary truncate">
-                    {p.display_name || p.username}
-                  </Link>
-                  <span className="text-text-mute text-sm hidden sm:inline">@{p.username}</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm flex-shrink-0">
-                  <span className="text-text-dim">{p.total_games} p.</span>
-                  <TierBadge display={Number((p as any).global_display ?? toDisplayRating(Number(p.global_ordinal)))} />
-                  <span className="font-mono font-semibold text-primary">
-                    {Number((p as any).global_display ?? toDisplayRating(Number(p.global_ordinal))).toFixed(1)}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="text-text-mute">Aún nadie tiene {DOMIRANK_MIN_GAMES}+ partidas. Sé el primero.</p>
-        )}
-      </section>
+    <div className="min-h-screen flex flex-col bg-bg">
+      <Topnav />
+      <main className="flex-1">
+        <Hero />
+        <Features />
+        <HowItWorks />
+        <Modalities />
+        <FAQ />
+        <FinalCTA />
+      </main>
+      <Footer />
     </div>
   );
 }
