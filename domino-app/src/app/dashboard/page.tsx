@@ -73,23 +73,26 @@ export default async function Dashboard() {
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                   backgroundClip: "text",
+                  opacity: qualified ? 1 : 0.85,
                 }}
               >
-                {qualified ? globalDisplay.toFixed(1) : "—"}
+                {globalDisplay.toFixed(1)}
               </span>
-              {qualified ? (
-                <div className="flex flex-col gap-1">
-                  <TierBadge display={globalDisplay} />
-                  <span className="text-text-mute text-xs">ordinal {gr.ordinal.toFixed(2)}</span>
-                </div>
-              ) : (
-                <span className="text-text-mute text-sm">
-                  faltan {DOMIRANK_MIN_GAMES - totalGames} partidas para calificar
-                </span>
-              )}
+              <div className="flex flex-col gap-1">
+                <TierBadge display={globalDisplay} />
+                {!qualified && (
+                  <span className="text-text-mute text-[10px] uppercase tracking-wider font-semibold">
+                    Provisional
+                  </span>
+                )}
+              </div>
             </div>
             <div className="text-text-dim text-sm mt-2">
-              {totalGames} partidas totales · μ {gr.mu.toFixed(2)} · σ {gr.sigma.toFixed(2)} ·{" "}
+              {totalGames} {totalGames === 1 ? "partida" : "partidas"} totales
+              {!qualified && (
+                <> · faltan {DOMIRANK_MIN_GAMES - totalGames} para confirmar tu rating</>
+              )}
+              {" · "}
               <Link href="/como-funciona" className="text-primary hover:underline">
                 cómo se calcula
               </Link>

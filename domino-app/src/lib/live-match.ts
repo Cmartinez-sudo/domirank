@@ -43,6 +43,23 @@ export async function startLiveMatch(input: StartLiveMatchInput): Promise<{ ok: 
   const limit = await checkLimit(rl.matchStart, `match:${user.id}`);
   if (!limit.allowed) return { ok: false, error: limit.error };
 
+  // Validar que TODOS los otros jugadores sean amigos del creador.
+  // Defensa en profundidad: el UI solo permite amigos pero un cliente malicioso
+  // podría llamar este action directamente.
+  const otherIds = [...i.team_a_players, ...i.team_b_players].filter((id) => id !== user.id);
+  if (otherIds.length > 0) {
+    const { data: friendRows } = await supabase
+      .from("friendships")
+      .select("friend_id")
+      .eq("user_id", user.id)
+      .in("friend_id", otherIds);
+    const friendSet = new Set((friendRows ?? []).map((r) => r.friend_id));
+    const notFriends = otherIds.filter((id) => !friendSet.has(id));
+    if (notFriends.length > 0) {
+      return { ok: false, error: "Solo puedes jugar con tus amigos. Envía solicitud antes de invitar." };
+    }
+  }
+
   // Si ya hay una partida in_progress del usuario, cancelarla primero
   await supabase.from("matches").update({ status: "cancelled" }).eq("created_by", user.id).eq("status", "in_progress");
 

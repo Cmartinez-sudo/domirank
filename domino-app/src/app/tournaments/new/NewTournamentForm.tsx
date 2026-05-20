@@ -5,16 +5,20 @@ import { useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { UserSearch } from "@/components/UserSearch";
-import { MODALIDADES, COUNTRIES, type ModalityCode } from "@/lib/modalidades";
+import { RatingBadge } from "@/components/RatingBadge";
+import { MODALIDADES, type ModalityCode } from "@/lib/modalidades";
 import { createTournament } from "@/lib/tournaments";
 import { TOURNAMENT_FORMATS, FORMAT_LIST, type TournamentFormat } from "@/lib/tournament-formats";
 
-type PublicUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; country: string | null };
-
-function flag(code: string | null) {
-  if (!code) return null;
-  return COUNTRIES.find((c) => c.code === code)?.flag ?? null;
-}
+type PublicUser = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  country: string | null;
+  global_display?: number | null;
+  total_games?: number | null;
+};
 
 export function NewTournamentForm({ currentUser, defaultModality }: { currentUser: PublicUser; defaultModality: ModalityCode }) {
   const router = useRouter();
@@ -200,10 +204,11 @@ export function NewTournamentForm({ currentUser, defaultModality }: { currentUse
 
       {/* Participantes */}
       <section className="card">
-        <label className="label mb-2">Participantes (mín. 4)</label>
+        <label className="label mb-2">Participantes (mín. 4 — solo amigos)</label>
         <UserSearch
           excludeIds={players.map((p) => p.id)}
-          placeholder="Buscar jugador…"
+          placeholder="Buscar entre tus amigos…"
+          friendsOnly
           onSelect={(u) => setPlayers([...players, u as PublicUser])}
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
@@ -211,15 +216,16 @@ export function NewTournamentForm({ currentUser, defaultModality }: { currentUse
             <div key={p.id} className="flex items-center gap-2 p-2 bg-surface-2 rounded-xl">
               <Avatar player={p as any} size={32} />
               <div className="flex-1 min-w-0">
-                <div className="text-sm truncate">{flag(p.country) && <span className="mr-1">{flag(p.country)}</span>}{p.display_name || p.username}</div>
+                <div className="text-sm truncate">{p.display_name || p.username}</div>
               </div>
+              <RatingBadge display={p.global_display ?? null} games={p.total_games} compact size="xs" />
               {p.id !== currentUser.id && (
                 <button type="button" className="text-text-mute hover:text-danger px-1 min-h-[36px]" onClick={() => setPlayers(players.filter((x) => x.id !== p.id))} aria-label="Quitar">✕</button>
               )}
             </div>
           ))}
         </div>
-        <p className="text-text-mute text-xs mt-2">{players.length} seleccionados</p>
+        <p className="text-text-mute text-xs mt-2">{players.length} seleccionados · <Link href="/friends" className="text-primary hover:underline">agregar más amigos →</Link></p>
       </section>
 
       {err && <div className="p-3 bg-danger/10 border border-danger/30 rounded-xl text-danger text-sm">{err}</div>}

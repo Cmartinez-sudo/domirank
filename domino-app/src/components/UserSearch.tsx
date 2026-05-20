@@ -2,28 +2,39 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { Avatar } from "@/components/Avatar";
-import { searchUsers, type SearchedUser } from "@/lib/users";
-import { COUNTRIES } from "@/lib/modalidades";
+import { searchUsers, searchFriends, type SearchedUser } from "@/lib/users";
+import { RatingBadge } from "@/components/RatingBadge";
 
 type Props = {
-  /** Si está presente, los IDs en este set NO aparecen en los resultados (ya elegidos). */
+  /** IDs a excluir de los resultados (ya seleccionados, etc.) */
   excludeIds?: string[];
   /** Placeholder del input. */
   placeholder?: string;
-  /** Callback cuando el usuario selecciona alguien. */
+  /** Callback al seleccionar un usuario. */
   onSelect: (u: SearchedUser) => void;
-  /** Mostrar lista de "ya seleccionados" arriba del input (opcional). */
+  /** Mostrar chips de "ya seleccionados" arriba del input. */
   selected?: SearchedUser[];
   onRemove?: (id: string) => void;
   autoFocus?: boolean;
+  /**
+   * Si true, busca solo entre amigos del usuario autenticado.
+   * Cuando el query está vacío, muestra la lista de amigos como hint.
+   */
+  friendsOnly?: boolean;
+  /** Mostrar rating del usuario al lado de cada resultado. Default true. */
+  showRating?: boolean;
 };
 
-function countryFlag(code: string | null) {
-  if (!code) return null;
-  return COUNTRIES.find((c) => c.code === code)?.flag ?? null;
-}
-
-export function UserSearch({ excludeIds, placeholder, onSelect, selected, onRemove, autoFocus }: Props) {
+export function UserSearch({
+  excludeIds,
+  placeholder,
+  onSelect,
+  selected,
+  onRemove,
+  autoFocus,
+  friendsOnly = false,
+  showRating = true,
+}: Props) {
   const [q, setQ] = useState("");
   const [results, setResults] = useState<SearchedUser[]>([]);
   const [loading, setLoading] = useState(false);
@@ -32,16 +43,19 @@ export function UserSearch({ excludeIds, placeholder, onSelect, selected, onRemo
   const ref = useRef<HTMLDivElement>(null);
   const excludeSet = new Set(excludeIds ?? []);
 
-  // Debounced search
+  // Debounced search. En friendsOnly, query vacío = listar amigos.
   useEffect(() => {
-    if (q.trim().length === 0) {
+    const term = q.trim();
+    if (!friendsOnly && term.length === 0) {
       setResults([]);
       return;
     }
     let cancelled = false;
     setLoading(true);
     const t = setTimeout(async () => {
-      const data = await searchUsers(q, { limit: 8 });
+      const data = friendsOnly
+        ? await searchFriends(term, { limit: 20 })
+        : await searchUsers(term, { limit: 8 });
       if (!cancelled) {
         setResults(data.filter((u) => !excludeSet.has(u.id)));
         setLoading(false);
@@ -51,9 +65,9 @@ export function UserSearch({ excludeIds, placeholder, onSelect, selected, onRemo
       cancelled = true;
       clearTimeout(t);
     };
-  }, [q]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [q, friendsOnly]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Click outside cierra dropdown
+  // Click fuera cierra dropdown
   useEffect(() => {
     function onDoc(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
@@ -62,6 +76,8 @@ export function UserSearch({ excludeIds, placeholder, onSelect, selected, onRemo
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
+  const showDropdown = open && (friendsOnly ? true : q.trim().length > 0);
+
   return (
     <div ref={ref} className="relative">
       {selected && selected.length > 0 && (
@@ -69,10 +85,7 @@ export function UserSearch({ excludeIds, placeholder, onSelect, selected, onRemo
           {selected.map((s) => (
             <span key={s.id} className="inline-flex items-center gap-2 bg-surface-2 border border-border rounded-full pl-1.5 pr-2 py-1">
               <Avatar player={s as any} size={22} />
-              <span className="text-sm">
-                {countryFlag(s.country) && <span className="mr-1">{countryFlag(s.country)}</span>}
-                {s.display_name || s.username}
-              </span>
+              <span className="text-sm">{s.display_name || s.username}</span>
               {onRemove && (
                 <button
                   type="button"
@@ -90,7 +103,7 @@ export function UserSearch({ excludeIds, placeholder, onSelect, selected, onRemo
       <input
         id={inputId}
         className="input"
-        placeholder={placeholder ?? "Buscar jugador por @usuario o nombre…"}
+        placeholder={placeholder ?? (friendsOnly ? "Buscar entre tus amigos…" : "Buscar por @usuario o nombre…")}
         value={q}
         onChange={(e) => {
           setQ(e.target.value);
@@ -100,11 +113,15 @@ export function UserSearch({ excludeIds, placeholder, onSelect, selected, onRemo
         autoFocus={autoFocus}
         autoComplete="off"
       />
-      {open && q.trim().length > 0 && (
+      {showDropdown && (
         <div className="absolute z-20 left-0 right-0 mt-1 bg-surface border border-border rounded-md shadow-pop max-h-72 overflow-y-auto">
           {loading && <div className="p-3 text-text-mute text-sm">Buscando…</div>}
           {!loading && results.length === 0 && (
-            <div className="p-3 text-text-mute text-sm">Sin resultados para “{q}”.</div>
+            <div className="p-3 text-text-mute text-sm">
+              {friendsOnly
+                ? (q.trim().length > 0 ? `Ningún amigo coincide con "${q}".` : "No tienes amigos aún.")
+                : `Sin resultados para "${q}".`}
+            </div>
           )}
           {!loading &&
             results.map((u) => (
@@ -121,12 +138,19 @@ export function UserSearch({ excludeIds, placeholder, onSelect, selected, onRemo
               >
                 <Avatar player={u as any} size={32} />
                 <div className="min-w-0 flex-1">
-                  <div className="font-medium truncate">
-                    {countryFlag(u.country) && <span className="mr-1.5">{countryFlag(u.country)}</span>}
-                    {u.display_name || u.username}
-                  </div>
+                  <div className="font-medium truncate">{u.display_name || u.username}</div>
                   <div className="text-text-mute text-xs truncate">@{u.username}</div>
                 </div>
+                {showRating && (
+                  <div className="shrink-0">
+                    <RatingBadge
+                      display={u.global_display ?? null}
+                      games={u.total_games}
+                      compact
+                      size="xs"
+                    />
+                  </div>
+                )}
               </button>
             ))}
         </div>

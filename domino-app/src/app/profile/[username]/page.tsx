@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { supabaseServer } from "@/lib/supabase/server";
-import { COUNTRIES } from "@/lib/modalidades";
 import { DOMIRANK_MIN_GAMES, toDisplayRating } from "@/lib/rating";
 import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
 
@@ -26,7 +25,7 @@ export default async function PublicProfile({
 
   const p = profile as any;
   const qualified = p.total_games >= DOMIRANK_MIN_GAMES;
-  const countryInfo = COUNTRIES.find((c) => c.code === p.country);
+  const globalDisplay = Number(p.global_display ?? toDisplayRating(Number(p.global_ordinal)));
 
   const { data: history } = await supabase
     .from("match_players")
@@ -42,12 +41,7 @@ export default async function PublicProfile({
           <div className="flex items-center gap-4">
             <Avatar player={p} size={72} />
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-3xl font-bold">{p.display_name || p.username}</h1>
-                {countryInfo && (
-                  <span className="text-2xl" title={countryInfo.name}>{countryInfo.flag}</span>
-                )}
-              </div>
+              <h1 className="text-3xl font-bold">{p.display_name || p.username}</h1>
               <p className="text-text-mute">@{p.username}</p>
               {p.bio && (
                 <p className="text-text-dim text-sm mt-1 max-w-xs">{p.bio}</p>
@@ -68,20 +62,22 @@ export default async function PublicProfile({
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
+                opacity: qualified ? 1 : 0.85,
               }}
             >
-              {qualified
-                ? Number(p.global_display ?? toDisplayRating(Number(p.global_ordinal))).toFixed(1)
-                : "—"}
+              {globalDisplay.toFixed(1)}
             </div>
-            {qualified && (
-              <div className="flex justify-end mt-1">
-                <TierBadge display={Number(p.global_display ?? toDisplayRating(Number(p.global_ordinal)))} />
-              </div>
-            )}
+            <div className="flex justify-end gap-2 items-center mt-1">
+              <TierBadge display={globalDisplay} />
+              {!qualified && (
+                <span className="text-text-mute text-[10px] uppercase tracking-wider font-semibold">
+                  Provisional
+                </span>
+              )}
+            </div>
             <div className="text-text-mute text-xs mt-1">
-              {p.total_games} partidas totales
-              {!qualified && ` · faltan ${DOMIRANK_MIN_GAMES - p.total_games}`}
+              {p.total_games} {p.total_games === 1 ? "partida" : "partidas"} totales
+              {!qualified && ` · faltan ${DOMIRANK_MIN_GAMES - p.total_games} para confirmar`}
             </div>
           </div>
         </div>

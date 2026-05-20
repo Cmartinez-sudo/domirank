@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { UserSearch } from "@/components/UserSearch";
-import { COUNTRIES } from "@/lib/modalidades";
+import { RatingBadge } from "@/components/RatingBadge";
 import { PageTransition } from "@/components/Motion";
 import {
   sendFriendRequest,
@@ -15,14 +15,17 @@ import {
   unfriend,
 } from "@/lib/friends";
 
-type PublicUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; country: string | null };
+type PublicUser = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  country: string | null;
+  global_display?: number | null;
+  total_games?: number | null;
+};
 type IncomingReq = { id: string; message: string | null; created_at: string; from: PublicUser };
 type OutgoingReq = { id: string; created_at: string; to: PublicUser };
-
-function flag(code: string | null) {
-  if (!code) return null;
-  return COUNTRIES.find((c) => c.code === code)?.flag ?? null;
-}
 
 export function FriendsPanel({
   friends,
@@ -148,12 +151,10 @@ function UserRow({ user, children }: { user: PublicUser; children: React.ReactNo
       <Link href={`/profile/${user.username}`} className="flex items-center gap-3 flex-1 min-w-0">
         <Avatar player={user as any} size={40} />
         <div className="min-w-0 flex-1">
-          <div className="font-medium truncate">
-            {flag(user.country) && <span className="mr-1.5">{flag(user.country)}</span>}
-            {user.display_name || user.username}
-          </div>
+          <div className="font-medium truncate">{user.display_name || user.username}</div>
           <div className="text-text-mute text-xs truncate">@{user.username}</div>
         </div>
+        <RatingBadge display={user.global_display ?? null} games={user.total_games} compact size="xs" />
       </Link>
       <div className="shrink-0">{children}</div>
     </div>
