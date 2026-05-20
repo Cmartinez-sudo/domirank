@@ -1,7 +1,6 @@
 "use server";
 
 import { z } from "zod";
-import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { supabaseServer } from "@/lib/supabase/server";
 import { rl, checkLimit } from "@/lib/ratelimit";
@@ -143,9 +142,17 @@ export async function signInWithOAuth(provider: "google" | "apple") {
       redirectTo: `${getOrigin()}/auth/callback`,
     },
   });
-  if (error) return { ok: false as const, error: error.message };
-  if (data?.url) redirect(data.url);
-  return { ok: true as const };
+  if (error) {
+    console.error("signInWithOAuth failed:", error.message);
+    return { ok: false as const, error: `No se pudo iniciar sesión con ${provider}. Intenta de nuevo o usa correo.` };
+  }
+  if (!data?.url) {
+    return { ok: false as const, error: "Respuesta inválida del proveedor de auth" };
+  }
+  // Devolvemos la URL en vez de hacer redirect() server-side. El cliente hace
+  // window.location.assign(url) — más confiable y mejor UX (no se ven flashes
+  // de navegación intermedia).
+  return { ok: true as const, url: data.url };
 }
 
 const ResetReqSchema = z.object({ email: z.string().email() });
@@ -157,8 +164,11 @@ export async function requestPasswordReset(formData: FormData) {
   if (!parsed.success) return { ok: false as const, error: "Correo inválido" };
 
   const supabase = await supabaseServer();
+  // El email lleva ?code=... que debe canjearse por sesión en /auth/callback
+  // antes de mostrar el formulario de cambio de contraseña. El parámetro `next`
+  // indica al callback a dónde llevar al usuario después del exchange.
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${getOrigin()}/reset-password`,
+    redirectTo: `${getOrigin()}/auth/callback?next=/reset-password`,
   });
   if (error) return { ok: false as const, error: error.message };
   return { ok: true as const };
