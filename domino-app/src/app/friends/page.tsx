@@ -11,19 +11,17 @@ type RawUser = {
   avatar_url: string | null;
   country: string | null;
 };
-type EnrichedUser = RawUser & { global_display: number | null; total_games: number | null };
 
 export default async function FriendsPage() {
   const user = await requireUser();
   const supabase = await supabaseServer();
 
-  // Amigos actuales (con perfil)
+  // Amigos
   const { data: friendsRaw } = await supabase
     .from("friendships")
     .select("friend_id, created_at, friend:profiles!friendships_friend_id_fkey(id, username, display_name, avatar_url, country)")
     .eq("user_id", user.id);
 
-  // Requests entrantes pendientes
   const { data: incoming } = await supabase
     .from("friend_requests")
     .select("id, message, created_at, from:profiles!friend_requests_from_user_fkey(id, username, display_name, avatar_url, country)")
@@ -31,7 +29,6 @@ export default async function FriendsPage() {
     .eq("status", "pending")
     .order("created_at", { ascending: false });
 
-  // Requests salientes pendientes
   const { data: outgoing } = await supabase
     .from("friend_requests")
     .select("id, created_at, to:profiles!friend_requests_to_user_fkey(id, username, display_name, avatar_url, country)")
@@ -43,28 +40,61 @@ export default async function FriendsPage() {
   const incomingList = (incoming ?? []) as any[];
   const outgoingList = (outgoing ?? []) as any[];
 
-  // Enriquecer con ratings (single batch query)
   const allIds = [
     ...friends.map((f) => f.id),
     ...incomingList.map((r) => r.from?.id).filter(Boolean),
     ...outgoingList.map((r) => r.to?.id).filter(Boolean),
   ];
 
-  let ratingsById = new Map<string, { global_display: number | null; total_games: number | null }>();
+  // Batch fetch ratings + stats
+  const ratingsById = new Map<string, {
+    global_display: number | null;
+    total_games: number | null;
+    total_wins: number | null;
+    total_losses: number | null;
+  }>();
   if (allIds.length > 0) {
     const { data: ratings } = await supabase
       .from("profile_ratings")
-      .select("id, global_display, total_games")
+      .select("id, global_display, total_games, d6_singles_wins, d6_singles_losses, d6_doubles_wins, d6_doubles_losses, d9_singles_wins, d9_singles_losses, d9_doubles_wins, d9_doubles_losses")
       .in("id", allIds);
     for (const r of (ratings ?? []) as any[]) {
-      ratingsById.set(r.id, { global_display: r.global_display, total_games: r.total_games });
+      const wins = (r.d6_singles_wins ?? 0) + (r.d6_doubles_wins ?? 0) + (r.d9_singles_wins ?? 0) + (r.d9_doubles_wins ?? 0);
+      const losses = (r.d6_singles_losses ?? 0) + (r.d6_doubles_losses ?? 0) + (r.d9_singles_losses ?? 0) + (r.d9_doubles_losses ?? 0);
+      ratingsById.set(r.id, {
+        global_display: r.global_display,
+        total_games:    r.total_games,
+        total_wins:     wins,
+        total_losses:   losses,
+      });
     }
   }
 
-  const enrich = (u: RawUser): EnrichedUser => ({
+  // Batch: última partida confirmed por amigo (solo para mis amigos)
+  const lastMatchById = new Map<string, string>();
+  if (friends.length > 0) {
+    const friendIds = friends.map((f) => f.id);
+    const { data: lastMatches } = await supabase
+      .from("match_players")
+      .select("user_id, created_at, matches!inner(status)")
+      .in("user_id", friendIds)
+      .eq("matches.status", "confirmed")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    for (const m of (lastMatches ?? []) as any[]) {
+      if (!lastMatchById.has(m.user_id)) {
+        lastMatchById.set(m.user_id, m.created_at);
+      }
+    }
+  }
+
+  const enrich = (u: RawUser) => ({
     ...u,
     global_display: ratingsById.get(u.id)?.global_display ?? null,
     total_games:    ratingsById.get(u.id)?.total_games    ?? null,
+    total_wins:     ratingsById.get(u.id)?.total_wins     ?? null,
+    total_losses:   ratingsById.get(u.id)?.total_losses   ?? null,
+    last_match_at:  lastMatchById.get(u.id)               ?? null,
   });
 
   return (
