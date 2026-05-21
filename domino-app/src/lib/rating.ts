@@ -174,17 +174,26 @@ export function updateRatings(teams: TeamInput[]): PlayerRatingUpdate[] {
 }
 
 /**
- * Mapea el ordinal de OpenSkill (μ-3σ, rango ~0-50) a escala DomiRank 1-20.
- * Anclas: ordinal 0 → 1.0 · ordinal 35 → 20.0
+ * Mapea el ordinal de OpenSkill (μ-3σ, realista 0-30 para humanos) a la
+ * escala DomiRank 1-20.
+ *
+ * Anclas: ordinal 0 → 1.0 · ordinal 28 → 20.0
+ *
+ * Antes anclábamos a ordinal 35, pero llegar ahí requiere μ≈44 (irrealista
+ * incluso con cientos de partidas). Top players reales llegan a μ~38, σ~3
+ * → ordinal ~29, lo que ahora corresponde al tope "Leyenda". Con el ancla
+ * vieja todos los élite se atascaban en ~17-18.
  */
+const TOP_ORDINAL = 28;
+
 export function toDisplayRating(ordinal: number): number {
   if (!isFinite(ordinal)) return 1.0;
-  const raw = 1 + (ordinal / 35) * 19;
+  const raw = 1 + (ordinal / TOP_ORDINAL) * 19;
   return Math.max(1.0, Math.min(20.0, Math.round(raw * 10) / 10));
 }
 
 export function displayToOrdinal(display: number): number {
-  return ((display - 1) / 19) * 35;
+  return ((display - 1) / 19) * TOP_ORDINAL;
 }
 
 export const SKILL_TIERS = [

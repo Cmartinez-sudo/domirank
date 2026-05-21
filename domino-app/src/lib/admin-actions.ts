@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
+import { applyMatchRating } from "@/lib/match-attest-actions";
 
 export async function adminResolveMatch(
   matchId: string,
@@ -26,7 +27,19 @@ export async function adminResolveMatch(
     return { ok: false, error: friendly };
   }
 
+  // Si admin confirmó la disputa, hay que aplicar el rating (el RPC solo
+  // cambia status; el cálculo OpenSkill vive en TS). Idempotente vía rated_at.
+  if (resolution === "confirm") {
+    const ratingResult = await applyMatchRating(matchId);
+    if (!ratingResult.ok) {
+      console.error("[adminResolveMatch] applyMatchRating failed:", ratingResult.error);
+      // Match queda confirmed sin rating — el cron lo retomará por rated_at IS NULL
+    }
+  }
+
   revalidatePath("/admin/disputes");
   revalidatePath(`/matches/${matchId}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/leaderboard");
   return { ok: true };
 }

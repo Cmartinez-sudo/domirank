@@ -149,10 +149,16 @@ export async function rejectFriendRequest(requestId: string): Promise<Result> {
   const parsed = Uuid.safeParse(requestId);
   if (!parsed.success) return { ok: false, error: "Request inválido" };
   const supabase = await supabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "No autenticado" };
+
+  // Solo el receptor puede rechazar. RLS también lo restringe a involved users
+  // pero esto previene un sender rechazando su propia request (semánticamente raro).
   const { error } = await supabase
     .from("friend_requests")
     .update({ status: "rejected", responded_at: new Date().toISOString() })
-    .eq("id", parsed.data);
+    .eq("id", parsed.data)
+    .eq("to_user", user.id);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/friends");
   return { ok: true };
@@ -162,10 +168,15 @@ export async function cancelFriendRequest(requestId: string): Promise<Result> {
   const parsed = Uuid.safeParse(requestId);
   if (!parsed.success) return { ok: false, error: "Request inválido" };
   const supabase = await supabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "No autenticado" };
+
+  // Solo el sender puede cancelar su propia request.
   const { error } = await supabase
     .from("friend_requests")
     .update({ status: "cancelled", responded_at: new Date().toISOString() })
-    .eq("id", parsed.data);
+    .eq("id", parsed.data)
+    .eq("from_user", user.id);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/friends");
   return { ok: true };

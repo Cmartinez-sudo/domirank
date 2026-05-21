@@ -94,7 +94,7 @@ export default async function Leaderboard({
 
               return (
                 <tr
-                  key={r.username}
+                  key={r.id ?? r.username}
                   className={`border-b border-border/50 hover:bg-surface-2/60 transition-colors ${
                     i === 0 ? "bg-yellow-400/[.025]" : ""
                   }`}
