@@ -19,19 +19,19 @@ export default async function FriendsPage() {
   // Amigos
   const { data: friendsRaw } = await supabase
     .from("friendships")
-    .select("friend_id, created_at, friend:profiles!friendships_friend_id_fkey(id, username, display_name, avatar_url, country)")
+    .select("friend_id, created_at, friend:profiles!friendships_friend_id_profiles_fkey(id, username, display_name, avatar_url, country)")
     .eq("user_id", user.id);
 
   const { data: incoming } = await supabase
     .from("friend_requests")
-    .select("id, message, created_at, from:profiles!friend_requests_from_user_fkey(id, username, display_name, avatar_url, country)")
+    .select("id, message, created_at, from:profiles!friend_requests_from_user_profiles_fkey(id, username, display_name, avatar_url, country)")
     .eq("to_user", user.id)
     .eq("status", "pending")
     .order("created_at", { ascending: false });
 
   const { data: outgoing } = await supabase
     .from("friend_requests")
-    .select("id, created_at, to:profiles!friend_requests_to_user_fkey(id, username, display_name, avatar_url, country)")
+    .select("id, created_at, to:profiles!friend_requests_to_user_profiles_fkey(id, username, display_name, avatar_url, country)")
     .eq("from_user", user.id)
     .eq("status", "pending")
     .order("created_at", { ascending: false });
