@@ -5,7 +5,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { DOMIRANK_MIN_GAMES, toDisplayRating } from "@/lib/rating";
 import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
 import { FriendActionButton } from "@/components/FriendActionButton";
-import { getRelationStatus } from "@/lib/friends";
+import { getRelationStatus, type RelationStatus } from "@/lib/friends";
 
 export const dynamic = "force-dynamic";
 
@@ -27,28 +27,43 @@ export default async function PublicProfile({
 
   const p = profile as any;
   const qualified = p.total_games >= DOMIRANK_MIN_GAMES;
-  const globalDisplay = Number(p.global_display ?? toDisplayRating(Number(p.global_ordinal)));
-  const relation = await getRelationStatus(p.id);
+  const rawDisplay = p.global_display ?? toDisplayRating(Number(p.global_ordinal ?? 25));
+  const globalDisplay = Number.isFinite(Number(rawDisplay)) ? Number(rawDisplay) : 1;
 
-  // Privacidad: si el viewer NO es el dueño del perfil, solo mostramos
-  // partidas confirmed. El propio dueño ve también pending/disputed/void.
-  const { data: { user: viewer } } = await supabase.auth.getUser();
-  const isOwnProfile = viewer?.id === p.id;
+  // Defensiva: si falla cualquiera de estas queries, no romper la página
+  let relation: RelationStatus = { kind: "none" };
+  try {
+    relation = await getRelationStatus(p.id);
+  } catch (e) {
+    console.error("[profile] getRelationStatus failed:", e);
+  }
 
-  const { data: historyRaw } = await supabase
-    .from("match_players")
-    .select("match_id, team, rank, mu_before, mu_after, created_at, matches(format, target_points, status)")
-    .eq("user_id", p.id)
-    .order("created_at", { ascending: false })
-    .limit(40);
+  let isOwnProfile = false;
+  try {
+    const { data: { user: viewer } } = await supabase.auth.getUser();
+    isOwnProfile = viewer?.id === p.id;
+  } catch (e) {
+    console.error("[profile] getUser failed:", e);
+  }
 
-  const history = ((historyRaw ?? []) as any[])
-    .filter((r) => {
-      const st = r.matches?.status;
-      if (isOwnProfile) return ["confirmed","pending_attestation","disputed","void"].includes(st);
-      return st === "confirmed";
-    })
-    .slice(0, 20);
+  let history: any[] = [];
+  try {
+    const { data: historyRaw } = await supabase
+      .from("match_players")
+      .select("match_id, team, rank, mu_before, mu_after, created_at, matches(format, target_points, status)")
+      .eq("user_id", p.id)
+      .order("created_at", { ascending: false })
+      .limit(40);
+    history = ((historyRaw ?? []) as any[])
+      .filter((r) => {
+        const st = r.matches?.status;
+        if (isOwnProfile) return ["confirmed","pending_attestation","disputed","void"].includes(st);
+        return st === "confirmed";
+      })
+      .slice(0, 20);
+  } catch (e) {
+    console.error("[profile] history failed:", e);
+  }
 
   return (
     <div className="space-y-6">
@@ -115,19 +130,19 @@ export default async function PublicProfile({
         <div className="grid md:grid-cols-2 gap-4 mt-6">
           <StatBlock
             title="Singles (6-6)"
-            display={Number(p.d6_singles_display ?? toDisplayRating(Number(p.d6_singles_ordinal)))}
-            ordinal={Number(p.d6_singles_ordinal)}
-            games={p.d6_singles_games}
-            wins={p.d6_singles_wins}
-            losses={p.d6_singles_losses}
+            display={safeNumber(p.d6_singles_display ?? toDisplayRating(Number(p.d6_singles_ordinal ?? 0)), 1)}
+            ordinal={safeNumber(p.d6_singles_ordinal, 0)}
+            games={p.d6_singles_games ?? 0}
+            wins={p.d6_singles_wins ?? 0}
+            losses={p.d6_singles_losses ?? 0}
           />
           <StatBlock
             title="Parejas (6-6)"
-            display={Number(p.d6_doubles_display ?? toDisplayRating(Number(p.d6_doubles_ordinal)))}
-            ordinal={Number(p.d6_doubles_ordinal)}
-            games={p.d6_doubles_games}
-            wins={p.d6_doubles_wins}
-            losses={p.d6_doubles_losses}
+            display={safeNumber(p.d6_doubles_display ?? toDisplayRating(Number(p.d6_doubles_ordinal ?? 0)), 1)}
+            ordinal={safeNumber(p.d6_doubles_ordinal, 0)}
+            games={p.d6_doubles_games ?? 0}
+            wins={p.d6_doubles_wins ?? 0}
+            losses={p.d6_doubles_losses ?? 0}
           />
         </div>
 
@@ -135,19 +150,19 @@ export default async function PublicProfile({
           <div className="grid md:grid-cols-2 gap-4 mt-4">
             <StatBlock
               title="Singles (9-9)"
-              display={Number(p.d9_singles_display ?? toDisplayRating(Number(p.d9_singles_ordinal)))}
-              ordinal={Number(p.d9_singles_ordinal)}
-              games={p.d9_singles_games}
-              wins={p.d9_singles_wins}
-              losses={p.d9_singles_losses}
+              display={safeNumber(p.d9_singles_display ?? toDisplayRating(Number(p.d9_singles_ordinal ?? 0)), 1)}
+              ordinal={safeNumber(p.d9_singles_ordinal, 0)}
+              games={p.d9_singles_games ?? 0}
+              wins={p.d9_singles_wins ?? 0}
+              losses={p.d9_singles_losses ?? 0}
             />
             <StatBlock
               title="Parejas (9-9)"
-              display={Number(p.d9_doubles_display ?? toDisplayRating(Number(p.d9_doubles_ordinal)))}
-              ordinal={Number(p.d9_doubles_ordinal)}
-              games={p.d9_doubles_games}
-              wins={p.d9_doubles_wins}
-              losses={p.d9_doubles_losses}
+              display={safeNumber(p.d9_doubles_display ?? toDisplayRating(Number(p.d9_doubles_ordinal ?? 0)), 1)}
+              ordinal={safeNumber(p.d9_doubles_ordinal, 0)}
+              games={p.d9_doubles_games ?? 0}
+              wins={p.d9_doubles_wins ?? 0}
+              losses={p.d9_doubles_losses ?? 0}
             />
           </div>
         )}
@@ -199,6 +214,11 @@ export default async function PublicProfile({
       </div>
     </div>
   );
+}
+
+function safeNumber(v: unknown, fallback: number): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
 }
 
 function StatBlock({ title, display, ordinal, games, wins, losses }: {
