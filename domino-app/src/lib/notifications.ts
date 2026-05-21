@@ -1,4 +1,6 @@
-"use server";
+// Server-side helpers de notifications. NO "use server" porque solo se llaman
+// desde Server Components / Server Actions. Si algún día un Client Component
+// necesita una mutation, mover esa función a un archivo "use server" separado.
 
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
