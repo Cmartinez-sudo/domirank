@@ -4,6 +4,8 @@ import { Avatar } from "@/components/Avatar";
 import { supabaseServer } from "@/lib/supabase/server";
 import { DOMIRANK_MIN_GAMES, toDisplayRating } from "@/lib/rating";
 import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
+import { FriendActionButton } from "@/components/FriendActionButton";
+import { getRelationStatus } from "@/lib/friends";
 
 export const dynamic = "force-dynamic";
 
@@ -26,26 +28,54 @@ export default async function PublicProfile({
   const p = profile as any;
   const qualified = p.total_games >= DOMIRANK_MIN_GAMES;
   const globalDisplay = Number(p.global_display ?? toDisplayRating(Number(p.global_ordinal)));
+  const relation = await getRelationStatus(p.id);
 
-  const { data: history } = await supabase
+  // Privacidad: si el viewer NO es el dueño del perfil, solo mostramos
+  // partidas confirmed. El propio dueño ve también pending/disputed/void.
+  const { data: { user: viewer } } = await supabase.auth.getUser();
+  const isOwnProfile = viewer?.id === p.id;
+
+  const { data: historyRaw } = await supabase
     .from("match_players")
-    .select("match_id, team, rank, mu_before, mu_after, created_at, matches(format, target_points)")
+    .select("match_id, team, rank, mu_before, mu_after, created_at, matches(format, target_points, status)")
     .eq("user_id", p.id)
     .order("created_at", { ascending: false })
-    .limit(20);
+    .limit(40);
+
+  const history = ((historyRaw ?? []) as any[])
+    .filter((r) => {
+      const st = r.matches?.status;
+      if (isOwnProfile) return ["confirmed","pending_attestation","disputed","void"].includes(st);
+      return st === "confirmed";
+    })
+    .slice(0, 20);
 
   return (
     <div className="space-y-6">
       <div className="card">
         <div className="flex items-start justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-1">
             <Avatar player={p} size={72} />
-            <div>
-              <h1 className="text-3xl font-bold">{p.display_name || p.username}</h1>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-3xl font-bold truncate">{p.display_name || p.username}</h1>
               <p className="text-text-mute">@{p.username}</p>
               {p.bio && (
                 <p className="text-text-dim text-sm mt-1 max-w-xs">{p.bio}</p>
               )}
+              <div className="mt-3 md:hidden">
+                <FriendActionButton
+                  targetUserId={p.id}
+                  targetUsername={p.username}
+                  initialStatus={relation}
+                />
+              </div>
+            </div>
+            <div className="hidden md:block">
+              <FriendActionButton
+                targetUserId={p.id}
+                targetUsername={p.username}
+                initialStatus={relation}
+              />
             </div>
           </div>
           <div className="text-right">
@@ -128,8 +158,14 @@ export default async function PublicProfile({
         {history && history.length > 0 ? (
           <ul className="divide-y divide-border">
             {history.map((r: any) => {
+              const status = r.matches?.status as string | undefined;
+              const isConfirmed = status === "confirmed";
+              const isPending   = status === "pending_attestation";
+              const isDisputed  = status === "disputed";
+              const isVoid      = status === "void";
               const won = r.rank === 1;
-              const delta = Number(r.mu_after) - Number(r.mu_before);
+              const hasRating = r.mu_before != null && r.mu_after != null;
+              const delta = hasRating ? Number(r.mu_after) - Number(r.mu_before) : null;
               return (
                 <li key={`${r.match_id}-${r.team}`} className="py-3 flex items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -140,13 +176,18 @@ export default async function PublicProfile({
                       {new Date(r.created_at).toLocaleDateString("es")}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 text-sm flex-shrink-0">
+                  <div className="flex items-center gap-2 text-sm flex-shrink-0">
+                    {isPending && <span className="badge bg-yellow-400/15 text-yellow-400">Pendiente</span>}
+                    {isDisputed && <span className="badge bg-danger/15 text-danger">Disputa</span>}
+                    {isVoid && <span className="badge bg-surface-3 text-text-mute">Anulada</span>}
+                    {isConfirmed && hasRating && <>
                     <span className={`badge ${won ? "bg-primary/15 text-primary" : "bg-danger/15 text-danger"}`}>
                       {won ? "Ganó" : "Perdió"}
                     </span>
-                    <span className={`font-mono ${delta >= 0 ? "text-primary" : "text-danger"}`}>
-                      {delta >= 0 ? "+" : ""}{delta.toFixed(2)}
+                    <span className={`font-mono ${delta! >= 0 ? "text-primary" : "text-danger"}`}>
+                      {delta! >= 0 ? "+" : ""}{delta!.toFixed(2)}
                     </span>
+                    </>}
                   </div>
                 </li>
               );

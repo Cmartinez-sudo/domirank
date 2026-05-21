@@ -4,6 +4,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { globalRating, toDisplayRating, tierFor, DOMIRANK_MIN_GAMES, DEFAULT_MU, DEFAULT_SIGMA } from "@/lib/rating";
 import { PageTransition, StaggerChildren, StaggerItem } from "@/components/Motion";
 import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
+import { PendingAttestationsCard } from "@/components/dashboard/PendingAttestationsCard";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export default async function Dashboard() {
   const supabase = await supabaseServer();
   const { data: recent } = await supabase
     .from("match_players")
-    .select("match_id, team, rank, mu_before, mu_after, sigma_before, sigma_after, created_at, matches(format, target_points, created_at)")
+    .select("match_id, team, rank, mu_before, mu_after, sigma_before, sigma_after, created_at, matches(format, target_points, created_at, status)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(10);
@@ -101,6 +102,10 @@ export default async function Dashboard() {
         </StaggerItem>
 
         <StaggerItem>
+          <PendingAttestationsCard userId={user.id} />
+        </StaggerItem>
+
+        <StaggerItem>
           <div className="grid md:grid-cols-2 gap-4">
             <RatingCard
               title="Singles (1v1)"
@@ -131,8 +136,14 @@ export default async function Dashboard() {
             {recent && recent.length > 0 ? (
               <ul className="divide-y divide-border">
                 {recent.map((r: any) => {
+                  const status = r.matches?.status as string | undefined;
+                  const isConfirmed = status === "confirmed";
+                  const isPending   = status === "pending_attestation";
+                  const isDisputed  = status === "disputed";
+                  const isVoid      = status === "void";
                   const won = r.rank === 1;
-                  const delta = Number(r.mu_after) - Number(r.mu_before);
+                  const hasRating = r.mu_before != null && r.mu_after != null;
+                  const delta = hasRating ? Number(r.mu_after) - Number(r.mu_before) : null;
                   return (
                     <li key={`${r.match_id}-${r.team}`} className="py-3 flex items-center justify-between gap-3">
                       <div className="min-w-0">
@@ -143,13 +154,26 @@ export default async function Dashboard() {
                           {new Date(r.created_at).toLocaleString("es")}
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 text-sm flex-shrink-0">
-                        <span className={`badge ${won ? "bg-primary/15 text-primary" : "bg-danger/15 text-danger"}`}>
-                          {won ? "Ganó" : "Perdió"}
-                        </span>
-                        <span className={`font-mono ${delta >= 0 ? "text-primary" : "text-danger"}`}>
-                          {delta >= 0 ? "+" : ""}{delta.toFixed(2)} μ
-                        </span>
+                      <div className="flex items-center gap-2 text-sm flex-shrink-0">
+                        {isPending && (
+                          <span className="badge bg-yellow-400/15 text-yellow-400">Pendiente</span>
+                        )}
+                        {isDisputed && (
+                          <span className="badge bg-danger/15 text-danger">Disputa</span>
+                        )}
+                        {isVoid && (
+                          <span className="badge bg-surface-3 text-text-mute">Anulada</span>
+                        )}
+                        {isConfirmed && hasRating && (
+                          <>
+                            <span className={`badge ${won ? "bg-primary/15 text-primary" : "bg-danger/15 text-danger"}`}>
+                              {won ? "Ganó" : "Perdió"}
+                            </span>
+                            <span className={`font-mono ${delta! >= 0 ? "text-primary" : "text-danger"}`}>
+                              {delta! >= 0 ? "+" : ""}{delta!.toFixed(2)} μ
+                            </span>
+                          </>
+                        )}
                       </div>
                     </li>
                   );

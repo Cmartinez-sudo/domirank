@@ -204,11 +204,10 @@ export function NewTournamentForm({ currentUser, defaultModality }: { currentUse
 
       {/* Participantes */}
       <section className="card">
-        <label className="label mb-2">Participantes (mín. 4 — solo amigos)</label>
+        <label className="label mb-2">Participantes (mín. 4)</label>
         <UserSearch
           excludeIds={players.map((p) => p.id)}
-          placeholder="Buscar entre tus amigos…"
-          friendsOnly
+          placeholder="Buscar jugador por nombre o @usuario…"
           onSelect={(u) => setPlayers([...players, u as PublicUser])}
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
@@ -225,7 +224,7 @@ export function NewTournamentForm({ currentUser, defaultModality }: { currentUse
             </div>
           ))}
         </div>
-        <p className="text-text-mute text-xs mt-2">{players.length} seleccionados · <Link href="/friends" className="text-primary hover:underline">agregar más amigos →</Link></p>
+        <p className="text-text-mute text-xs mt-2">{players.length} seleccionados</p>
       </section>
 
       {err && <div className="p-3 bg-danger/10 border border-danger/30 rounded-xl text-danger text-sm">{err}</div>}

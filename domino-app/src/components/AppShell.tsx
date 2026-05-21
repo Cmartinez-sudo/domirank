@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { NavigationLoader } from "@/components/NavigationLoader";
 import { RealtimeNotifications } from "@/components/RealtimeNotifications";
+import { NotificationBell } from "@/components/NotificationBell";
 
 type NavItem = { href: string; label: string; icon: React.ReactNode; isCenter?: boolean; beta?: boolean; badge?: number };
 
@@ -37,7 +38,7 @@ export function AppShell({
 }: {
   user: { id: string } | null;
   profile: { username?: string; display_name?: string | null; avatar_url?: string | null } | null;
-  counts?: { friendRequests: number } | null;
+  counts?: { unread: number } | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -58,13 +59,13 @@ export function AppShell({
     return pathname === href || pathname.startsWith(href + "/");
   };
 
-  const friendBadge = counts?.friendRequests ?? 0;
+  const unread = counts?.unread ?? 0;
   const items: NavItem[] = [
     { href: "/dashboard",    label: "Inicio",   icon: ICON.home },
     { href: "/leaderboard",  label: "Ranking",  icon: ICON.trophy },
     { href: "/matches/new",  label: "Jugar",    icon: ICON.plus, isCenter: true },
     { href: "/tournaments",  label: "Torneos",  icon: ICON.pollas, beta: true },
-    { href: "/friends",      label: "Amigos",   icon: ICON.users, badge: friendBadge },
+    { href: "/friends",      label: "Amigos",   icon: ICON.users },
   ];
 
   return (
@@ -75,7 +76,7 @@ export function AppShell({
       {/* SIDEBAR DESKTOP */}
       {user && (
         <aside className="hidden md:flex md:flex-col w-64 shrink-0 border-r border-border bg-bg-2/40">
-          <div className="px-5 h-16 flex items-center">
+          <div className="px-5 h-16 flex items-center justify-between gap-3">
             <Link href="/" className="flex items-center gap-2.5 font-bold tracking-tight">
               <span
                 className="inline-grid place-items-center w-8 h-8 rounded-lg text-black text-xs font-extrabold"
@@ -85,6 +86,7 @@ export function AppShell({
               </span>
               <span className="text-[15px]">DomiRank</span>
             </Link>
+            <NotificationBell userId={user.id} initialUnreadCount={unread} />
           </div>
           <nav className="flex-1 px-3 space-y-0.5 py-3">
             {items.map((it) => {
@@ -155,9 +157,12 @@ export function AppShell({
               <span className="text-[16px]">DomiRank</span>
             </Link>
             {user ? (
-              <Link href="/settings" className="flex items-center p-1 rounded-full active:opacity-70 transition-opacity">
-                {profile && <Avatar player={profile as any} size={34} />}
-              </Link>
+              <div className="flex items-center gap-1">
+                <NotificationBell userId={user.id} initialUnreadCount={unread} />
+                <Link href="/settings" className="flex items-center p-1 rounded-full active:opacity-70 transition-opacity">
+                  {profile && <Avatar player={profile as any} size={34} />}
+                </Link>
+              </div>
             ) : (
               <Link href="/login" className="btn-primary !min-h-0 !py-2 !px-4 text-sm">Entrar</Link>
             )}

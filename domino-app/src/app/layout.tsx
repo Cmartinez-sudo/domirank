@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import { getCurrentUser, getCurrentProfile } from "@/lib/auth";
 import { getNotificationCounts, type NotificationCounts } from "@/lib/notifications";
 import { AppShell } from "@/components/AppShell";
+import { ToastProvider } from "@/components/Toast";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
@@ -29,9 +30,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="es" className={inter.className}>
       <body>
-        <AppShell user={user ? { id: user.id } : null} profile={profile} counts={counts}>
-          {children}
-        </AppShell>
+        <ToastProvider>
+          <AppShell user={user ? { id: user.id } : null} profile={profile} counts={counts}>
+            {children}
+          </AppShell>
+        </ToastProvider>
       </body>
     </html>
   );

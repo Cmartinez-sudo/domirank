@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { UserSearch } from "@/components/UserSearch";
@@ -22,11 +21,9 @@ type Player = {
 export function NewMatchForm({
   currentUser,
   defaultModality,
-  friendsCount,
 }: {
   currentUser: Player;
   defaultModality: ModalityCode;
-  friendsCount: number;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -45,8 +42,6 @@ export function NewMatchForm({
   const [teamB, setTeamB] = useState<Player[]>([]);
 
   const teamSize = format === "singles" ? 1 : 2;
-  const friendsNeeded = format === "singles" ? 1 : 3;
-  const notEnoughFriends = friendsCount < friendsNeeded;
 
   function applyModality(code: ModalityCode) {
     setModality(code);
@@ -180,24 +175,13 @@ export function NewMatchForm({
         )}
       </section>
 
-      {/* Equipos con búsqueda */}
-      {notEnoughFriends ? (
-        <section className="card text-center py-8">
-          <div className="text-4xl mb-3 select-none">🎯</div>
-          <h3 className="text-lg font-semibold mb-1">Necesitas amigos para jugar</h3>
-          <p className="text-text-dim text-sm mb-4 max-w-sm mx-auto">
-            Solo puedes crear partidas con amigos aceptados. Para {format === "singles" ? "singles necesitas 1 amigo" : "parejas necesitas 3 amigos"}.
-          </p>
-          <Link href="/friends" className="btn-primary inline-block">
-            Agregar amigos →
-          </Link>
-        </section>
-      ) : (
-        <div className="grid md:grid-cols-2 gap-4">
-          <TeamPicker label={format === "singles" ? "Tú" : "Equipo A"} colorClass="text-teamA" size={teamSize} players={teamA} setPlayers={setTeamA} excludeIds={excludeIds} />
-          <TeamPicker label={format === "singles" ? "Oponente" : "Equipo B"} colorClass="text-teamB" size={teamSize} players={teamB} setPlayers={setTeamB} excludeIds={excludeIds} />
-        </div>
-      )}
+      {/* Equipos con búsqueda — cualquier jugador puede ser agregado.
+          La confianza viene del attestation system: al cerrar partida,
+          se necesitan 3 de 4 firmas para que afecte el rating. */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <TeamPicker label={format === "singles" ? "Tú" : "Equipo A"} colorClass="text-teamA" size={teamSize} players={teamA} setPlayers={setTeamA} excludeIds={excludeIds} />
+        <TeamPicker label={format === "singles" ? "Oponente" : "Equipo B"} colorClass="text-teamB" size={teamSize} players={teamB} setPlayers={setTeamB} excludeIds={excludeIds} />
+      </div>
 
       {error && (
         <div className="p-3 bg-danger/10 border border-danger/30 rounded-md text-danger text-sm">
@@ -205,7 +189,7 @@ export function NewMatchForm({
         </div>
       )}
 
-      <button type="submit" className="btn-primary w-full" disabled={pending || notEnoughFriends}>
+      <button type="submit" className="btn-primary w-full" disabled={pending}>
         {pending ? "Creando…" : "Iniciar partida en vivo"}
       </button>
     </form>
@@ -228,8 +212,7 @@ function TeamPicker({
       {players.length < size ? (
         <UserSearch
           excludeIds={excludeIds}
-          placeholder="Buscar entre tus amigos…"
-          friendsOnly
+          placeholder="Buscar jugador por nombre o @usuario…"
           onSelect={(u) => setPlayers([...players, u as Player])}
         />
       ) : null}

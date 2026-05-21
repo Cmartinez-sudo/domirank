@@ -3,6 +3,7 @@ import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
 import { VoidMatchButton } from "./VoidMatchButton";
+import { AttestationPanel, type AttestationStatus, type AttestPlayer, type Attestation } from "@/components/match/AttestationPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,19 @@ export default async function MatchDetail({
 
   if (!match) return notFound();
 
+  // Carga campos extra de matches no expuestos por match_feed
+  const { data: matchExtra } = await supabase
+    .from("matches")
+    .select("scorekeeper_id, finalized_at, confirmed_at, rated_at, set_size")
+    .eq("id", id)
+    .single();
+
+  const { data: attestationsData } = await supabase
+    .from("match_attestations")
+    .select("user_id, action, comment, created_at")
+    .eq("match_id", id);
+  const attestations = (attestationsData ?? []) as Attestation[];
+
   const teams = new Map<number, any[]>();
   for (const p of (match.players ?? []) as any[]) {
     if (!p?.user_id) continue;
@@ -32,19 +46,33 @@ export default async function MatchDetail({
   }
   const teamList = Array.from(teams.entries()).sort(([a], [b]) => a - b);
 
-  const isVoided   = match.status === "voided";
-  const isCreator  = currentUserId && match.created_by === currentUserId;
-  const canVoid    = isCreator && match.status === "completed";
+  // Players para AttestationPanel
+  const players: AttestPlayer[] = ((match.players ?? []) as any[])
+    .filter((p) => p?.user_id)
+    .map((p) => ({
+      user_id:      p.user_id,
+      username:     p.username,
+      display_name: p.display_name,
+      avatar_url:   p.avatar_url ?? null,
+    }));
+
+  // Delta de rating del viewer si confirmed
+  let viewerDelta: number | null = null;
+  if (match.status === "confirmed" && currentUserId) {
+    const me = (match.players as any[]).find((p) => p.user_id === currentUserId);
+    if (me?.mu_before != null && me?.mu_after != null) {
+      viewerDelta = Number(me.mu_after) - Number(me.mu_before);
+    }
+  }
+
+  const status = match.status as AttestationStatus | "in_progress" | "cancelled";
+  const showAttestation = ["pending_attestation", "confirmed", "disputed", "void"].includes(status);
+  const isVoid    = status === "void";
+  const isCreator = currentUserId && match.created_by === currentUserId;
+  const canVoid   = isCreator && status === "confirmed";
 
   return (
     <div className="space-y-6">
-      {isVoided && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-danger/10 border border-danger/30 text-danger text-sm font-medium">
-          <span>⚠</span>
-          <span>Esta partida fue anulada. Los ratings han sido revertidos.</span>
-        </div>
-      )}
-
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="text-text-mute text-sm">
@@ -56,33 +84,55 @@ export default async function MatchDetail({
         {canVoid && <VoidMatchButton matchId={id} />}
       </div>
 
+      {showAttestation && currentUserId && (
+        <AttestationPanel
+          matchId={id}
+          status={status as AttestationStatus}
+          scorekeeperId={matchExtra?.scorekeeper_id ?? null}
+          viewerId={currentUserId}
+          players={players}
+          attestations={attestations}
+          finalizedAt={matchExtra?.finalized_at ?? null}
+          ratingDelta={viewerDelta}
+        />
+      )}
+
       <div className="grid md:grid-cols-2 gap-4">
         {teamList.map(([teamNo, players]) => {
           const score = players[0]?.score ?? 0;
           const won = players[0]?.rank === 1;
+          const hasRating = players[0]?.mu_before != null && players[0]?.mu_after != null;
           return (
-            <div key={teamNo} className={`card ${won ? "border-primary/50" : ""}`}>
+            <div key={teamNo} className={`card ${won && status === "confirmed" ? "border-primary/50" : ""}`}>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold">Equipo {teamNo}</h2>
-                {won && <span className="badge bg-primary/15 text-primary">Ganador</span>}
+                {won && status === "confirmed" && (
+                  <span className="badge bg-primary/15 text-primary">Ganador</span>
+                )}
+                {won && status === "pending_attestation" && (
+                  <span className="badge bg-yellow-400/15 text-yellow-400">Ganador (pendiente)</span>
+                )}
               </div>
               <div className="text-4xl font-mono font-bold mb-4">{score}</div>
               <ul className="space-y-3">
                 {players.map((p) => {
-                  const delta = Number(p.mu_after) - Number(p.mu_before);
                   return (
                     <li key={p.user_id} className="flex items-center justify-between text-sm">
                       <Link href={`/profile/${p.username}`} className="hover:text-primary">
                         {p.display_name || p.username}
                       </Link>
-                      <div className="flex items-center gap-3 font-mono">
-                        <span className="text-text-mute">{Number(p.mu_before).toFixed(2)}</span>
-                        <span className="text-text-mute">→</span>
-                        <span>{Number(p.mu_after).toFixed(2)}</span>
-                        <span className={delta >= 0 ? "text-primary" : "text-danger"}>
-                          ({delta >= 0 ? "+" : ""}{delta.toFixed(2)})
-                        </span>
-                      </div>
+                      {hasRating ? (
+                        <div className="flex items-center gap-3 font-mono">
+                          <span className="text-text-mute">{Number(p.mu_before).toFixed(2)}</span>
+                          <span className="text-text-mute">→</span>
+                          <span>{Number(p.mu_after).toFixed(2)}</span>
+                          <span className={Number(p.mu_after) - Number(p.mu_before) >= 0 ? "text-primary" : "text-danger"}>
+                            ({Number(p.mu_after) - Number(p.mu_before) >= 0 ? "+" : ""}{(Number(p.mu_after) - Number(p.mu_before)).toFixed(2)})
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-text-mute text-xs italic">rating pendiente</span>
+                      )}
                     </li>
                   );
                 })}

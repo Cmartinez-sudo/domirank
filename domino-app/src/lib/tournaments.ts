@@ -30,20 +30,7 @@ export async function createTournament(input: z.infer<typeof CreateSchema>) {
   const limit = await checkLimit(rl.tournament, `tournament:${user.id}`);
   if (!limit.allowed) return { ok: false as const, error: limit.error };
 
-  // Validar que todos los participantes (excepto el creador) sean amigos
-  const otherIds = f.player_ids.filter((id) => id !== user.id);
-  if (otherIds.length > 0) {
-    const { data: friendRows } = await supabase
-      .from("friendships")
-      .select("friend_id")
-      .eq("user_id", user.id)
-      .in("friend_id", otherIds);
-    const friendSet = new Set((friendRows ?? []).map((r) => r.friend_id));
-    const notFriends = otherIds.filter((id) => !friendSet.has(id));
-    if (notFriends.length > 0) {
-      return { ok: false as const, error: "Solo puedes agregar amigos al torneo. Envíales solicitud primero." };
-    }
-  }
+  // Epic Q: ya no validamos amistad. Cualquier jugador puede agregarse.
 
   // Crear el tournament
   const { data: t, error } = await supabase

@@ -26,7 +26,7 @@ export default async function LivePage({
     if (match.status !== "in_progress") redirect(`/matches/${id}`);
     redirect(`/matches/${id}`);
   }
-  if (match.status === "completed") redirect(`/matches/${id}`);
+  if (match.status !== "in_progress") redirect(`/matches/${id}`);
   if (match.status === "cancelled") redirect(`/dashboard`);
 
   const { data: mps } = await supabase

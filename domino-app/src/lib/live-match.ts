@@ -4,8 +4,6 @@ import { z } from "zod";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
-import { updateRatings, type TeamInput } from "@/lib/rating";
-import { MODALIDADES, modalityByCode, type ModalityCode, type SetCode, type FormatCode } from "@/lib/modalidades";
 import { rl, checkLimit } from "@/lib/ratelimit";
 
 /* ============================================================
@@ -43,22 +41,8 @@ export async function startLiveMatch(input: StartLiveMatchInput): Promise<{ ok: 
   const limit = await checkLimit(rl.matchStart, `match:${user.id}`);
   if (!limit.allowed) return { ok: false, error: limit.error };
 
-  // Validar que TODOS los otros jugadores sean amigos del creador.
-  // Defensa en profundidad: el UI solo permite amigos pero un cliente malicioso
-  // podría llamar este action directamente.
-  const otherIds = [...i.team_a_players, ...i.team_b_players].filter((id) => id !== user.id);
-  if (otherIds.length > 0) {
-    const { data: friendRows } = await supabase
-      .from("friendships")
-      .select("friend_id")
-      .eq("user_id", user.id)
-      .in("friend_id", otherIds);
-    const friendSet = new Set((friendRows ?? []).map((r) => r.friend_id));
-    const notFriends = otherIds.filter((id) => !friendSet.has(id));
-    if (notFriends.length > 0) {
-      return { ok: false, error: "Solo puedes jugar con tus amigos. Envía solicitud antes de invitar." };
-    }
-  }
+  // Epic Q: ya no validamos amistad. Cualquier jugador puede agregarse.
+  // La confianza viene del attestation system (3 de 4 firmas).
 
   // Si ya hay una partida in_progress del usuario, cancelarla primero
   await supabase.from("matches").update({ status: "cancelled" }).eq("created_by", user.id).eq("status", "in_progress");
@@ -170,103 +154,50 @@ export async function cancelLiveMatch(match_id: string) {
    ============================================================ */
 
 /**
- * Finaliza una partida y aplica el cálculo de OpenSkill.
+ * Finaliza una partida → la mueve a `pending_attestation`.
  *
- * Arquitectura: la matemática (Plackett-Luce / Weng-Lin) corre en JS porque
- * vive en la librería `openskill`, pero la persistencia (snapshots de
- * match_players + bump de profile ratings + status=completed) se hace
- * atómicamente vía la función SQL `finalize_match(p_match_id, p_updates)`
- * — un único bloque PL/pgSQL con `for update` lock sobre la partida.
- * Esto previene doble-finalize, partial-failures, y race conditions
- * en el path de mutación. Ver migración 0012.
+ * Arquitectura (Epic Q):
+ *   - El cálculo de OpenSkill NO se aplica aquí. Esperamos consenso
+ *     (3 de 4 jugadores firmando) antes de afectar el rating.
+ *   - El SQL RPC `finalize_match` cambia status, marca al scorekeeper
+ *     y auto-firma su attestation.
+ *   - Si después se llega a quórum vía attestMatch, ahí se aplica el
+ *     rating. Ver src/lib/match-attest-actions.ts.
  */
 export async function finalizeMatch(match_id: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = await supabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado." };
 
-  // Pre-check liviano (SQL re-verifica todo bajo lock)
-  const { data: match } = await supabase
-    .from("matches")
-    .select("id, created_by, status, format, set_size")
-    .eq("id", match_id)
-    .single();
-  if (!match) return { ok: false, error: "No existe la partida." };
-  if (match.created_by !== user.id) return { ok: false, error: "Solo el creador puede finalizar." };
-  if (match.status !== "in_progress") return { ok: false, error: "La partida no está en curso." };
-
+  // Sincronizar scores acumulados desde los rounds antes de finalizar
   await syncMatchScores(match_id);
 
+  // Validar que haya ganador definido (no empates)
   const { data: mps } = await supabase
     .from("match_players")
-    .select("user_id, team, score")
+    .select("team, score")
     .eq("match_id", match_id);
   if (!mps || mps.length === 0) return { ok: false, error: "Sin jugadores." };
-
-  // Detectar ganador / validar empate
   const teamScores: Record<number, number> = {};
   for (const r of mps) teamScores[r.team] = (teamScores[r.team] ?? 0) + r.score;
   const max = Math.max(...Object.values(teamScores));
   const winners = Object.entries(teamScores).filter(([, s]) => s === max).map(([t]) => Number(t));
-  if (winners.length !== 1) return { ok: false, error: "Empates no se rankean." };
+  if (winners.length !== 1) return { ok: false, error: "Empates no se pueden cerrar — debe haber un ganador." };
 
-  // Cargar μ/σ actuales para el bucket correspondiente
-  const mu_col    = ratingCol(match.set_size as SetCode, match.format as FormatCode, "mu");
-  const sigma_col = ratingCol(match.set_size as SetCode, match.format as FormatCode, "sigma");
-  const userIds   = mps.map((r) => r.user_id);
-  const { data: profiles, error: pErr } = await supabase
-    .from("profiles")
-    .select(`id, ${mu_col}, ${sigma_col}`)
-    .in("id", userIds);
-  if (pErr || !profiles) return { ok: false, error: pErr?.message ?? "No se pudieron leer perfiles" };
-  const byId = new Map(profiles.map((p: any) => [p.id, p]));
-
-  // Construir teams para OpenSkill (rank 1 = mejor)
-  const teamsMap = new Map<number, typeof mps>();
-  for (const r of mps) {
-    if (!teamsMap.has(r.team)) teamsMap.set(r.team, []);
-    teamsMap.get(r.team)!.push(r);
-  }
-  const teamInputs: TeamInput[] = Array.from(teamsMap.entries()).sort(([a],[b]) => a - b).map(([team, rows]) => ({
-    team,
-    rank: 1 + Object.values(teamScores).filter((s) => s > teamScores[team]).length,
-    players: rows.map((r) => {
-      const p: any = byId.get(r.user_id);
-      return { user_id: r.user_id, mu: Number(p[mu_col]), sigma: Number(p[sigma_col]) };
-    }),
-  }));
-
-  const updates = updateRatings(teamInputs);
-
-  // Aplicar atómicamente vía RPC
-  const { error: rpcErr } = await supabase.rpc("finalize_match", {
-    p_match_id: match_id,
-    p_updates: updates.map((u) => ({
-      user_id:      u.user_id,
-      rank:         u.rank,
-      mu_before:    u.mu_before,
-      sigma_before: u.sigma_before,
-      mu_after:     u.mu_after,
-      sigma_after:  u.sigma_after,
-    })),
-  });
-
+  // Llamar SQL RPC: mueve a pending_attestation + auto-attest scorekeeper
+  const { error: rpcErr } = await supabase.rpc("finalize_match", { p_match_id: match_id });
   if (rpcErr) {
     const m = rpcErr.message ?? "";
     const friendly =
-      m.includes("not_authorized")        ? "Solo el creador puede finalizar" :
-      m.includes("not_finalizable")       ? "La partida ya no está en curso" :
-      m.includes("match_not_found")       ? "Partida no encontrada" :
-      m.includes("user_not_in_match")     ? "Datos inconsistentes — recarga la página" :
-      m.includes("updates_count_mismatch")? "Conteo de jugadores inconsistente" :
-      m.includes("invalid_update_fields") ? "Datos inválidos en el cálculo de rating" :
+      m.includes("not_authorized")    ? "Solo el creador puede finalizar" :
+      m.includes("not_finalizable")   ? "La partida ya no está en curso" :
+      m.includes("match_not_found")   ? "Partida no encontrada" :
       "Error al finalizar la partida";
     console.error("finalize_match RPC failed:", rpcErr);
     return { ok: false, error: friendly };
   }
 
   revalidatePath("/dashboard");
-  revalidatePath("/leaderboard");
   revalidatePath(`/matches/${match_id}`);
   return { ok: true };
 }
@@ -274,14 +205,6 @@ export async function finalizeMatch(match_id: string): Promise<{ ok: true } | { 
 /* ============================================================
    HELPERS
    ============================================================ */
-
-function ratingCol(set: SetCode, format: FormatCode, suffix: "mu"|"sigma"|"games"|"wins"|"losses"): string {
-  // d6 usa columnas legacy singles_*/doubles_*; d9 usa d9_singles_*/d9_doubles_*
-  const base = set === "d6"
-    ? (format === "singles" ? "singles" : "doubles")
-    : (format === "singles" ? "d9_singles" : "d9_doubles");
-  return `${base}_${suffix}`;
-}
 
 async function syncMatchScores(match_id: string) {
   const supabase = await supabaseServer();
