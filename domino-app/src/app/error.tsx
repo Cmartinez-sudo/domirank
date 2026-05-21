@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 
 export default function Error({
@@ -9,6 +10,10 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => {
+    console.error("[page-error]", error);
+  }, [error]);
+
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center text-center gap-4 px-4">
       <div className="text-5xl select-none">⚠️</div>
@@ -20,9 +25,21 @@ export default function Error({
         <button onClick={reset} className="btn-primary">Reintentar</button>
         <Link href="/dashboard" className="btn-ghost">Ir al inicio</Link>
       </div>
-      {error.digest && (
-        <p className="text-text-mute text-xs mt-4 font-mono">ref: {error.digest}</p>
-      )}
+
+      <details className="mt-6 w-full max-w-md text-left">
+        <summary className="cursor-pointer text-text-mute text-xs">
+          Detalles técnicos
+        </summary>
+        <div className="mt-2 p-3 bg-surface-2 rounded-lg border border-border text-xs font-mono space-y-2 text-text-dim break-words">
+          {error.digest && <div><strong>Ref:</strong> {error.digest}</div>}
+          <div><strong>Mensaje:</strong> {error.message || "(sin mensaje)"}</div>
+          {error.stack && (
+            <pre className="whitespace-pre-wrap text-text-mute text-[10px]">
+              {error.stack.slice(0, 1200)}
+            </pre>
+          )}
+        </div>
+      </details>
     </div>
   );
 }
