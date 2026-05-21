@@ -24,15 +24,28 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const user = await getCurrentUser();
-  const profile = user ? (await getCurrentProfile() as any) : null;
-  const counts: NotificationCounts | null = user ? await getNotificationCounts(user.id) : null;
+  // Defensa: que un fallo en CUALQUIERA de estas queries no rompa el layout
+  // entero (sino, el usuario ve global-error en cualquier ruta).
+  let user: { id: string } | null = null;
+  let profile: any = null;
+  let counts: NotificationCounts | null = null;
+
+  try {
+    const u = await getCurrentUser();
+    if (u) {
+      user = { id: u.id };
+      try { profile = await getCurrentProfile(); } catch (e) { console.error("[layout] profile failed:", e); }
+      try { counts = await getNotificationCounts(u.id); } catch (e) { console.error("[layout] counts failed:", e); }
+    }
+  } catch (e) {
+    console.error("[layout] getCurrentUser failed:", e);
+  }
 
   return (
     <html lang="es" className={inter.className}>
       <body>
         <ToastProvider>
-          <AppShell user={user ? { id: user.id } : null} profile={profile} counts={counts}>
+          <AppShell user={user} profile={profile} counts={counts}>
             {children}
           </AppShell>
         </ToastProvider>
