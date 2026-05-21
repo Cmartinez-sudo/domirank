@@ -26,34 +26,33 @@ export function RealtimeNotifications({ userId }: { userId: string }) {
     if (!userId) return;
 
     const supabase = supabaseBrowser();
-    const channel = supabase
-      .channel(`notifications:${userId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "friend_requests",
-          filter: `to_user=eq.${userId}`,
-        },
-        () => router.refresh()
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "friend_requests",
-          filter: `from_user=eq.${userId}`,
-        },
-        () => router.refresh()
-      )
-      .subscribe();
-
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      // Nombre único por mount + router fuera de deps para evitar
+      // "cannot add callbacks after subscribe()" en re-renders
+      channel = supabase
+        .channel(`fr:${userId}:${Math.random().toString(36).slice(2, 9)}`)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "friend_requests", filter: `to_user=eq.${userId}` },
+          () => router.refresh()
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "friend_requests", filter: `from_user=eq.${userId}` },
+          () => router.refresh()
+        )
+        .subscribe();
+    } catch (e) {
+      console.error("[RealtimeNotifications] subscribe failed:", e);
+    }
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        try { supabase.removeChannel(channel); } catch {}
+      }
     };
-  }, [userId, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   return null;
 }

@@ -65,24 +65,35 @@ export function AttestationPanel(props: Props) {
   const isParticipant = props.players.some((p) => p.user_id === props.viewerId);
 
   // Realtime: cualquier nueva attestation sobre esta partida → refresh
+  // Nombre único por mount para evitar conflict de canal existente
   useEffect(() => {
     if (!isParticipant) return;
     const supabase = supabaseBrowser();
-    const channel = supabase
-      .channel(`attest:${props.matchId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "match_attestations", filter: `match_id=eq.${props.matchId}` },
-        () => router.refresh()
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "matches", filter: `id=eq.${props.matchId}` },
-        () => router.refresh()
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [props.matchId, isParticipant, router]);
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      channel = supabase
+        .channel(`attest:${props.matchId}:${Math.random().toString(36).slice(2, 9)}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "match_attestations", filter: `match_id=eq.${props.matchId}` },
+          () => router.refresh()
+        )
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "matches", filter: `id=eq.${props.matchId}` },
+          () => router.refresh()
+        )
+        .subscribe();
+    } catch (e) {
+      console.error("[AttestationPanel] subscribe failed:", e);
+    }
+    return () => {
+      if (channel) {
+        try { supabase.removeChannel(channel); } catch {}
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.matchId, isParticipant]);
 
   if (!isParticipant) {
     return <StatusBanner status={props.status} hideDetail />;

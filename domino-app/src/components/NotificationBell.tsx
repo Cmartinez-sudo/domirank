@@ -84,22 +84,35 @@ export function NotificationBell({
   useEffect(() => setUnread(initialUnreadCount), [initialUnreadCount]);
 
   // Realtime: INSERT en notifications donde user_id = me
+  // Bug evitado: nombre de canal único por mount + router fuera de deps
+  // (Supabase devuelve canales existentes por nombre; reusar nombre tras
+  // re-render causaría "cannot add callbacks after subscribe()")
   useEffect(() => {
     if (!userId) return;
     const supabase = supabaseBrowser();
-    const channel = supabase
-      .channel(`bell:${userId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
-        () => {
-          setUnread((c) => c + 1);
-          router.refresh();
-        }
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [userId, router]);
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      channel = supabase
+        .channel(`bell:${userId}:${Math.random().toString(36).slice(2, 9)}`)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
+          () => {
+            setUnread((c) => c + 1);
+            router.refresh();
+          }
+        )
+        .subscribe();
+    } catch (e) {
+      console.error("[NotificationBell] subscribe failed:", e);
+    }
+    return () => {
+      if (channel) {
+        try { supabase.removeChannel(channel); } catch {}
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   // Click fuera cierra dropdown
   useEffect(() => {
