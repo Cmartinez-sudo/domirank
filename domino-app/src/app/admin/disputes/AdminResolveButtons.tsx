@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
 import { adminResolveMatch } from "@/lib/admin-actions";
-import { applyMatchRating } from "@/lib/match-attest-actions";
 
 export function AdminResolveButtons({ matchId }: { matchId: string }) {
   const router = useRouter();
@@ -14,21 +13,14 @@ export function AdminResolveButtons({ matchId }: { matchId: string }) {
   async function resolve(action: "confirm" | "void") {
     if (!confirm(action === "confirm" ? "¿Confirmar este resultado y aplicar al rating?" : "¿Marcar como anulada (no afecta rating)?")) return;
     setPending(true);
+    // adminResolveMatch ya aplica el rating internamente cuando action='confirm'
     const r = await adminResolveMatch(matchId, action);
+    setPending(false);
     if (!r.ok) {
       toast.error(r.error);
-      setPending(false);
       return;
     }
-    if (action === "confirm") {
-      // Aplica rating en el mismo request
-      const ar = await applyMatchRating(matchId);
-      if (!ar.ok) toast.error(`Confirmada pero rating no aplicado: ${ar.error}`);
-      else toast.success("Confirmada · rating aplicado");
-    } else {
-      toast.success("Partida anulada");
-    }
-    setPending(false);
+    toast.success(action === "confirm" ? "Confirmada · rating aplicado" : "Partida anulada");
     router.refresh();
   }
 
