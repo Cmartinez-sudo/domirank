@@ -2,7 +2,8 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { getCurrentUser, getCurrentProfile } from "@/lib/auth";
-import { getNotificationCounts, type NotificationCounts } from "@/lib/notifications";
+import { getNotificationCounts } from "@/lib/notifications";
+import type { NotificationCounts } from "@/lib/notifications-types";
 import { AppShell } from "@/components/AppShell";
 import { ToastProvider } from "@/components/Toast";
 

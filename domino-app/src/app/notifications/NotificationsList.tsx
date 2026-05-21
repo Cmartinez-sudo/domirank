@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { Avatar } from "@/components/Avatar";
 import { useToast } from "@/components/Toast";
 import { acceptFriendRequest, rejectFriendRequest } from "@/lib/friends";
-import type { AppNotification } from "@/lib/notifications";
+import type { AppNotification } from "@/lib/notifications-types";
 
 const EASE_OUT: [number, number, number, number] = [0.25, 0.46, 0.45, 0.94];
 

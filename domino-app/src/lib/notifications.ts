@@ -2,38 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
-
-/* ============================================================
-   TIPOS
-   ============================================================ */
-
-export type NotificationCounts = {
-  /** Total de notificaciones no leídas — alimenta el bell badge */
-  unread: number;
-};
-
-export type NotificationType = "friend_request_received" | "friend_request_accepted" | string;
-
-export type AppNotification = {
-  id: string;
-  type: NotificationType;
-  payload: Record<string, any>;
-  ref_match_id: string | null;
-  read_at: string | null;
-  created_at: string;
-  /** Perfil del usuario relevante (sender, actor, scorekeeper) si aplica */
-  actor: {
-    id: string;
-    username: string;
-    display_name: string | null;
-    avatar_url: string | null;
-  } | null;
-  /**
-   * Para friend_request_received: si la request sigue pendiente, request_id
-   * apunta a ella. Si ya fue respondida, es null.
-   */
-  pending_request_id: string | null;
-};
+import type { NotificationCounts, AppNotification } from "@/lib/notifications-types";
 
 /* ============================================================
    QUERIES
@@ -63,12 +32,11 @@ export async function getNotifications(limit: number = 50): Promise<AppNotificat
 
   if (!rows || rows.length === 0) return [];
 
-  // Recolectar IDs de actores y request_ids relevantes (una query cada uno)
-  const actorIds  = new Set<string>();
+  // Recolectar IDs de actores y request_ids relevantes
+  const actorIds   = new Set<string>();
   const requestIds = new Set<string>();
   for (const r of rows) {
     const p = r.payload as any;
-    // Distintos tipos usan distintos campos para el "actor"
     const a = p?.from_user ?? p?.by_user ?? p?.actor_id ?? p?.scorekeeper_id;
     if (a) actorIds.add(a);
     const reqId = p?.request_id;
@@ -85,7 +53,7 @@ export async function getNotifications(limit: number = 50): Promise<AppNotificat
     for (const p of (profiles ?? []) as any[]) actors.set(p.id, p);
   }
 
-  // Batch fetch friend_requests status (para saber cuáles siguen pendientes)
+  // Batch fetch friend_requests pendientes
   const pending = new Set<string>();
   if (requestIds.size > 0) {
     const { data: reqs } = await supabase
