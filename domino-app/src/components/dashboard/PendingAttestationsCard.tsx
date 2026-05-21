@@ -20,33 +20,46 @@ type PendingMatch = {
 /**
  * Widget de dashboard: lista partidas pendientes de tu firma.
  * Server component — se renderiza solo si el viewer tiene ≥1 pendientes.
+ * Defensivo: si CUALQUIER query falla, devuelve null silenciosamente.
  */
 export async function PendingAttestationsCard({ userId }: { userId: string }) {
-  const supabase = await supabaseServer();
+  let toShow: PendingMatch[] = [];
 
-  // Partidas donde el viewer es jugador, status=pending_attestation,
-  // y NO ha firmado todavía.
-  const { data: rows } = await supabase
-    .from("match_feed")
-    .select("*")
-    .eq("status", "pending_attestation")
-    .order("created_at", { ascending: false })
-    .limit(20);
+  try {
+    const supabase = await supabaseServer();
 
-  const pending: PendingMatch[] = ((rows ?? []) as any[])
-    .filter((m) => (m.players ?? []).some((p: any) => p?.user_id === userId));
+    const { data: rows, error: rowsErr } = await supabase
+      .from("match_feed")
+      .select("*")
+      .eq("status", "pending_attestation")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (rowsErr) {
+      console.error("[PendingAttestationsCard] match_feed failed:", rowsErr.message);
+      return null;
+    }
 
-  if (pending.length === 0) return null;
+    const pending: PendingMatch[] = ((rows ?? []) as any[])
+      .filter((m) => Array.isArray(m?.players) && m.players.some((p: any) => p?.user_id === userId));
 
-  // Filtra los que YA firmé
-  const matchIds = pending.map((m) => m.id);
-  const { data: myAttestations } = await supabase
-    .from("match_attestations")
-    .select("match_id")
-    .eq("user_id", userId)
-    .in("match_id", matchIds);
-  const signed = new Set((myAttestations ?? []).map((a) => a.match_id));
-  const toShow = pending.filter((m) => !signed.has(m.id));
+    if (pending.length === 0) return null;
+
+    const matchIds = pending.map((m) => m.id);
+    const { data: myAttestations, error: attErr } = await supabase
+      .from("match_attestations")
+      .select("match_id")
+      .eq("user_id", userId)
+      .in("match_id", matchIds);
+    if (attErr) {
+      console.error("[PendingAttestationsCard] attestations failed:", attErr.message);
+      return null;
+    }
+    const signed = new Set((myAttestations ?? []).map((a) => a.match_id));
+    toShow = pending.filter((m) => !signed.has(m.id));
+  } catch (e) {
+    console.error("[PendingAttestationsCard] unexpected error:", e);
+    return null;
+  }
 
   if (toShow.length === 0) return null;
 
