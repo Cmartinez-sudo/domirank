@@ -24,13 +24,13 @@ export default async function Dashboard() {
   const globalDisplay  = Number(profile.global_display  ?? 1);
   const singlesDisplay = Number(profile.d6_singles_display ?? 1);
   const doublesDisplay = Number(profile.d6_doubles_display ?? 1);
-  const singlesOrdinal = Number(profile.d6_singles_ordinal ?? 0);
-  const doublesOrdinal = Number(profile.d6_doubles_ordinal ?? 0);
+  const singlesElo     = Number(profile.d6_singles_elo ?? 1500);
+  const doublesElo     = Number(profile.d6_doubles_elo ?? 1500);
 
   const supabase = await supabaseServer();
   const { data: recent } = await supabase
     .from("match_players")
-    .select("match_id, team, rank, mu_before, mu_after, sigma_before, sigma_after, created_at, matches(format, target_points, created_at, status)")
+    .select("match_id, team, rank, elo_before, elo_after, created_at, matches(format, target_points, created_at, status)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(10);
@@ -106,9 +106,7 @@ export default async function Dashboard() {
             <RatingCard
               title="Singles (1v1)"
               display={singlesDisplay}
-              ordinal={singlesOrdinal}
-              mu={Number(profile.d6_singles_mu ?? 25)}
-              sigma={Number(profile.d6_singles_sigma ?? 8.3333)}
+              elo={singlesElo}
               games={profile.d6_singles_games || 0}
               wins={profile.d6_singles_wins || 0}
               losses={profile.d6_singles_losses || 0}
@@ -116,9 +114,7 @@ export default async function Dashboard() {
             <RatingCard
               title="Parejas (2v2)"
               display={doublesDisplay}
-              ordinal={doublesOrdinal}
-              mu={Number(profile.d6_doubles_mu ?? 25)}
-              sigma={Number(profile.d6_doubles_sigma ?? 8.3333)}
+              elo={doublesElo}
               games={profile.d6_doubles_games || 0}
               wins={profile.d6_doubles_wins || 0}
               losses={profile.d6_doubles_losses || 0}
@@ -138,8 +134,8 @@ export default async function Dashboard() {
                   const isDisputed  = status === "disputed";
                   const isVoid      = status === "void";
                   const won = r.rank === 1;
-                  const hasRating = r.mu_before != null && r.mu_after != null;
-                  const delta = hasRating ? Number(r.mu_after) - Number(r.mu_before) : null;
+                  const hasRating = r.elo_before != null && r.elo_after != null;
+                  const delta = hasRating ? Number(r.elo_after) - Number(r.elo_before) : null;
                   return (
                     <li key={`${r.match_id}-${r.team}`} className="py-3 flex items-center justify-between gap-3">
                       <div className="min-w-0">
@@ -166,7 +162,7 @@ export default async function Dashboard() {
                               {won ? "Ganó" : "Perdió"}
                             </span>
                             <span className={`font-mono ${delta! >= 0 ? "text-primary" : "text-danger"}`}>
-                              {delta! >= 0 ? "+" : ""}{delta!.toFixed(2)} μ
+                              {delta! >= 0 ? "+" : ""}{delta!} Elo
                             </span>
                           </>
                         )}
@@ -192,41 +188,40 @@ export default async function Dashboard() {
   );
 }
 
-function RatingCard({ title, display, ordinal, mu, sigma, games, wins, losses }: {
-  title: string; display: number; ordinal: number; mu: number; sigma: number;
+function RatingCard({ title, display, elo, games, wins, losses }: {
+  title: string; display: number; elo: number;
   games: number; wins: number; losses: number;
 }) {
   const winRate = games > 0 ? Math.round((wins / games) * 100) : null;
+  const isProvisional = games > 0 && games < 10;
   return (
     <div className="card">
       <div className="text-text-mute text-sm">{title}</div>
       <div className="flex items-baseline gap-2 mt-1 flex-wrap">
         <span className="text-4xl font-bold text-primary font-mono">{games > 0 ? display.toFixed(1) : "—"}</span>
         {games > 0 && <TierBadge display={display} />}
+        {isProvisional && (
+          <span className="text-text-mute text-[10px] uppercase tracking-wider font-semibold">Provisional</span>
+        )}
       </div>
-      {games > 0 && <div className="text-text-mute text-xs mt-0.5">ordinal {ordinal.toFixed(2)}</div>}
-      <div className="grid grid-cols-4 gap-3 mt-4 text-sm">
-        <div>
-          <div className="text-text-mute text-xs">μ</div>
-          <div className="font-mono">{mu.toFixed(2)}</div>
-        </div>
-        <div>
-          <div className="text-text-mute text-xs">σ</div>
-          <div className="font-mono">{sigma.toFixed(2)}</div>
-        </div>
+      {games > 0 && <div className="text-text-mute text-xs mt-0.5">Elo {elo}</div>}
+      <div className="grid grid-cols-3 gap-3 mt-4 text-sm">
         <div>
           <div className="text-text-mute text-xs">Partidas</div>
           <div className="font-mono">{games}</div>
         </div>
         <div>
+          <div className="text-text-mute text-xs">G / P</div>
+          <div className="font-mono">
+            <span className="text-primary">{wins}</span>
+            <span className="text-text-mute"> / </span>
+            <span className="text-danger">{losses}</span>
+          </div>
+        </div>
+        <div>
           <div className="text-text-mute text-xs">W%</div>
           <div className="font-mono">{winRate !== null ? `${winRate}%` : "—"}</div>
         </div>
-      </div>
-      <div className="mt-3 text-sm">
-        <span className="text-primary">{wins}G</span>
-        <span className="text-text-mute"> · </span>
-        <span className="text-danger">{losses}P</span>
       </div>
     </div>
   );

@@ -50,7 +50,7 @@ export default async function PublicProfile({
   try {
     const { data: historyRaw } = await supabase
       .from("match_players")
-      .select("match_id, team, rank, mu_before, mu_after, created_at, matches(format, target_points, status)")
+      .select("match_id, team, rank, elo_before, elo_after, created_at, matches(format, target_points, status)")
       .eq("user_id", p.id)
       .order("created_at", { ascending: false })
       .limit(40);
@@ -131,7 +131,7 @@ export default async function PublicProfile({
           <StatBlock
             title="Singles (6-6)"
             display={safeNumber(p.d6_singles_display, 1)}
-            ordinal={safeNumber(p.d6_singles_ordinal, 0)}
+            elo={safeNumber(p.d6_singles_elo, 1500)}
             games={p.d6_singles_games ?? 0}
             wins={p.d6_singles_wins ?? 0}
             losses={p.d6_singles_losses ?? 0}
@@ -139,7 +139,7 @@ export default async function PublicProfile({
           <StatBlock
             title="Parejas (6-6)"
             display={safeNumber(p.d6_doubles_display, 1)}
-            ordinal={safeNumber(p.d6_doubles_ordinal, 0)}
+            elo={safeNumber(p.d6_doubles_elo, 1500)}
             games={p.d6_doubles_games ?? 0}
             wins={p.d6_doubles_wins ?? 0}
             losses={p.d6_doubles_losses ?? 0}
@@ -151,7 +151,7 @@ export default async function PublicProfile({
             <StatBlock
               title="Singles (9-9)"
               display={safeNumber(p.d9_singles_display, 1)}
-              ordinal={safeNumber(p.d9_singles_ordinal, 0)}
+              elo={safeNumber(p.d9_singles_elo, 1500)}
               games={p.d9_singles_games ?? 0}
               wins={p.d9_singles_wins ?? 0}
               losses={p.d9_singles_losses ?? 0}
@@ -159,7 +159,7 @@ export default async function PublicProfile({
             <StatBlock
               title="Parejas (9-9)"
               display={safeNumber(p.d9_doubles_display, 1)}
-              ordinal={safeNumber(p.d9_doubles_ordinal, 0)}
+              elo={safeNumber(p.d9_doubles_elo, 1500)}
               games={p.d9_doubles_games ?? 0}
               wins={p.d9_doubles_wins ?? 0}
               losses={p.d9_doubles_losses ?? 0}
@@ -179,8 +179,8 @@ export default async function PublicProfile({
               const isDisputed  = status === "disputed";
               const isVoid      = status === "void";
               const won = r.rank === 1;
-              const hasRating = r.mu_before != null && r.mu_after != null;
-              const delta = hasRating ? Number(r.mu_after) - Number(r.mu_before) : null;
+              const hasRating = r.elo_before != null && r.elo_after != null;
+              const delta = hasRating ? Number(r.elo_after) - Number(r.elo_before) : null;
               return (
                 <li key={`${r.match_id}-${r.team}`} className="py-3 flex items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -200,7 +200,7 @@ export default async function PublicProfile({
                       {won ? "Ganó" : "Perdió"}
                     </span>
                     <span className={`font-mono ${delta! >= 0 ? "text-primary" : "text-danger"}`}>
-                      {delta! >= 0 ? "+" : ""}{delta!.toFixed(2)}
+                      {delta! >= 0 ? "+" : ""}{delta!} Elo
                     </span>
                     </>}
                   </div>
@@ -221,10 +221,11 @@ function safeNumber(v: unknown, fallback: number): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function StatBlock({ title, display, ordinal, games, wins, losses }: {
-  title: string; display: number; ordinal: number; games: number; wins: number; losses: number;
+function StatBlock({ title, display, elo, games, wins, losses }: {
+  title: string; display: number; elo: number; games: number; wins: number; losses: number;
 }) {
   const winRate = games > 0 ? Math.round((wins / games) * 100) : null;
+  const isProvisional = games > 0 && games < 10;
   return (
     <div className="bg-surface-2 rounded-md p-4">
       <div className="text-text-mute text-sm">{title}</div>
@@ -233,8 +234,11 @@ function StatBlock({ title, display, ordinal, games, wins, losses }: {
           {games > 0 ? display.toFixed(1) : "—"}
         </span>
         {games > 0 && <TierBadge display={display} />}
+        {isProvisional && (
+          <span className="text-text-mute text-[10px] uppercase tracking-wider font-semibold">Provisional</span>
+        )}
       </div>
-      {games > 0 && <div className="text-text-mute text-xs mt-0.5">ordinal {ordinal.toFixed(2)}</div>}
+      {games > 0 && <div className="text-text-mute text-xs mt-0.5">Elo {elo}</div>}
       <div className="flex items-center gap-3 mt-2 text-sm">
         <span className="text-text-dim">{games} partidas</span>
         <span className="text-primary">{wins}G</span>

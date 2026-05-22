@@ -112,7 +112,7 @@ export async function attestMatch(
 }
 
 /**
- * Calcula OpenSkill y aplica el rating atómicamente vía SQL apply_match_rating.
+ * Calcula el Elo y aplica el rating atómicamente vía SQL apply_match_rating.
  * Idempotente — si la partida ya tiene rated_at, no hace nada.
  * Internal: típicamente lo llama attestMatch cuando se alcanza quórum.
  * También puede llamarse desde un job que detecta matches confirmed sin ratear.
@@ -151,13 +151,13 @@ export async function applyMatchRating(matchId: string): Promise<{ ok: true } | 
     if (teamScores[mp.team] === undefined) teamScores[mp.team] = 0;
   }
 
-  // Cargar ratings actuales por bucket
-  const muCol    = ratingCol(match.set_size as SetCode, match.format as FormatCode, "mu");
-  const sigmaCol = ratingCol(match.set_size as SetCode, match.format as FormatCode, "sigma");
+  // Cargar Elo y games actuales por bucket
+  const eloCol   = ratingCol(match.set_size as SetCode, match.format as FormatCode, "elo");
+  const gamesCol = ratingCol(match.set_size as SetCode, match.format as FormatCode, "games");
   const userIds  = mps.map((r) => r.user_id);
   const { data: profiles, error: pErr } = await supabase
     .from("profiles")
-    .select(`id, ${muCol}, ${sigmaCol}`)
+    .select(`id, ${eloCol}, ${gamesCol}`)
     .in("id", userIds);
   if (pErr || !profiles) return { ok: false, error: pErr?.message ?? "profiles_load_failed" };
   const byId = new Map(profiles.map((p: any) => [p.id, p]));
@@ -168,26 +168,36 @@ export async function applyMatchRating(matchId: string): Promise<{ ok: true } | 
     if (!teamsMap.has(r.team)) teamsMap.set(r.team, []);
     teamsMap.get(r.team)!.push(r);
   }
-  const teamInputs: TeamInput[] = Array.from(teamsMap.entries()).sort(([a],[b]) => a - b).map(([team, rows]) => ({
-    team,
-    rank: 1 + Object.values(teamScores).filter((s) => s > teamScores[team]).length,
-    players: rows.map((r) => {
-      const p: any = byId.get(r.user_id);
-      return { user_id: r.user_id, mu: Number(p[muCol]), sigma: Number(p[sigmaCol]) };
-    }),
-  }));
+  const teamInputs: TeamInput[] = Array.from(teamsMap.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([team, rows]) => {
+      const rank = 1 + Object.values(teamScores).filter((s) => s > teamScores[team]).length;
+      const score = teamScores[team] ?? 0;
+      return {
+        team,
+        rank: rank as 1 | 2,
+        score,
+        players: rows.map((r) => {
+          const p: any = byId.get(r.user_id);
+          return {
+            user_id:      r.user_id,
+            elo:          Number(p[eloCol]),
+            games_played: Number(p[gamesCol]),
+          };
+        }),
+      };
+    });
 
   const updates = updateRatings(teamInputs);
 
   const { error: rpcErr } = await supabase.rpc("apply_match_rating", {
     p_match_id: matchId,
     p_updates: updates.map((u) => ({
-      user_id:      u.user_id,
-      rank:         u.rank,
-      mu_before:    u.mu_before,
-      sigma_before: u.sigma_before,
-      mu_after:     u.mu_after,
-      sigma_after:  u.sigma_after,
+      user_id:    u.user_id,
+      rank:       teamInputs.find((t) => t.players.some((p) => p.user_id === u.user_id))!.rank,
+      elo_before: u.elo_before,
+      elo_after:  u.elo_after,
+      k_used:     u.k_used,
     })),
   });
 

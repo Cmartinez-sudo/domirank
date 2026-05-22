@@ -236,6 +236,57 @@ export function matchConfirmedEmail(input: MatchTemplateInput & { auto?: boolean
    y no hay quórum para confirmar.
    ============================================================ */
 
+/* ============================================================
+   MIGRATION TO ELO — "actualizamos tu motor de rating"
+   Enviado opcionalmente a todos los usuarios después de aplicar
+   recalculate-elo.ts en producción.
+   ============================================================ */
+
+export function migrationToEloEmail(input: { username: string; displayName: string | null }) {
+  const { username, displayName } = input;
+  const name = displayName || username;
+  const url = `${getAppUrl()}/profile/${username}`;
+  return {
+    subject: `Actualizamos nuestro motor de rating — tu DomiRank puede haber cambiado`,
+    html: shell(
+      "Nuevo motor de rating DomiRank",
+      `
+      <h1 style="margin:0 0 12px 0;font-size:20px;font-weight:700;color:${BRAND.text};">Bienvenido al nuevo DomiRank</h1>
+      <p style="margin:0 0 12px 0;color:${BRAND.textDim};font-size:15px;line-height:1.5;">
+        Hola <strong style="color:${BRAND.text};">${escapeHtml(name)}</strong>, actualizamos el sistema de rating de DomiRank
+        para hacerlo más transparente y justo.
+      </p>
+      <p style="margin:0 0 12px 0;color:${BRAND.textDim};font-size:14px;line-height:1.5;">
+        Tu nuevo rating usa <strong style="color:${BRAND.text};">Elo clásico</strong> — el mismo sistema que usan el ajedrez
+        (FIDE) y los deportes profesionales. Cada victoria sube tu Elo y cada derrota lo baja,
+        con un ajuste por margen de puntos (ganar por mucho a un underdog vale poco; vencer a un
+        favorito vale mucho).
+      </p>
+      <div style="margin:16px 0;padding:14px 16px;background:${BRAND.bg};border:1px solid ${BRAND.border};border-radius:10px;color:${BRAND.text};font-size:14px;line-height:1.6;">
+        <div style="color:${BRAND.textDim};font-size:12px;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Lo que NO cambia</div>
+        <ul style="margin:0;padding:0 0 0 16px;color:${BRAND.textDim};">
+          <li>La escala 1–20 y los tiers (Aprendiz → Leyenda)</li>
+          <li>Tus 4 formatos de juego (Singles/Parejas × D6/D9)</li>
+          <li>Tu historial de partidas</li>
+        </ul>
+      </div>
+      <p style="margin:0;color:${BRAND.textDim};font-size:13px;line-height:1.5;">
+        Recalculamos tu rating desde el inicio usando todas tus partidas confirmadas.
+        Tu DomiRank puede ser diferente al anterior — eso es normal y esperado.
+      </p>
+      `,
+      { label: "Ver mi nuevo rating", href: url }
+    ),
+    text: `Hola ${name},\n\nActualizamos el motor de rating de DomiRank a Elo clásico.\nTu DomiRank puede haber cambiado pero la escala 1-20 sigue igual.\n\nVer tu perfil: ${url}`,
+  };
+}
+
+/* ============================================================
+   MATCH DISPUTED — "la partida pasó a disputa"
+   Enviado a los 4 jugadores cuando se alcanzan 2+ disputas
+   y no hay quórum para confirmar.
+   ============================================================ */
+
 export function matchDisputedEmail(input: MatchTemplateInput) {
   const url = `${getAppUrl()}/matches/${input.matchId}`;
   return {

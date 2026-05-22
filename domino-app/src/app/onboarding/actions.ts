@@ -26,9 +26,9 @@ export async function saveOnboarding(formData: FormData) {
 
   const skillPoints = parsed.data.skill_points;
   const useAssessment = skillPoints !== undefined;
-  const { mu, sigma } = useAssessment
+  const { elo } = useAssessment
     ? initialRatingFromAssessment(skillPoints!)
-    : { mu: 25, sigma: 25 / 3 };
+    : { elo: 1500 };
 
   const update: Record<string, unknown> = {
     country:          parsed.data.country,
@@ -38,15 +38,12 @@ export async function saveOnboarding(formData: FormData) {
 
   if (useAssessment) {
     update.initial_skill_points = skillPoints;
-    // Apply to all 4 buckets
-    update.singles_mu      = mu;
-    update.singles_sigma   = sigma;
-    update.doubles_mu      = mu;
-    update.doubles_sigma   = sigma;
-    update.d9_singles_mu   = mu;
-    update.d9_singles_sigma = sigma;
-    update.d9_doubles_mu   = mu;
-    update.d9_doubles_sigma = sigma;
+    // Apply initial Elo to all 4 buckets and global
+    update.singles_elo    = elo;
+    update.doubles_elo    = elo;
+    update.d9_singles_elo = elo;
+    update.d9_doubles_elo = elo;
+    update.global_elo     = elo;
   }
 
   const { error } = await supabase

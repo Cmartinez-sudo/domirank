@@ -56,12 +56,12 @@ export default async function MatchDetail({
       avatar_url:   p.avatar_url ?? null,
     }));
 
-  // Delta de rating del viewer si confirmed
+  // Delta de rating Elo del viewer si confirmed
   let viewerDelta: number | null = null;
   if (match.status === "confirmed" && currentUserId) {
     const me = (match.players as any[]).find((p) => p.user_id === currentUserId);
-    if (me?.mu_before != null && me?.mu_after != null) {
-      viewerDelta = Number(me.mu_after) - Number(me.mu_before);
+    if (me?.elo_before != null && me?.elo_after != null) {
+      viewerDelta = Number(me.elo_after) - Number(me.elo_before);
     }
   }
 
@@ -101,7 +101,7 @@ export default async function MatchDetail({
         {teamList.map(([teamNo, players]) => {
           const score = players[0]?.score ?? 0;
           const won = players[0]?.rank === 1;
-          const hasRating = players[0]?.mu_before != null && players[0]?.mu_after != null;
+          const hasRating = players[0]?.elo_before != null && players[0]?.elo_after != null;
           return (
             <div key={teamNo} className={`card ${won && status === "confirmed" ? "border-primary/50" : ""}`}>
               <div className="flex items-center justify-between mb-3">
@@ -116,6 +116,9 @@ export default async function MatchDetail({
               <div className="text-4xl font-mono font-bold mb-4">{score}</div>
               <ul className="space-y-3">
                 {players.map((p) => {
+                  const eloDelta = hasRating
+                    ? Number(p.elo_after) - Number(p.elo_before)
+                    : null;
                   return (
                     <li key={p.user_id} className="flex items-center justify-between text-sm">
                       <Link href={`/profile/${p.username}`} className="hover:text-primary">
@@ -123,11 +126,11 @@ export default async function MatchDetail({
                       </Link>
                       {hasRating ? (
                         <div className="flex items-center gap-3 font-mono">
-                          <span className="text-text-mute">{Number(p.mu_before).toFixed(2)}</span>
+                          <span className="text-text-mute">{Number(p.elo_before)}</span>
                           <span className="text-text-mute">→</span>
-                          <span>{Number(p.mu_after).toFixed(2)}</span>
-                          <span className={Number(p.mu_after) - Number(p.mu_before) >= 0 ? "text-primary" : "text-danger"}>
-                            ({Number(p.mu_after) - Number(p.mu_before) >= 0 ? "+" : ""}{(Number(p.mu_after) - Number(p.mu_before)).toFixed(2)})
+                          <span>{Number(p.elo_after)}</span>
+                          <span className={eloDelta! >= 0 ? "text-primary" : "text-danger"}>
+                            ({eloDelta! >= 0 ? "+" : ""}{eloDelta!})
                           </span>
                         </div>
                       ) : (

@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 
 /**
  * Vercel Cron — corre diariamente para auto-confirmar partidas que pasaron
- * 7 días sin alcanzar quórum, y luego aplicar el rating OpenSkill a:
+ * 7 días sin alcanzar quórum, y luego aplicar el rating Elo a:
  *   1. Las recién auto-confirmadas
  *   2. Cualquier match `confirmed` que quedó con rated_at NULL por una falla
  *      previa (orphan recovery)
@@ -115,7 +115,7 @@ export async function GET(request: Request) {
 
 /**
  * Helper que replica applyMatchRating pero usando service role en lugar del
- * cliente authenticated. El TS de OpenSkill es el mismo; solo cambia el client.
+ * cliente authenticated. El motor Elo es el mismo; solo cambia el client.
  */
 async function applyRatingForMatch(
   supabase: ReturnType<typeof supabaseService>,
@@ -123,8 +123,8 @@ async function applyRatingForMatch(
   format: FormatCode,
   setSize: SetCode,
 ): Promise<boolean> {
-  const muCol    = ratingCol(setSize, format, "mu");
-  const sigmaCol = ratingCol(setSize, format, "sigma");
+  const eloCol   = ratingCol(setSize, format, "elo");
+  const gamesCol = ratingCol(setSize, format, "games");
 
   const { data: mps } = await supabase
     .from("match_players")
@@ -150,7 +150,7 @@ async function applyRatingForMatch(
   const userIds = mps.map((r) => r.user_id);
   const { data: profiles } = await supabase
     .from("profiles")
-    .select(`id, ${muCol}, ${sigmaCol}`)
+    .select(`id, ${eloCol}, ${gamesCol}`)
     .in("id", userIds);
   if (!profiles) return false;
   const byId = new Map(profiles.map((p: any) => [p.id, p]));
@@ -160,26 +160,36 @@ async function applyRatingForMatch(
     if (!teamsMap.has(r.team)) teamsMap.set(r.team, []);
     teamsMap.get(r.team)!.push(r);
   }
-  const teamInputs: TeamInput[] = Array.from(teamsMap.entries()).sort(([a],[b]) => a - b).map(([team, rows]) => ({
-    team,
-    rank: 1 + Object.values(teamScores).filter((s) => s > teamScores[team]).length,
-    players: rows.map((r) => {
-      const p: any = byId.get(r.user_id);
-      return { user_id: r.user_id, mu: Number(p[muCol]), sigma: Number(p[sigmaCol]) };
-    }),
-  }));
+  const teamInputs: TeamInput[] = Array.from(teamsMap.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([team, rows]) => {
+      const rank = 1 + Object.values(teamScores).filter((s) => s > teamScores[team]).length;
+      const score = teamScores[team] ?? 0;
+      return {
+        team,
+        rank: rank as 1 | 2,
+        score,
+        players: rows.map((r) => {
+          const p: any = byId.get(r.user_id);
+          return {
+            user_id:      r.user_id,
+            elo:          Number(p[eloCol]),
+            games_played: Number(p[gamesCol]),
+          };
+        }),
+      };
+    });
 
   const updates = updateRatings(teamInputs);
 
   const { error } = await supabase.rpc("apply_match_rating", {
     p_match_id: matchId,
     p_updates: updates.map((u) => ({
-      user_id:      u.user_id,
-      rank:         u.rank,
-      mu_before:    u.mu_before,
-      sigma_before: u.sigma_before,
-      mu_after:     u.mu_after,
-      sigma_after:  u.sigma_after,
+      user_id:    u.user_id,
+      rank:       teamInputs.find((t) => t.players.some((p) => p.user_id === u.user_id))!.rank,
+      elo_before: u.elo_before,
+      elo_after:  u.elo_after,
+      k_used:     u.k_used,
     })),
   });
 

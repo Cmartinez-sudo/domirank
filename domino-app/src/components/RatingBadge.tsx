@@ -1,13 +1,10 @@
-import { toDisplayRating, tierFor, DEFAULT_MU, DEFAULT_SIGMA } from "@/lib/rating";
+import { toDisplayRating, tierFor, DEFAULT_ELO } from "@/lib/rating";
 
 type Props = {
-  /** Valor display 1-20. Si null/undefined, calcula desde ordinal (μ-3σ). */
+  /** Valor display 1-20. Si null/undefined, calcula desde elo. */
   display?: number | null;
-  /** Alternativa: pasar ordinal directo (μ-3σ). */
-  ordinal?: number | null;
-  /** Alternativa: pasar μ/σ y se computa el display. */
-  mu?: number | null;
-  sigma?: number | null;
+  /** Alternativa: pasar Elo y se computa el display. */
+  elo?: number | null;
   /** Si total_games < 5, marca como "provisional" con opacidad reducida. */
   games?: number | null;
   /** Compact = solo el número. Default = "DR 8.5". */
@@ -17,21 +14,18 @@ type Props = {
 
 /**
  * Pill visual del DomiRank display (1-20) con color del tier.
- * Resilient: acepta display, ordinal, o μ/σ y resuelve internamente.
+ * Resilient: acepta display o elo y resuelve internamente.
  */
 export function RatingBadge({
   display,
-  ordinal,
-  mu,
-  sigma,
+  elo,
   games,
   compact = false,
   size = "sm",
 }: Props) {
   let d: number | null = null;
   if (typeof display === "number") d = display;
-  else if (typeof ordinal === "number") d = toDisplayRating(ordinal);
-  else if (typeof mu === "number" && typeof sigma === "number") d = toDisplayRating(mu - 3 * sigma);
+  else if (typeof elo === "number") d = toDisplayRating(elo);
 
   // Sin datos suficientes → marca neutra
   if (d == null) {
@@ -78,9 +72,7 @@ export function RatingBadgeForUser({
 }: {
   user: {
     global_display?: number | null;
-    global_ordinal?: number | null;
-    singles_mu?: number | null;
-    singles_sigma?: number | null;
+    global_elo?: number | null;
     total_games?: number | null;
   };
   compact?: boolean;
@@ -89,9 +81,7 @@ export function RatingBadgeForUser({
   return (
     <RatingBadge
       display={user.global_display ?? null}
-      ordinal={user.global_ordinal ?? null}
-      mu={user.singles_mu ?? DEFAULT_MU}
-      sigma={user.singles_sigma ?? DEFAULT_SIGMA}
+      elo={user.global_elo ?? DEFAULT_ELO}
       games={user.total_games ?? 0}
       compact={compact}
       size={size}

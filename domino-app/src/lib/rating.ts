@@ -1,252 +1,288 @@
 /**
- * Motor de rating Domino — wrapper de OpenSkill.
+ * Motor de rating DomiRank — Elo clásico con MoV multiplier FiveThirtyEight.
  *
- * Modelo: Plackett-Luce con aproximaciones analíticas Weng-Lin.
- *   Weng & Lin (2011) "A Bayesian Approximation Method for Online Ranking".
+ * Reemplaza OpenSkill (Plackett-Luce / Weng-Lin) en mayo 2025.
+ * El legacy OpenSkill está archivado en rating-openskill.legacy.ts.
  *
- * La librería `openskill` (npm) usa PlackettLuce como modelo por defecto.
- * Defaults (mismos que TrueSkill original):
- *   μ = 25.0   σ = 25/3 ≈ 8.3333   β = 25/6 ≈ 4.1667   τ = 25/300 ≈ 0.0833
+ * Matemática:
+ *   team_elo = avg(partners)
+ *   expected = 1 / (1 + 10^((opp - me) / 400))
+ *   MOVM = ln(|score_winner - score_loser| + 1) * (2.2 / (elo_gap * 0.001 + 2.2))
+ *   delta = K * MOVM * (actual - expected)
  *
- * Rating "ordinal" visible al usuario = μ − 3σ.  Es conservador: representa el
- * skill que el modelo considera muy probable que el jugador tenga al menos.
+ * Display 1–20: 1 + ((elo - 1000) / 1200) * 19  — clamp [1, 20].
+ * Global Elo:   weighted average by games_played per bucket (only games > 0).
  */
 
-import { rating, rate, predictWin, ordinal, type Rating } from "openskill";
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+/** Starting Elo for every new player in every bucket. */
+export const DEFAULT_ELO = 1500;
+
+/** Games-played threshold below which a player is Provisional in a bucket. */
+export const PROVISIONAL_THRESHOLD = 10;
+
+/** Minimum total games (all buckets) to appear in the global leaderboard. */
+export const DOMIRANK_MIN_GAMES = 5;
+
+/** K-factor ladder (Provisional always wins over tier). */
+export const K_FACTORS = {
+  PROVISIONAL: 40,  // games_played < PROVISIONAL_THRESHOLD
+  LEARNING:    28,  // elo < 1500
+  STABLE:      24,  // elo 1500 – 1899
+  ELITE:       18,  // elo 1900 – 2049
+  LEGEND:      12,  // elo >= 2050
+} as const;
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export type Player = {
   user_id: string;
-  mu: number;
-  sigma: number;
+  elo: number;
+  games_played: number;
 };
 
 export type TeamInput = {
-  team: number;       // 1, 2, 3...
-  players: Player[];  // jugadores del equipo
-  rank: number;       // 1 = ganador (menor es mejor)
+  team: number;
+  players: Player[];
+  /** 1 = winner, 2 = loser (only 2 teams supported). */
+  rank: 1 | 2;
+  /** Total points scored by this team in the match (for MoV). */
+  score: number;
 };
 
 export type PlayerRatingUpdate = {
   user_id: string;
   team: number;
-  rank: number;
-  mu_before: number;
-  sigma_before: number;
-  mu_after: number;
-  sigma_after: number;
-  ordinal_before: number;
-  ordinal_after: number;
+  elo_before: number;
+  elo_after: number;
+  games_before: number;
+  games_after: number;
+  k_used: number;
 };
 
-export const DEFAULT_MU = 25.0;
-export const DEFAULT_SIGMA = 25 / 3; // 8.3333...
-
-export function newRating(): Rating {
-  return rating({ mu: DEFAULT_MU, sigma: DEFAULT_SIGMA });
-}
-
-export function asOrdinal(mu: number, sigma: number): number {
-  // OpenSkill's ordinal = mu - z*sigma (z=3 por defecto)
-  return ordinal({ mu, sigma });
-}
-
-/**
- * Mínimo de partidas totales (singles + parejas) para entrar al ranking global.
- * Por debajo de esto, el global_ordinal no se considera confiable y no se muestra
- * en el leaderboard.
- */
-export const DOMIRANK_MIN_GAMES = 5;
-
-/**
- * Buckets de rating: singles/doubles × sets (doble-seis / doble-nueve).
- * Modalidades del mismo set comparten bucket porque la estructura estratégica
- * del juego es idéntica (solo cambian puntos meta y bonus capicúa).
- * Sets distintos = ratings separados (el espacio de acciones y la carga de
- * memoria son fundamentalmente distintos en doble-seis vs doble-nueve).
- */
-export type Bucket = { mu: number; sigma: number; games?: number };
 export type RatingBucketKey = 'd6_singles' | 'd6_doubles' | 'd9_singles' | 'd9_doubles';
 
-export const RATING_BUCKETS: RatingBucketKey[] = ['d6_singles', 'd6_doubles', 'd9_singles', 'd9_doubles'];
+export const RATING_BUCKETS: RatingBucketKey[] = [
+  'd6_singles', 'd6_doubles', 'd9_singles', 'd9_doubles',
+];
+
+// ─── K-factor ────────────────────────────────────────────────────────────────
 
 /**
- * DomiRank Global: fusión Bayesiana inverse-variance SOLO de los buckets
- * que el jugador ha jugado (games > 0). Los buckets vacíos quedan fuera
- * para no jalar el global hacia el default μ=25.
- *
- *   μ_global = Σ μ_i · p_i / Σ p_i      donde p_i = 1/σ²_i (precisión)
- *   σ²_global = 1 / Σ p_i
- *
- * Edge case: jugador sin partidas en ningún bucket → defaults μ=25, σ=8.33.
- * Pesos devueltos son 0 para buckets excluidos.
- *
- * Mantener consistente con calc_global_ordinal_v2 en SQL (migración 0023).
+ * Returns the K-factor for a player.
+ * Provisional status (games_played < PROVISIONAL_THRESHOLD) always wins
+ * over tier — even a Leyenda has K=40 in their first 10 games of a new bucket.
  */
-export function globalRating(buckets: { [K in RatingBucketKey]: Bucket }): {
-  mu: number;
-  sigma: number;
-  ordinal: number;
-  weights: { [K in RatingBucketKey]: number };
-} {
-  let muNum = 0;
-  let precSum = 0;
-  const precs = {} as { [K in RatingBucketKey]: number };
-  const weights = {} as { [K in RatingBucketKey]: number };
-  for (const k of RATING_BUCKETS) {
-    const b = buckets[k];
-    const played = (b.games ?? 0) > 0;
-    const p = played ? 1 / (b.sigma * b.sigma) : 0;
-    precs[k] = p;
-    if (played) {
-      muNum += b.mu * p;
-      precSum += p;
-    }
-  }
-  if (precSum === 0) {
-    for (const k of RATING_BUCKETS) weights[k] = 0;
-    return {
-      mu: DEFAULT_MU,
-      sigma: DEFAULT_SIGMA,
-      ordinal: DEFAULT_MU - 3 * DEFAULT_SIGMA,
-      weights,
-    };
-  }
-  for (const k of RATING_BUCKETS) weights[k] = precs[k] / precSum;
-  const mu = muNum / precSum;
-  const sigma = Math.sqrt(1 / precSum);
-  return { mu, sigma, ordinal: mu - 3 * sigma, weights };
+export function kFactorFor(player: { elo: number; games_played: number }): number {
+  if (player.games_played < PROVISIONAL_THRESHOLD) return K_FACTORS.PROVISIONAL;
+  if (player.elo < 1500)  return K_FACTORS.LEARNING;
+  if (player.elo < 1900)  return K_FACTORS.STABLE;
+  if (player.elo < 2050)  return K_FACTORS.ELITE;
+  return K_FACTORS.LEGEND;
+}
+
+// ─── Core Elo computation ────────────────────────────────────────────────────
+
+/** Expected win probability for team with `myElo` vs `opponentElo`. */
+function expected(myElo: number, opponentElo: number): number {
+  return 1 / (1 + Math.pow(10, (opponentElo - myElo) / 400));
+}
+
+/** Average Elo of a team (identical to individual Elo in 1v1). */
+function teamAvgElo(players: Player[]): number {
+  return players.reduce((s, p) => s + p.elo, 0) / players.length;
 }
 
 /**
- * Variante simplificada: pasa solo singles+doubles y asume d9 vacíos.
- * Útil para callers que aún no diferencian por set. Los d9 se marcan
- * con games=0 → quedan fuera de la fusión automáticamente.
+ * Margin of Victory multiplier — FiveThirtyEight autocorrelation-corrected,
+ * recalibrated para los rangos de score del dominó (5-100 vs 5-15 NBA).
+ *
+ * Diferencia vs FiveThirtyEight original: usamos log10 en vez de ln para que
+ * los diffs típicos de dominó (20-50 pts) no inflen el delta. Con ln un partido
+ * normal daba ~37 pts de cambio; con log10 da ~16 (rango Elo estable).
+ *
+ * El término `2.2 / (...)` es autocorrelation correction: evita que favoritos
+ * inflen su rating ganando por mucho a underdogs.
+ *
+ * @param scoreDiff Absolute difference in scores between winner and loser.
+ * @param eloGap    winner_team_elo - loser_team_elo (can be negative for upsets).
  */
-export function globalRatingFromTwoFormats(
-  singlesMu: number, singlesSigma: number, singlesGames: number,
-  doublesMu: number, doublesSigma: number, doublesGames: number,
-) {
-  return globalRating({
-    d6_singles: { mu: singlesMu, sigma: singlesSigma, games: singlesGames },
-    d6_doubles: { mu: doublesMu, sigma: doublesSigma, games: doublesGames },
-    d9_singles: { mu: DEFAULT_MU, sigma: DEFAULT_SIGMA, games: 0 },
-    d9_doubles: { mu: DEFAULT_MU, sigma: DEFAULT_SIGMA, games: 0 },
-  });
+function movMultiplier(scoreDiff: number, eloGap: number): number {
+  return Math.log10(scoreDiff + 1) * (2.2 / (eloGap * 0.001 + 2.2));
 }
 
+// ─── updateRatings ───────────────────────────────────────────────────────────
+
 /**
- * Recalcula μ/σ de todos los jugadores tras una partida.
+ * Calculates new Elo for all players after a 2-team match.
  *
- * @param teams  Array de equipos con sus jugadores y rank final (1=ganador).
- *               Soporta cualquier número de equipos y tamaños (1v1, 2v2, FFA...).
- * @returns Array plano con el rating actualizado de cada jugador.
+ * Doubles (2v2): team_elo = avg(partners). Both partners move identically.
+ * Singles (1v1): team_elo = individual elo. Same formula.
+ * FFA (>2 teams): throws — not yet supported.
  *
- * Ejemplo singles (Alice gana a Bob):
- *   updateRatings([
- *     { team: 1, players: [{user_id: "alice", mu: 25, sigma: 8.33}], rank: 1 },
- *     { team: 2, players: [{user_id: "bob",   mu: 25, sigma: 8.33}], rank: 2 },
- *   ])
+ * Each player's K-factor is evaluated independently at the moment of the update.
  */
 export function updateRatings(teams: TeamInput[]): PlayerRatingUpdate[] {
-  if (teams.length < 2) {
-    throw new Error("Se necesitan al menos 2 equipos para calcular rating");
+  if (teams.length !== 2) {
+    throw new Error("updateRatings soporta exactamente 2 equipos por ahora");
   }
   for (const t of teams) {
-    if (t.players.length < 1) throw new Error(`El equipo ${t.team} no tiene jugadores`);
-  }
-
-  // openskill espera teams como Rating[][] y opcionalmente ranks
-  const teamsRatings: Rating[][] = teams.map((t) =>
-    t.players.map((p) => rating({ mu: p.mu, sigma: p.sigma }))
-  );
-  const ranks = teams.map((t) => t.rank);
-
-  // PlackettLuce es el modelo por defecto; rank menor = mejor.
-  const updated = rate(teamsRatings, { rank: ranks });
-
-  const out: PlayerRatingUpdate[] = [];
-  for (let i = 0; i < teams.length; i++) {
-    const t = teams[i];
-    const beforeTeam = teamsRatings[i];
-    const afterTeam  = updated[i];
-    for (let j = 0; j < t.players.length; j++) {
-      const p = t.players[j];
-      const before = beforeTeam[j];
-      const after  = afterTeam[j];
-      out.push({
-        user_id: p.user_id,
-        team: t.team,
-        rank: t.rank,
-        mu_before: before.mu,
-        sigma_before: before.sigma,
-        mu_after: after.mu,
-        sigma_after: after.sigma,
-        ordinal_before: asOrdinal(before.mu, before.sigma),
-        ordinal_after:  asOrdinal(after.mu, after.sigma),
-      });
+    if (t.players.length < 1) {
+      throw new Error(`El equipo ${t.team} no tiene jugadores`);
     }
   }
+
+  const [t1, t2] = teams.sort((a, b) => a.team - b.team);
+  const winner = t1.rank === 1 ? t1 : t2;
+  const loser  = t1.rank === 1 ? t2 : t1;
+
+  const winnerElo = teamAvgElo(winner.players);
+  const loserElo  = teamAvgElo(loser.players);
+
+  const scoreDiff = Math.abs(winner.score - loser.score);
+  const eloGap    = winnerElo - loserElo;
+  const movm      = movMultiplier(scoreDiff, eloGap);
+
+  const expWinner = expected(winnerElo, loserElo);
+  const expLoser  = expected(loserElo, winnerElo);
+
+  const out: PlayerRatingUpdate[] = [];
+
+  for (const player of winner.players) {
+    const k = kFactorFor(player);
+    const delta = Math.round(k * movm * (1 - expWinner));
+    out.push({
+      user_id:      player.user_id,
+      team:         winner.team,
+      elo_before:   player.elo,
+      elo_after:    player.elo + delta,
+      games_before: player.games_played,
+      games_after:  player.games_played + 1,
+      k_used:       k,
+    });
+  }
+
+  for (const player of loser.players) {
+    const k = kFactorFor(player);
+    const delta = Math.round(k * movm * (0 - expLoser));
+    out.push({
+      user_id:      player.user_id,
+      team:         loser.team,
+      elo_before:   player.elo,
+      elo_after:    player.elo + delta,
+      games_before: player.games_played,
+      games_after:  player.games_played + 1,
+      k_used:       k,
+    });
+  }
+
   return out;
 }
 
-/**
- * Mapea el ordinal de OpenSkill (μ-3σ, realista 0-30 para humanos) a la
- * escala DomiRank 1-20.
- *
- * Anclas: ordinal 0 → 1.0 · ordinal 28 → 20.0
- *
- * Antes anclábamos a ordinal 35, pero llegar ahí requiere μ≈44 (irrealista
- * incluso con cientos de partidas). Top players reales llegan a μ~38, σ~3
- * → ordinal ~29, lo que ahora corresponde al tope "Leyenda". Con el ancla
- * vieja todos los élite se atascaban en ~17-18.
- */
-const TOP_ORDINAL = 28;
+// ─── Global rating ───────────────────────────────────────────────────────────
 
-export function toDisplayRating(ordinal: number): number {
-  if (!isFinite(ordinal)) return 1.0;
-  const raw = 1 + (ordinal / TOP_ORDINAL) * 19;
+/**
+ * Calculates DomiRank Global as a weighted average of buckets with games > 0.
+ * Buckets with 0 games are excluded to avoid dragging the global to DEFAULT_ELO.
+ *
+ * Returns `display: null` when total_games < DOMIRANK_MIN_GAMES (unranked).
+ */
+export function globalRating(
+  buckets: Record<RatingBucketKey, { elo: number; games_played: number }>,
+): { elo: number; games_played: number; display: number | null } {
+  let weightedSum = 0;
+  let totalGames  = 0;
+
+  for (const k of RATING_BUCKETS) {
+    const b = buckets[k];
+    if (b.games_played > 0) {
+      weightedSum += b.elo * b.games_played;
+      totalGames  += b.games_played;
+    }
+  }
+
+  if (totalGames === 0) {
+    return { elo: DEFAULT_ELO, games_played: 0, display: null };
+  }
+
+  const elo = Math.round(weightedSum / totalGames);
+  const display = totalGames >= DOMIRANK_MIN_GAMES ? toDisplayRating(elo) : null;
+  return { elo, games_played: totalGames, display };
+}
+
+// ─── Display mapping ─────────────────────────────────────────────────────────
+
+/**
+ * Maps Elo to the 1–20 DomiRank display scale.
+ * Anchors: Elo 1000 → 1.0, Elo 2200 → 20.0.
+ */
+export function toDisplayRating(elo: number): number {
+  if (!isFinite(elo)) return 1.0;
+  const raw = 1 + ((elo - 1000) / 1200) * 19;
   return Math.max(1.0, Math.min(20.0, Math.round(raw * 10) / 10));
 }
 
-export function displayToOrdinal(display: number): number {
-  return ((display - 1) / 19) * TOP_ORDINAL;
+/**
+ * Inverse of toDisplayRating — useful for tests and threshold calculations.
+ */
+export function displayToElo(display: number): number {
+  return 1000 + ((display - 1) / 19) * 1200;
 }
 
+// ─── Tiers ───────────────────────────────────────────────────────────────────
+
 export const SKILL_TIERS = [
-  { min: 1,    max: 3.9,  name: "Aprendiz",   color: "#94a3b8" },
-  { min: 4,    max: 6.9,  name: "Casual",     color: "#10b981" },
-  { min: 7,    max: 9.9,  name: "Habilidoso", color: "#3b82f6" },
-  { min: 10,   max: 12.9, name: "Veterano",   color: "#8b5cf6" },
-  { min: 13,   max: 15.9, name: "Maestro",    color: "#f59e0b" },
-  { min: 16,   max: 17.9, name: "Élite",      color: "#ef4444" },
-  { min: 18,   max: 20,   name: "Leyenda",    color: "#fbbf24" },
+  { min: 1.0, max: 3.9,  name: "Aprendiz",   color: "#94a3b8" },
+  { min: 4.0, max: 6.9,  name: "Casual",     color: "#10b981" },
+  { min: 7.0, max: 9.9,  name: "Habilidoso", color: "#3b82f6" },
+  { min: 10.0, max: 12.9, name: "Veterano",  color: "#8b5cf6" },
+  { min: 13.0, max: 15.9, name: "Maestro",   color: "#f59e0b" },
+  { min: 16.0, max: 17.9, name: "Élite",     color: "#ef4444" },
+  { min: 18.0, max: 20.0, name: "Leyenda",   color: "#fbbf24" },
 ] as const;
 
 export type SkillTier = typeof SKILL_TIERS[number];
 
+/** Returns the tier for a given display rating (1–20). */
 export function tierFor(display: number): SkillTier {
   return SKILL_TIERS.find((t) => display >= t.min && display <= t.max) ?? SKILL_TIERS[0];
 }
 
-/**
- * Mapea puntos del skill assessment (0-12) a (μ, σ) iniciales.
- * Veteranos arrancan más arriba y con menos incertidumbre.
- */
-export function initialRatingFromAssessment(points: number): { mu: number; sigma: number; estimatedDisplay: number } {
-  if (points <= 2)  return { mu: 22,   sigma: 7.5, estimatedDisplay: 3  };
-  if (points <= 5)  return { mu: 25,   sigma: 7.0, estimatedDisplay: 6  };
-  if (points <= 8)  return { mu: 28,   sigma: 6.5, estimatedDisplay: 9  };
-  if (points <= 10) return { mu: 31,   sigma: 5.5, estimatedDisplay: 13 };
-  return               { mu: 33,   sigma: 4.5, estimatedDisplay: 16 };
-}
+// ─── Win probability ─────────────────────────────────────────────────────────
 
 /**
- * Probabilidad de que el equipo A le gane al equipo B, según los ratings actuales.
- * Útil para mostrar "favorito" antes de la partida.
+ * Returns the probability (0–1) that teamA beats teamB, based on current Elos.
+ * Uses average Elo per team, same formula as the update step.
  */
 export function winProbability(teamA: Player[], teamB: Player[]): number {
-  const a: Rating[] = teamA.map((p) => rating({ mu: p.mu, sigma: p.sigma }));
-  const b: Rating[] = teamB.map((p) => rating({ mu: p.mu, sigma: p.sigma }));
-  const [pA] = predictWin([a, b]);
-  return pA;
+  return expected(teamAvgElo(teamA), teamAvgElo(teamB));
+}
+
+// ─── Initial rating from assessment ──────────────────────────────────────────
+
+/**
+ * Maps skill-assessment points (0–12) to a starting Elo.
+ * Players with no assessment start at DEFAULT_ELO = 1500.
+ *
+ * | Points | Elo  | Estimated tier |
+ * |--------|------|----------------|
+ * | 0–2    | 1300 | Aprendiz       |
+ * | 3–5    | 1450 | Casual         |
+ * | 6–8    | 1550 | Habilidoso     |
+ * | 9–10   | 1700 | Veterano       |
+ * | 11–12  | 1850 | Maestro        |
+ */
+export function initialRatingFromAssessment(points: number): {
+  elo: number;
+  estimatedDisplay: number;
+} {
+  let elo: number;
+  if (points <= 2)       elo = 1300;
+  else if (points <= 5)  elo = 1450;
+  else if (points <= 8)  elo = 1550;
+  else if (points <= 10) elo = 1700;
+  else                   elo = 1850;
+
+  return { elo, estimatedDisplay: toDisplayRating(elo) };
 }

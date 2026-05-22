@@ -50,8 +50,8 @@ export function RatingInfoTooltip() {
         >
           <div className="text-sm font-semibold mb-2">Escala DomiRank 1-20</div>
           <p className="text-text-dim text-xs mb-3">
-            Tu rating OpenSkill interno (μ − 3σ) se mapea a una escala visible de 1 a 20.
-            Anclas: 0 → 1.0 · 28 → 20.0.
+            Tu Elo interno se mapea a una escala visible de 1 a 20.
+            Anclas: Elo 1000 → 1.0 · Elo 2200 → 20.0. Empiezas en Elo 1500 ≈ 8.9.
           </p>
           <div className="space-y-1">
             {SKILL_TIERS.map((t) => (
@@ -168,11 +168,10 @@ export function LeaderboardColumnsInfo({ tab }: { tab: "global" | "singles" | "d
     {
       k: "DomiRank",
       t: tab === "global"
-        ? "Tu rating visible (1-20), fusión Bayesiana inverse-variance SOLO de los formatos que has jugado. No es promedio: pesa por certeza (1/σ²)."
-        : "Tu rating visible (1-20) en este formato. = to_display(μ − 3σ).",
+        ? "Tu rating visible (1-20). Promedio ponderado por partidas de tus buckets activos. Elo 1000 → 1.0, Elo 2200 → 20.0."
+        : "Tu rating visible (1-20) en este formato. = to_display(Elo): 1 + ((elo-1000)/1200)×19.",
     },
-    { k: "μ (mu)", t: "Skill estimado interno (OpenSkill). Empieza en 25.0 y se mueve con cada partida confirmada." },
-    { k: "σ (sigma)", t: "Incertidumbre. Empieza en ~8.33 y baja a medida que juegas más. σ menor = el sistema confía más en tu μ." },
+    { k: "Elo", t: "Rating Elo interno. Empieza en 1500. Sube al ganar, baja al perder. Primeras 10 partidas son Provisional (K=40, se mueve rápido)." },
     {
       k: "Partidas",
       t: tab === "global"
@@ -211,7 +210,7 @@ export function LeaderboardColumnsInfo({ tab }: { tab: "global" | "singles" | "d
           </dl>
           {tab === "global" && (
             <div className="mt-3 pt-3 border-t border-border/50 text-xs text-text-mute leading-relaxed">
-              <strong className="text-text-dim">Importante:</strong> si solo juegas un formato (e.g., solo parejas), tu DomiRank Global = tu rating de parejas. Los formatos que no has tocado no cuentan.
+              <strong className="text-text-dim">Importante:</strong> si solo juegas un formato (e.g., solo parejas), tu DomiRank Global = tu rating Elo de parejas. Los formatos sin partidas no cuentan.
             </div>
           )}
         </div>

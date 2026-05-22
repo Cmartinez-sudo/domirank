@@ -25,12 +25,12 @@ export default async function Leaderboard({
       .from("profile_ratings")
       .select("*")
       .gte("total_games", DOMIRANK_MIN_GAMES)
-      .order("global_ordinal", { ascending: false })
+      .order("global_elo", { ascending: false })
       .limit(100);
     rows = data ?? [];
   } else {
-    const orderCol = tab === "singles" ? "d6_singles_ordinal" : "d6_doubles_ordinal";
-    const gamesCol = tab === "singles" ? "d6_singles_games"   : "d6_doubles_games";
+    const orderCol = tab === "singles" ? "d6_singles_elo" : "d6_doubles_elo";
+    const gamesCol = tab === "singles" ? "d6_singles_games" : "d6_doubles_games";
     const { data } = await supabase
       .from("profile_ratings")
       .select("*")
@@ -64,23 +64,16 @@ export default async function Leaderboard({
                   align="right"
                   tooltip={
                     tab === "global"
-                      ? "Tu rating visible (1-20). Fusión Bayesiana inverse-variance de los formatos que has jugado (1/σ²). Si solo juegas un formato, esto = tu rating en ese formato."
-                      : "Tu rating visible (1-20) en este formato = to_display(μ − 3σ)."
+                      ? "Tu rating visible (1-20). Promedio ponderado por partidas de tus buckets jugados. Si solo juegas un formato, esto = tu rating en ese formato."
+                      : "Tu rating visible (1-20) en este formato. Anchors: Elo 1000 → 1.0, Elo 2200 → 20.0."
                   }
                 />
               </th>
               <th className="px-4 py-3 text-right hidden md:table-cell">
                 <ColHeader
-                  label="μ"
+                  label="Elo"
                   align="right"
-                  tooltip="Skill estimado (OpenSkill). Empieza en 25.0 y se mueve con cada partida confirmada. Subes al ganar; bajas al perder."
-                />
-              </th>
-              <th className="px-4 py-3 text-right hidden md:table-cell">
-                <ColHeader
-                  label="σ"
-                  align="right"
-                  tooltip="Incertidumbre. Empieza en ~8.33 y baja a medida que juegas más. σ menor = el sistema confía más en tu μ. El rating display = μ − 3σ es conservador."
+                  tooltip="Rating Elo interno. Empieza en 1500 y se mueve con cada partida confirmada. Sube al ganar, baja al perder. Primeras 10 partidas son 'Provisional' (K=40, se mueve más rápido)."
                 />
               </th>
               <th className="px-4 py-3 text-right">
@@ -162,10 +155,8 @@ export default async function Leaderboard({
               const isGlobal = tab === "global";
               const display = isGlobal ? r.global_display
                 : tab === "singles" ? r.d6_singles_display : r.d6_doubles_display;
-              const mu      = isGlobal ? r.global_mu
-                : tab === "singles" ? r.d6_singles_mu : r.d6_doubles_mu;
-              const sigma   = isGlobal ? r.global_sigma
-                : tab === "singles" ? r.d6_singles_sigma : r.d6_doubles_sigma;
+              const elo     = isGlobal ? r.global_elo
+                : tab === "singles" ? r.d6_singles_elo : r.d6_doubles_elo;
               const games   = isGlobal ? r.total_games
                 : tab === "singles" ? r.d6_singles_games : r.d6_doubles_games;
               const wins    = isGlobal ? (r.total_wins   ?? 0)
@@ -204,10 +195,7 @@ export default async function Leaderboard({
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right hidden md:table-cell font-mono text-text-dim text-sm">
-                    {Number(mu).toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3 text-right hidden md:table-cell font-mono text-text-dim text-sm">
-                    {Number(sigma).toFixed(2)}
+                    {Number(elo)}
                   </td>
                   <td className="px-4 py-3 text-right font-mono">{games}</td>
                   <td className="px-4 py-3 text-right hidden sm:table-cell font-mono text-primary">{wins}</td>
@@ -230,8 +218,8 @@ export default async function Leaderboard({
 
       <p className="text-text-mute text-xs text-center">
         {tab === "global"
-          ? `DomiRank Global fusiona solo los formatos que has jugado, ponderados por certeza (1/σ²). Formatos sin partidas no cuentan. Mínimo ${DOMIRANK_MIN_GAMES} partidas totales para aparecer aquí.`
-          : "Rating = μ − 3σ (OpenSkill ordinal). W% = partidas ganadas. μ es el skill estimado, σ la incertidumbre."}
+          ? `DomiRank Global = promedio ponderado por partidas de tus buckets activos. Mínimo ${DOMIRANK_MIN_GAMES} partidas totales para aparecer aquí.`
+          : "DomiRank = to_display(Elo): 1 + ((elo - 1000) / 1200) × 19. W% = partidas ganadas. Provisional = primeras 10 partidas en este formato."}
       </p>
     </div>
     </PageTransition>
