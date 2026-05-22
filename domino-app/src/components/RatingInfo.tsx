@@ -76,6 +76,71 @@ export function RatingInfoTooltip() {
 }
 
 /**
+ * Botón "i" compacto dentro de un <th>. Muestra tooltip al click.
+ * Se cierra al click fuera.
+ *
+ * Uso:
+ *   <th><ColHeader label="DomiRank" tooltip="tu rating visible 1-20..." /></th>
+ *
+ * El align controla a qué lado se posiciona el tooltip (default "center").
+ * Usa "right" para columnas alineadas a la derecha (las numéricas).
+ */
+export function ColHeader({
+  label,
+  tooltip,
+  align = "left",
+  className = "",
+}: {
+  label: React.ReactNode;
+  tooltip: string;
+  align?: "left" | "right" | "center";
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function close(e: MouseEvent | TouchEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", close);
+    document.addEventListener("touchstart", close);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("touchstart", close);
+    };
+  }, [open]);
+
+  const popPos =
+    align === "right" ? "right-0" :
+    align === "center" ? "left-1/2 -translate-x-1/2" :
+    "left-0";
+
+  return (
+    <span ref={ref} className={`relative inline-flex items-center gap-1 ${className}`}>
+      <span>{label}</span>
+      <button
+        type="button"
+        aria-label={`Información sobre ${typeof label === "string" ? label : "columna"}`}
+        className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-border/60 text-text-mute text-[9px] font-bold leading-none hover:border-primary hover:text-primary transition-colors"
+        onClick={(e) => { e.preventDefault(); setOpen((v) => !v); }}
+      >
+        i
+      </button>
+      {open && (
+        <span
+          className={`absolute top-full mt-1.5 ${popPos} z-50 w-56 rounded-lg border border-border bg-surface shadow-lg p-3 text-text-dim text-[11px] leading-relaxed normal-case tracking-normal font-normal text-left whitespace-normal`}
+          role="tooltip"
+        >
+          {tooltip}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/**
  * Tooltip explicando las columnas del Ranking. Variantes por tab:
  *   - global  → S/P = "partidas singles · partidas parejas"
  *   - singles/doubles → W% = "porcentaje de partidas ganadas"

@@ -3,7 +3,7 @@ import { Avatar } from "@/components/Avatar";
 import { supabaseServer } from "@/lib/supabase/server";
 import { DOMIRANK_MIN_GAMES } from "@/lib/rating";
 import { PageTransition } from "@/components/Motion";
-import { TierBadge, LeaderboardColumnsInfo } from "@/components/RatingInfo";
+import { TierBadge, ColHeader } from "@/components/RatingInfo";
 
 export const dynamic = "force-dynamic";
 
@@ -44,10 +44,7 @@ export default async function Leaderboard({
     <PageTransition>
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-2">
-          <h1 className="text-3xl font-bold">Ranking</h1>
-          <LeaderboardColumnsInfo tab={tab} />
-        </div>
+        <h1 className="text-3xl font-bold">Ranking</h1>
         <div className="flex gap-1 bg-surface rounded-md p-1 border border-border">
           <TabLink href="/leaderboard?tab=global"  active={tab === "global"}>DomiRank Global</TabLink>
           <TabLink href="/leaderboard?tab=singles" active={tab === "singles"}>Singles</TabLink>
@@ -61,18 +58,102 @@ export default async function Leaderboard({
             <tr className="text-left text-text-mute text-xs uppercase tracking-wider border-b border-border">
               <th className="px-4 py-3 w-12">#</th>
               <th className="px-4 py-3">Jugador</th>
-              <th className="px-4 py-3 text-right">DomiRank</th>
-              <th className="px-4 py-3 text-right hidden md:table-cell">μ</th>
-              <th className="px-4 py-3 text-right hidden md:table-cell">σ</th>
-              <th className="px-4 py-3 text-right">Partidas</th>
+              <th className="px-4 py-3 text-right">
+                <ColHeader
+                  label="DomiRank"
+                  align="right"
+                  tooltip={
+                    tab === "global"
+                      ? "Tu rating visible (1-20). Fusión Bayesiana inverse-variance de los formatos que has jugado (1/σ²). Si solo juegas un formato, esto = tu rating en ese formato."
+                      : "Tu rating visible (1-20) en este formato = to_display(μ − 3σ)."
+                  }
+                />
+              </th>
+              <th className="px-4 py-3 text-right hidden md:table-cell">
+                <ColHeader
+                  label="μ"
+                  align="right"
+                  tooltip="Skill estimado (OpenSkill). Empieza en 25.0 y se mueve con cada partida confirmada. Subes al ganar; bajas al perder."
+                />
+              </th>
+              <th className="px-4 py-3 text-right hidden md:table-cell">
+                <ColHeader
+                  label="σ"
+                  align="right"
+                  tooltip="Incertidumbre. Empieza en ~8.33 y baja a medida que juegas más. σ menor = el sistema confía más en tu μ. El rating display = μ − 3σ es conservador."
+                />
+              </th>
+              <th className="px-4 py-3 text-right">
+                <ColHeader
+                  label="Partidas"
+                  align="right"
+                  tooltip={
+                    tab === "global"
+                      ? `Total de partidas confirmadas en todos los formatos. Mínimo ${DOMIRANK_MIN_GAMES} para aparecer en el global.`
+                      : "Partidas confirmadas en este formato."
+                  }
+                />
+              </th>
               <th className="px-4 py-3 text-right hidden sm:table-cell">
-                {tab === "global" ? "S / P" : "W%"}
+                <ColHeader
+                  label="G"
+                  align="right"
+                  tooltip={
+                    tab === "global"
+                      ? "Partidas ganadas en todos los formatos."
+                      : "Partidas ganadas en este formato."
+                  }
+                />
+              </th>
+              <th className="px-4 py-3 text-right hidden sm:table-cell">
+                <ColHeader
+                  label="P"
+                  align="right"
+                  tooltip={
+                    tab === "global"
+                      ? "Partidas perdidas en todos los formatos."
+                      : "Partidas perdidas en este formato."
+                  }
+                />
+              </th>
+              <th className="px-4 py-3 text-right hidden lg:table-cell">
+                <ColHeader
+                  label="Pts+"
+                  align="right"
+                  tooltip={
+                    tab === "global"
+                      ? "Puntos anotados por tu equipo en todas tus partidas."
+                      : "Puntos anotados por tu equipo en este formato."
+                  }
+                />
+              </th>
+              <th className="px-4 py-3 text-right hidden lg:table-cell">
+                <ColHeader
+                  label="Pts−"
+                  align="right"
+                  tooltip={
+                    tab === "global"
+                      ? "Puntos anotados por el equipo contrario en todas tus partidas."
+                      : "Puntos anotados por el equipo contrario en este formato."
+                  }
+                />
+              </th>
+              <th className="px-4 py-3 text-right hidden sm:table-cell">
+                <ColHeader
+                  label={tab === "global" ? "S / P" : "W%"}
+                  align="right"
+                  tooltip={
+                    tab === "global"
+                      ? "Partidas en singles · partidas en parejas (doble-6)."
+                      : "Porcentaje de partidas ganadas en este formato."
+                  }
+                />
               </th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-text-mute">
+              <tr><td colSpan={10} className="px-4 py-10 text-center text-text-mute">
                 {tab === "global"
                   ? `Aún nadie tiene ${DOMIRANK_MIN_GAMES}+ partidas para entrar al ranking global.`
                   : `Sin jugadores con partidas en ${tab === "singles" ? "singles" : "parejas"} todavía.`}
@@ -81,18 +162,20 @@ export default async function Leaderboard({
               const isGlobal = tab === "global";
               const display = isGlobal ? r.global_display
                 : tab === "singles" ? r.d6_singles_display : r.d6_doubles_display;
-              const ordinal = isGlobal ? r.global_ordinal
-                : tab === "singles" ? r.d6_singles_ordinal : r.d6_doubles_ordinal;
               const mu      = isGlobal ? r.global_mu
                 : tab === "singles" ? r.d6_singles_mu : r.d6_doubles_mu;
               const sigma   = isGlobal ? r.global_sigma
                 : tab === "singles" ? r.d6_singles_sigma : r.d6_doubles_sigma;
               const games   = isGlobal ? r.total_games
                 : tab === "singles" ? r.d6_singles_games : r.d6_doubles_games;
-              const wins    = tab === "singles" ? r.d6_singles_wins
-                : tab === "doubles" ? r.d6_doubles_wins : 0;
-              const losses  = tab === "singles" ? r.d6_singles_losses
-                : tab === "doubles" ? r.d6_doubles_losses : 0;
+              const wins    = isGlobal ? (r.total_wins   ?? 0)
+                : tab === "singles" ? (r.d6_singles_wins   ?? 0) : (r.d6_doubles_wins   ?? 0);
+              const losses  = isGlobal ? (r.total_losses ?? 0)
+                : tab === "singles" ? (r.d6_singles_losses ?? 0) : (r.d6_doubles_losses ?? 0);
+              const ptsWon  = isGlobal ? (r.total_points_won  ?? 0)
+                : tab === "singles" ? (r.d6_singles_points_won  ?? 0) : (r.d6_doubles_points_won  ?? 0);
+              const ptsLost = isGlobal ? (r.total_points_lost ?? 0)
+                : tab === "singles" ? (r.d6_singles_points_lost ?? 0) : (r.d6_doubles_points_lost ?? 0);
               const winRate = games > 0 ? Math.round((wins / games) * 100) : null;
 
               return (
@@ -126,10 +209,14 @@ export default async function Leaderboard({
                   <td className="px-4 py-3 text-right hidden md:table-cell font-mono text-text-dim text-sm">
                     {Number(sigma).toFixed(2)}
                   </td>
-                  <td className="px-4 py-3 text-right">{games}</td>
+                  <td className="px-4 py-3 text-right font-mono">{games}</td>
+                  <td className="px-4 py-3 text-right hidden sm:table-cell font-mono text-primary">{wins}</td>
+                  <td className="px-4 py-3 text-right hidden sm:table-cell font-mono text-danger">{losses}</td>
+                  <td className="px-4 py-3 text-right hidden lg:table-cell font-mono text-text-dim text-sm">{ptsWon}</td>
+                  <td className="px-4 py-3 text-right hidden lg:table-cell font-mono text-text-dim text-sm">{ptsLost}</td>
                   <td className="px-4 py-3 text-right hidden sm:table-cell text-sm">
                     {isGlobal
-                      ? <span className="text-text-dim">{r.d6_singles_games ?? r.singles_games ?? 0} <span className="text-text-mute">·</span> {r.d6_doubles_games ?? r.doubles_games ?? 0}</span>
+                      ? <span className="text-text-dim">{r.d6_singles_games ?? 0} <span className="text-text-mute">·</span> {r.d6_doubles_games ?? 0}</span>
                       : <span className={winRate !== null && winRate >= 50 ? "text-primary" : "text-text-dim"}>
                           {winRate !== null ? `${winRate}%` : "—"}
                         </span>}
