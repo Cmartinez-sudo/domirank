@@ -5,6 +5,8 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { updateRatings, type TeamInput } from "@/lib/rating";
 import { ratingCol } from "@/lib/rating-buckets";
 import type { SetCode, FormatCode } from "@/lib/modalidades";
+import { buildMatchEmailMeta, sendToUserIds } from "@/lib/match-notifications";
+import { matchConfirmedEmail, matchDisputedEmail } from "@/lib/email-templates";
 
 export type AttestResult =
   | { ok: true; newStatus: "pending_attestation" | "confirmed" | "disputed" }
@@ -29,6 +31,18 @@ export async function attestMatch(
   const supabase = await supabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
+
+  // Capturar status previo para detectar transición (y evitar reenviar
+  // emails si alguien firma cuando el match ya está confirmed/disputed).
+  const { data: priorMatch } = await supabase
+    .from("matches")
+    .select("status")
+    .eq("id", matchId)
+    .maybeSingle();
+  const priorStatus = priorMatch?.status as
+    | "pending_attestation" | "confirmed" | "disputed" | "in_progress" | "cancelled"
+    | null
+    | undefined;
 
   const { data: newStatus, error } = await supabase.rpc("attest_match", {
     p_match_id: matchId,
@@ -63,6 +77,35 @@ export async function attestMatch(
   revalidatePath("/dashboard");
   if (status === "confirmed") {
     revalidatePath("/leaderboard");
+  }
+
+  // Notificar por email a los 4 jugadores SOLO si el estado transitó.
+  // Si el match ya estaba confirmed/disputed antes, no reenviamos.
+  const transitioned =
+    (status === "confirmed" || status === "disputed") &&
+    priorStatus !== status;
+  if (transitioned) {
+    void (async () => {
+      try {
+        const { data: mps } = await supabase
+          .from("match_players")
+          .select("user_id")
+          .eq("match_id", matchId);
+        const recipients = (mps ?? []).map((mp: any) => mp.user_id as string);
+        if (recipients.length === 0) return;
+
+        const meta = await buildMatchEmailMeta(supabase, matchId);
+        if (!meta) return;
+
+        const builder = status === "confirmed"
+          ? () => matchConfirmedEmail(meta)
+          : () => matchDisputedEmail(meta);
+
+        await sendToUserIds(supabase, recipients, builder);
+      } catch (e) {
+        console.error(`[attestMatch] ${status} email dispatch failed:`, e);
+      }
+    })();
   }
 
   return { ok: true, newStatus: status };

@@ -3,6 +3,8 @@ import { supabaseService } from "@/lib/supabase/service";
 import { updateRatings, type TeamInput } from "@/lib/rating";
 import { ratingCol } from "@/lib/rating-buckets";
 import type { SetCode, FormatCode } from "@/lib/modalidades";
+import { buildMatchEmailMeta, sendToMatchPlayers } from "@/lib/match-notifications";
+import { matchConfirmedEmail } from "@/lib/email-templates";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -35,16 +37,41 @@ export async function GET(request: Request) {
   }
 
   let autoConfirmed = 0;
+  let autoConfirmedIds: string[] = [];
   try {
     const { data, error } = await supabase.rpc("auto_confirm_stale_matches");
     if (error) {
       console.error("[cron] auto_confirm_stale_matches failed:", error);
     } else {
-      autoConfirmed = data ?? 0;
+      // El RPC ahora devuelve SETOF uuid; en supabase-js viene como
+      // array de objetos { auto_confirm_stale_matches: uuid } o como
+      // array de strings dependiendo del cliente. Normalizamos.
+      const rows = Array.isArray(data) ? data : [];
+      autoConfirmedIds = rows
+        .map((r: any) => typeof r === "string" ? r : r?.auto_confirm_stale_matches ?? r?.id ?? null)
+        .filter((id): id is string => typeof id === "string");
+      autoConfirmed = autoConfirmedIds.length;
     }
   } catch (e) {
     console.error("[cron] auto_confirm exception:", e);
   }
+
+  // Email "tu partida fue confirmada (auto)" SOLO a los recién auto-confirmados.
+  // Los orphans (matches confirmed con rated_at NULL) ya fueron notificados
+  // por attestMatch cuando alcanzaron quórum — no reenviamos.
+  await Promise.all(
+    autoConfirmedIds.map(async (matchId) => {
+      try {
+        const meta = await buildMatchEmailMeta(supabase, matchId);
+        if (!meta) return;
+        await sendToMatchPlayers(supabase, matchId, () =>
+          matchConfirmedEmail({ ...meta, auto: true })
+        );
+      } catch (e) {
+        console.error(`[cron] auto-confirm email failed for ${matchId}:`, e);
+      }
+    })
+  );
 
   // Aplica rating a TODOS los matches confirmed sin rated_at
   // (los recién auto-confirmados + cualquier orphan previo)

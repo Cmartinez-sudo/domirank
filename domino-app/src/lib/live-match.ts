@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
 import { rl, checkLimit } from "@/lib/ratelimit";
 import { validateMatchClosure } from "@/lib/match-validation";
+import { buildMatchEmailMeta, sendToUserIds } from "@/lib/match-notifications";
+import { matchAttestRequestedEmail } from "@/lib/email-templates";
 
 /* ============================================================
    START LIVE MATCH
@@ -225,6 +227,31 @@ export async function finalizeMatch(match_id: string): Promise<{ ok: true } | { 
 
   revalidatePath("/dashboard");
   revalidatePath(`/matches/${match_id}`);
+
+  // Notificar por email a los 3 jugadores no-scorekeeper que deben firmar.
+  // Fire-and-forget — no bloquea el response al scorekeeper.
+  void (async () => {
+    try {
+      const { data: mps } = await supabase
+        .from("match_players")
+        .select("user_id")
+        .eq("match_id", match_id);
+      const recipients = (mps ?? [])
+        .map((mp: any) => mp.user_id as string)
+        .filter((uid) => uid !== user.id);
+      if (recipients.length === 0) return;
+
+      const meta = await buildMatchEmailMeta(supabase, match_id);
+      if (!meta) return;
+
+      await sendToUserIds(supabase, recipients, () =>
+        matchAttestRequestedEmail(meta)
+      );
+    } catch (e) {
+      console.error("[finalizeMatch] attest email dispatch failed:", e);
+    }
+  })();
+
   return { ok: true };
 }
 

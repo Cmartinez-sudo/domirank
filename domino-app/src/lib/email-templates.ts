@@ -11,6 +11,17 @@ type FriendTemplateInput = {
   fromDisplayName: string | null;
 };
 
+type MatchTemplateInput = {
+  matchId:        string;
+  format:         "singles" | "doubles";
+  setSize:        "d6" | "d9";
+  scoreTeam1:     number;
+  scoreTeam2:     number;
+  team1Label:     string;
+  team2Label:     string;
+  winningTeam?:   1 | 2 | null;
+};
+
 const BRAND = {
   bg:        "#0a1020",
   card:      "#0f172a",
@@ -129,5 +140,125 @@ export function friendAcceptedEmail(input: FriendTemplateInput) {
       { label: "Ver perfil", href: url }
     ),
     text: `${displayName} (@${fromUsername}) aceptó tu solicitud de amistad en DomiRank.\n\nVer perfil: ${url}`,
+  };
+}
+
+/* ============================================================
+   MATCH HELPERS
+   ============================================================ */
+
+function modalityLabel(format: "singles" | "doubles", setSize: "d6" | "d9"): string {
+  const f = format === "singles" ? "Individual" : "Pareja";
+  const s = setSize === "d6" ? "Doble 6" : "Doble 9";
+  return `${f} · ${s}`;
+}
+
+function scoreLine(input: MatchTemplateInput): string {
+  return `${escapeHtml(input.team1Label)} ${input.scoreTeam1} — ${input.scoreTeam2} ${escapeHtml(input.team2Label)}`;
+}
+
+/* ============================================================
+   MATCH PENDING_ATTESTATION — "confirma el resultado"
+   Enviado a los 3 jugadores no-scorekeeper cuando el creador
+   finaliza la partida.
+   ============================================================ */
+
+export function matchAttestRequestedEmail(input: MatchTemplateInput) {
+  const url = `${getAppUrl()}/matches/${input.matchId}`;
+  return {
+    subject: `Confirma el resultado de tu partida`,
+    html: shell(
+      "Confirma el resultado",
+      `
+      <h1 style="margin:0 0 12px 0;font-size:20px;font-weight:700;color:${BRAND.text};">¿El resultado es correcto?</h1>
+      <p style="margin:0 0 12px 0;color:${BRAND.textDim};font-size:15px;line-height:1.5;">
+        Acaba de finalizar tu partida (<span style="color:${BRAND.text};">${escapeHtml(modalityLabel(input.format, input.setSize))}</span>).
+        El sistema necesita que confirmes el marcador antes de aplicar el rating.
+      </p>
+      <div style="margin:16px 0;padding:14px 16px;background:${BRAND.bg};border:1px solid ${BRAND.border};border-radius:10px;color:${BRAND.text};font-size:16px;font-weight:700;text-align:center;letter-spacing:0.5px;">
+        ${scoreLine(input)}
+      </div>
+      <p style="margin:0;color:${BRAND.textDim};font-size:14px;line-height:1.5;">
+        Si están de acuerdo 3 de los 4 jugadores, el rating se aplica automáticamente.
+        Si no firmas en 7 días, se confirma sola.
+      </p>
+      `,
+      { label: "Firmar o disputar", href: url }
+    ),
+    text: `Confirma tu partida en DomiRank.\n\n${input.team1Label} ${input.scoreTeam1} — ${input.scoreTeam2} ${input.team2Label}\n\nFirma o disputa aquí: ${url}`,
+  };
+}
+
+/* ============================================================
+   MATCH CONFIRMED — "tu rating se actualizó"
+   Enviado a los 4 jugadores cuando se alcanza quórum
+   (o admin confirma, o auto-confirm tras 7 días).
+   ============================================================ */
+
+export function matchConfirmedEmail(input: MatchTemplateInput & { auto?: boolean }) {
+  const url = `${getAppUrl()}/matches/${input.matchId}`;
+  const winnerLabel = input.winningTeam === 1 ? input.team1Label
+                    : input.winningTeam === 2 ? input.team2Label
+                    : null;
+  const headline = winnerLabel
+    ? `Ganador: ${winnerLabel}`
+    : "Partida confirmada";
+  const subline = input.auto
+    ? "Pasaron 7 días sin disputas, así que se confirmó automáticamente."
+    : "Los jugadores firmaron el resultado y el rating ya se aplicó.";
+
+  return {
+    subject: `Tu partida fue confirmada${winnerLabel ? ` — ${winnerLabel}` : ""}`,
+    html: shell(
+      "Partida confirmada",
+      `
+      <h1 style="margin:0 0 12px 0;font-size:20px;font-weight:700;color:${BRAND.text};">${escapeHtml(headline)}</h1>
+      <p style="margin:0 0 12px 0;color:${BRAND.textDim};font-size:15px;line-height:1.5;">
+        ${escapeHtml(subline)}
+      </p>
+      <div style="margin:16px 0;padding:14px 16px;background:${BRAND.bg};border:1px solid ${BRAND.border};border-radius:10px;color:${BRAND.text};font-size:16px;font-weight:700;text-align:center;letter-spacing:0.5px;">
+        ${scoreLine(input)}
+      </div>
+      <p style="margin:0;color:${BRAND.textDim};font-size:14px;line-height:1.5;">
+        Modalidad: ${escapeHtml(modalityLabel(input.format, input.setSize))}.
+        Tu rating ya refleja el resultado en el leaderboard.
+      </p>
+      `,
+      { label: "Ver detalle", href: url }
+    ),
+    text: `${headline}\n\n${input.team1Label} ${input.scoreTeam1} — ${input.scoreTeam2} ${input.team2Label}\nModalidad: ${modalityLabel(input.format, input.setSize)}\n\n${subline}\n\nDetalle: ${url}`,
+  };
+}
+
+/* ============================================================
+   MATCH DISPUTED — "la partida pasó a disputa"
+   Enviado a los 4 jugadores cuando se alcanzan 2+ disputas
+   y no hay quórum para confirmar.
+   ============================================================ */
+
+export function matchDisputedEmail(input: MatchTemplateInput) {
+  const url = `${getAppUrl()}/matches/${input.matchId}`;
+  return {
+    subject: `Tu partida pasó a disputa`,
+    html: shell(
+      "Partida en disputa",
+      `
+      <h1 style="margin:0 0 12px 0;font-size:20px;font-weight:700;color:${BRAND.text};">No hay acuerdo sobre el resultado</h1>
+      <p style="margin:0 0 12px 0;color:${BRAND.textDim};font-size:15px;line-height:1.5;">
+        Dos o más jugadores marcaron como disputado el marcador de tu partida
+        (<span style="color:${BRAND.text};">${escapeHtml(modalityLabel(input.format, input.setSize))}</span>).
+        El rating queda congelado hasta que un administrador resuelva.
+      </p>
+      <div style="margin:16px 0;padding:14px 16px;background:${BRAND.bg};border:1px solid ${BRAND.border};border-radius:10px;color:${BRAND.text};font-size:16px;font-weight:700;text-align:center;letter-spacing:0.5px;">
+        ${scoreLine(input)}
+      </div>
+      <p style="margin:0;color:${BRAND.textDim};font-size:14px;line-height:1.5;">
+        Si tienes contexto del problema (mano mal anotada, error de cálculo),
+        agrégalo en los comentarios de la partida para acelerar la resolución.
+      </p>
+      `,
+      { label: "Ver disputa", href: url }
+    ),
+    text: `Tu partida en DomiRank entró en disputa.\n\n${input.team1Label} ${input.scoreTeam1} — ${input.scoreTeam2} ${input.team2Label}\nModalidad: ${modalityLabel(input.format, input.setSize)}\n\nVer disputa: ${url}`,
   };
 }

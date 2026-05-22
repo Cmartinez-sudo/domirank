@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseService } from "@/lib/supabase/service";
 import { applyMatchRating } from "@/lib/match-attest-actions";
+import { buildMatchEmailMeta, sendToMatchPlayers } from "@/lib/match-notifications";
+import { matchConfirmedEmail } from "@/lib/email-templates";
 
 export async function adminResolveMatch(
   matchId: string,
@@ -35,6 +38,19 @@ export async function adminResolveMatch(
       console.error("[adminResolveMatch] applyMatchRating failed:", ratingResult.error);
       // Match queda confirmed sin rating — el cron lo retomará por rated_at IS NULL
     }
+
+    // Notificar a los 4 jugadores. El admin no es coparticipante, así que
+    // usamos service role para el lookup vía get_match_player_emails.
+    void (async () => {
+      try {
+        const svc = supabaseService();
+        const meta = await buildMatchEmailMeta(svc, matchId);
+        if (!meta) return;
+        await sendToMatchPlayers(svc, matchId, () => matchConfirmedEmail(meta));
+      } catch (e) {
+        console.error("[adminResolveMatch] confirmed email dispatch failed:", e);
+      }
+    })();
   }
 
   revalidatePath("/admin/disputes");
