@@ -6,6 +6,7 @@ import { PageTransition, StaggerChildren, StaggerItem } from "@/components/Motio
 import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
 import { PendingAttestationsCard } from "@/components/dashboard/PendingAttestationsCard";
 import { GameIcon } from "@/components/icons";
+import { NotificationPermissionPrompt } from "@/components/notifications/NotificationPermissionPrompt";
 
 export const dynamic = "force-dynamic";
 
@@ -35,9 +36,22 @@ export default async function Dashboard() {
     .order("created_at", { ascending: false })
     .limit(10);
 
+  // Count confirmed matches for the push notification prompt condition.
+  // Use `matches!inner(status)` so the .eq("matches.status", ...) filter
+  // actually applies as a JOIN — otherwise supabase-js silently ignores it
+  // and counts every match (incl. pending). See friends/page.tsx for the same pattern.
+  const { count: confirmedCount } = await supabase
+    .from("match_players")
+    .select("match_id, matches!inner(status)", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("matches.status", "confirmed");
+
   return (
     <PageTransition>
       <StaggerChildren className="space-y-8">
+        <StaggerItem>
+          <NotificationPermissionPrompt confirmedMatchesCount={confirmedCount ?? 0} />
+        </StaggerItem>
         <StaggerItem>
           <div className="flex items-center justify-between">
             <div>

@@ -1,9 +1,18 @@
+import withSerwistInit from "@serwist/next";
+
+const withSerwist = withSerwistInit({
+  swSrc: "src/app/sw.ts",
+  swDest: "public/sw.js",
+  // Disable during development to avoid caching issues
+  disable: process.env.NODE_ENV === "development",
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
-    typedRoutes: false
-  }
+    typedRoutes: false,
+  },
 };
 
-export default nextConfig;
+export default withSerwist(nextConfig);

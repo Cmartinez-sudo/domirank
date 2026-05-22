@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { COUNTRIES, MODALIDADES, type ModalityCode, type CountryCode } from "@/lib/modalidades";
 import { updateProfile, uploadAvatar, removeAvatar, signOut } from "@/lib/settings";
+import { PushSubscriptionToggle } from "@/components/notifications/PushSubscriptionToggle";
 
 type Profile = {
   id: string;
@@ -137,6 +138,12 @@ export function SettingsForm({ email, profile }: { email: string; profile: Profi
             className="w-5 h-5 accent-primary"
           />
         </label>
+      </section>
+
+      {/* ── Push notifications ──────────────────────────────────────────── */}
+      <section className="card space-y-1">
+        <h2 className="font-semibold text-sm mb-3">Notificaciones push</h2>
+        <PushSubscriptionToggle />
       </section>
 
       {msg && (
