@@ -113,7 +113,7 @@ export default async function Leaderboard({
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex flex-col items-end gap-0.5">
-                      <span className="font-mono font-bold text-primary">{Number(display ?? ordinal).toFixed(1)}</span>
+                      <span className="font-mono font-bold text-primary">{Number(display ?? 1).toFixed(1)}</span>
                       {display != null && <TierBadge display={Number(display)} />}
                     </div>
                   </td>

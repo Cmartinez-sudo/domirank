@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireUser, getCurrentProfile } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
-import { globalRating, toDisplayRating, tierFor, DOMIRANK_MIN_GAMES, DEFAULT_MU, DEFAULT_SIGMA } from "@/lib/rating";
+import { DOMIRANK_MIN_GAMES } from "@/lib/rating";
 import { PageTransition, StaggerChildren, StaggerItem } from "@/components/Motion";
 import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
 import { PendingAttestationsCard } from "@/components/dashboard/PendingAttestationsCard";
@@ -13,17 +13,18 @@ export default async function Dashboard() {
   const profile: any = await getCurrentProfile();
   if (!profile) return <p>No se pudo cargar tu perfil.</p>;
 
-  const gr = globalRating({
-    d6_singles: { mu: Number(profile.d6_singles_mu ?? DEFAULT_MU), sigma: Number(profile.d6_singles_sigma ?? DEFAULT_SIGMA) },
-    d6_doubles: { mu: Number(profile.d6_doubles_mu ?? DEFAULT_MU), sigma: Number(profile.d6_doubles_sigma ?? DEFAULT_SIGMA) },
-    d9_singles: { mu: Number(profile.d9_singles_mu ?? DEFAULT_MU), sigma: Number(profile.d9_singles_sigma ?? DEFAULT_SIGMA) },
-    d9_doubles: { mu: Number(profile.d9_doubles_mu ?? DEFAULT_MU), sigma: Number(profile.d9_doubles_sigma ?? DEFAULT_SIGMA) },
-  });
-
+  // All display values come directly from profile_ratings view (single source of truth).
+  // Never recompute from mu/sigma in TS — SQL is authoritative.
   const totalGames =
     (profile.d6_singles_games || 0) + (profile.d6_doubles_games || 0) +
     (profile.d9_singles_games || 0) + (profile.d9_doubles_games || 0);
   const qualified = totalGames >= DOMIRANK_MIN_GAMES;
+
+  const globalDisplay  = Number(profile.global_display  ?? 1);
+  const singlesDisplay = Number(profile.d6_singles_display ?? 1);
+  const doublesDisplay = Number(profile.d6_doubles_display ?? 1);
+  const singlesOrdinal = Number(profile.d6_singles_ordinal ?? 0);
+  const doublesOrdinal = Number(profile.d6_doubles_ordinal ?? 0);
 
   const supabase = await supabaseServer();
   const { data: recent } = await supabase
@@ -32,12 +33,6 @@ export default async function Dashboard() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(10);
-
-  const singlesOrdinal = Number(profile.d6_singles_mu ?? DEFAULT_MU) - 3 * Number(profile.d6_singles_sigma ?? DEFAULT_SIGMA);
-  const doublesOrdinal = Number(profile.d6_doubles_mu ?? DEFAULT_MU) - 3 * Number(profile.d6_doubles_sigma ?? DEFAULT_SIGMA);
-  const globalDisplay  = toDisplayRating(gr.ordinal);
-  const singlesDisplay = toDisplayRating(singlesOrdinal);
-  const doublesDisplay = toDisplayRating(doublesOrdinal);
 
   return (
     <PageTransition>
@@ -111,8 +106,8 @@ export default async function Dashboard() {
               title="Singles (1v1)"
               display={singlesDisplay}
               ordinal={singlesOrdinal}
-              mu={Number(profile.d6_singles_mu ?? DEFAULT_MU)}
-              sigma={Number(profile.d6_singles_sigma ?? DEFAULT_SIGMA)}
+              mu={Number(profile.d6_singles_mu ?? 25)}
+              sigma={Number(profile.d6_singles_sigma ?? 8.3333)}
               games={profile.d6_singles_games || 0}
               wins={profile.d6_singles_wins || 0}
               losses={profile.d6_singles_losses || 0}
@@ -121,8 +116,8 @@ export default async function Dashboard() {
               title="Parejas (2v2)"
               display={doublesDisplay}
               ordinal={doublesOrdinal}
-              mu={Number(profile.d6_doubles_mu ?? DEFAULT_MU)}
-              sigma={Number(profile.d6_doubles_sigma ?? DEFAULT_SIGMA)}
+              mu={Number(profile.d6_doubles_mu ?? 25)}
+              sigma={Number(profile.d6_doubles_sigma ?? 8.3333)}
               games={profile.d6_doubles_games || 0}
               wins={profile.d6_doubles_wins || 0}
               losses={profile.d6_doubles_losses || 0}

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { supabaseServer } from "@/lib/supabase/server";
-import { DOMIRANK_MIN_GAMES, toDisplayRating } from "@/lib/rating";
+import { DOMIRANK_MIN_GAMES } from "@/lib/rating";
 import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
 import { FriendActionButton } from "@/components/FriendActionButton";
 import { getRelationStatus, type RelationStatus } from "@/lib/friends";
@@ -27,8 +27,8 @@ export default async function PublicProfile({
 
   const p = profile as any;
   const qualified = p.total_games >= DOMIRANK_MIN_GAMES;
-  const rawDisplay = p.global_display ?? toDisplayRating(Number(p.global_ordinal ?? 25));
-  const globalDisplay = Number.isFinite(Number(rawDisplay)) ? Number(rawDisplay) : 1;
+  // global_display comes from profile_ratings view (SQL authoritative source).
+  const globalDisplay = Number.isFinite(Number(p.global_display)) ? Number(p.global_display) : 1;
 
   // Defensiva: si falla cualquiera de estas queries, no romper la página
   let relation: RelationStatus = { kind: "none" };
@@ -130,7 +130,7 @@ export default async function PublicProfile({
         <div className="grid md:grid-cols-2 gap-4 mt-6">
           <StatBlock
             title="Singles (6-6)"
-            display={safeNumber(p.d6_singles_display ?? toDisplayRating(Number(p.d6_singles_ordinal ?? 0)), 1)}
+            display={safeNumber(p.d6_singles_display, 1)}
             ordinal={safeNumber(p.d6_singles_ordinal, 0)}
             games={p.d6_singles_games ?? 0}
             wins={p.d6_singles_wins ?? 0}
@@ -138,7 +138,7 @@ export default async function PublicProfile({
           />
           <StatBlock
             title="Parejas (6-6)"
-            display={safeNumber(p.d6_doubles_display ?? toDisplayRating(Number(p.d6_doubles_ordinal ?? 0)), 1)}
+            display={safeNumber(p.d6_doubles_display, 1)}
             ordinal={safeNumber(p.d6_doubles_ordinal, 0)}
             games={p.d6_doubles_games ?? 0}
             wins={p.d6_doubles_wins ?? 0}
@@ -150,7 +150,7 @@ export default async function PublicProfile({
           <div className="grid md:grid-cols-2 gap-4 mt-4">
             <StatBlock
               title="Singles (9-9)"
-              display={safeNumber(p.d9_singles_display ?? toDisplayRating(Number(p.d9_singles_ordinal ?? 0)), 1)}
+              display={safeNumber(p.d9_singles_display, 1)}
               ordinal={safeNumber(p.d9_singles_ordinal, 0)}
               games={p.d9_singles_games ?? 0}
               wins={p.d9_singles_wins ?? 0}
@@ -158,7 +158,7 @@ export default async function PublicProfile({
             />
             <StatBlock
               title="Parejas (9-9)"
-              display={safeNumber(p.d9_doubles_display ?? toDisplayRating(Number(p.d9_doubles_ordinal ?? 0)), 1)}
+              display={safeNumber(p.d9_doubles_display, 1)}
               ordinal={safeNumber(p.d9_doubles_ordinal, 0)}
               games={p.d9_doubles_games ?? 0}
               wins={p.d9_doubles_wins ?? 0}
