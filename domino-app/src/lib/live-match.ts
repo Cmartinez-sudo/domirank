@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
 import { rl, checkLimit } from "@/lib/ratelimit";
+import { validateMatchClosure } from "@/lib/match-validation";
 
 /* ============================================================
    START LIVE MATCH
@@ -172,17 +173,35 @@ export async function finalizeMatch(match_id: string): Promise<{ ok: true } | { 
   // Sincronizar scores acumulados desde los rounds antes de finalizar
   await syncMatchScores(match_id);
 
-  // Validar que haya ganador definido (no empates)
+  // Validar que haya ganador definido (no empates).
+  // IMPORTANT: en doubles hay varias filas por equipo con el mismo score denormalizado.
+  // Usar MAX por equipo, no SUM, para evitar doblar el score.
   const { data: mps } = await supabase
     .from("match_players")
     .select("team, score")
     .eq("match_id", match_id);
   if (!mps || mps.length === 0) return { ok: false, error: "Sin jugadores." };
   const teamScores: Record<number, number> = {};
-  for (const r of mps) teamScores[r.team] = (teamScores[r.team] ?? 0) + r.score;
-  const max = Math.max(...Object.values(teamScores));
-  const winners = Object.entries(teamScores).filter(([, s]) => s === max).map(([t]) => Number(t));
-  if (winners.length !== 1) return { ok: false, error: "Empates no se pueden cerrar — debe haber un ganador." };
+  for (const r of mps) {
+    teamScores[r.team] = Math.max(teamScores[r.team] ?? 0, r.score);
+  }
+  const { data: matchRow } = await supabase
+    .from("matches")
+    .select("target_points")
+    .eq("id", match_id)
+    .single();
+  if (!matchRow) return { ok: false, error: "Partida no encontrada." };
+  const validation = validateMatchClosure(
+    teamScores[1] ?? 0,
+    teamScores[2] ?? 0,
+    matchRow.target_points,
+  );
+  if (validation.status === 'in_progress') {
+    return { ok: false, error: "Ningún equipo ha llegado a la meta aún." };
+  }
+  if (validation.status === 'tied_at_goal') {
+    return { ok: false, error: "Empate — deben jugar una mano adicional para desempatar." };
+  }
 
   // Llamar SQL RPC: mueve a pending_attestation + auto-attest scorekeeper
   const { error: rpcErr } = await supabase.rpc("finalize_match", { p_match_id: match_id });

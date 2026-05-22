@@ -6,6 +6,7 @@ import { Avatar } from "@/components/Avatar";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { MODALIDADES, SETS, type ModalityCode, type SetCode, type FormatCode } from "@/lib/modalidades";
 import { addRound, undoLastRound, cancelLiveMatch, finalizeMatch } from "@/lib/live-match";
+import { validateMatchClosure } from "@/lib/match-validation";
 
 type PublicUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; country: string | null };
 type Round = { id: number; round_number: number; team: number; points: number; kind: string; created_at: string };
@@ -35,11 +36,13 @@ export function LiveMatchScreen({
   const mod = MODALIDADES[modality] ?? MODALIDADES.custom;
   const scoreA = rounds.filter((r) => r.team === 1).reduce((s, r) => s + r.points, 0);
   const scoreB = rounds.filter((r) => r.team === 2).reduce((s, r) => s + r.points, 0);
-  const finished = scoreA >= targetPoints || scoreB >= targetPoints;
+  const validation = validateMatchClosure(scoreA, scoreB, targetPoints);
   const nameOf = (arr: PublicUser[]) => arr.map((p) => (p.display_name || p.username).split(" ")[0]).join(" & ");
   const nameA = nameOf(teamA);
   const nameB = nameOf(teamB);
-  const winnerName = scoreA >= targetPoints ? nameA : nameB;
+  const winnerName = validation.status === 'finishable'
+    ? (validation.winnerTeam === 1 ? nameA : nameB)
+    : null;
   const pctA = Math.min(100, (scoreA / targetPoints) * 100);
   const pctB = Math.min(100, (scoreB / targetPoints) * 100);
 
@@ -60,12 +63,20 @@ export function LiveMatchScreen({
 
   function doAdd() {
     if (input <= 0) return;
-    run(() => addRound({ match_id: matchId, team: activeTeam, points: input, kind: "points" }), () => setInput(0));
+    run(
+      () => addRound({ match_id: matchId, team: activeTeam, points: input, kind: "points" }),
+      () => { setInput(0); setErr(null); },
+    );
   }
   function doCapicua() {
-    run(() => addRound({ match_id: matchId, team: activeTeam, points: capicuaBonus, kind: "capicua" }), () => setInput(0));
+    run(
+      () => addRound({ match_id: matchId, team: activeTeam, points: capicuaBonus, kind: "capicua" }),
+      () => { setInput(0); setErr(null); },
+    );
   }
-  function doUndo() { run(() => undoLastRound(matchId)); }
+  function doUndo() {
+    run(() => undoLastRound(matchId), () => setErr(null));
+  }
   async function doCancel() {
     if (rounds.length > 0) {
       setConfirmCancel(true);
@@ -79,6 +90,7 @@ export function LiveMatchScreen({
     try { await cancelLiveMatch(matchId); } finally { setPending(false); }
   }
   async function doFinalize() {
+    setErr(null);
     setPending(true);
     try {
       const r = await finalizeMatch(matchId);
@@ -111,12 +123,12 @@ export function LiveMatchScreen({
       <div className="grid grid-cols-2 gap-3 mb-3">
         <TeamTile
           color="A" name={nameA} score={scoreA} pct={pctA}
-          active={activeTeam === 1} onClick={() => !finished && setActiveTeam(1)}
+          active={activeTeam === 1} onClick={() => validation.status === 'in_progress' && setActiveTeam(1)}
           players={teamA}
         />
         <TeamTile
           color="B" name={nameB} score={scoreB} pct={pctB}
-          active={activeTeam === 2} onClick={() => !finished && setActiveTeam(2)}
+          active={activeTeam === 2} onClick={() => validation.status === 'in_progress' && setActiveTeam(2)}
           players={teamB}
         />
       </div>
@@ -128,14 +140,16 @@ export function LiveMatchScreen({
           <div className="font-bold mt-0.5">{targetPoints} puntos</div>
         </div>
         <div className="text-right">
-          <div className="text-text-mute text-xs uppercase tracking-wider">{finished ? "Listo" : "En curso"}</div>
+          <div className="text-text-mute text-xs uppercase tracking-wider">
+            {validation.status === 'finishable' ? "Listo" : "En curso"}
+          </div>
           <div className="font-bold mt-0.5">{todayLabel}</div>
         </div>
       </div>
 
       {err && <div className="p-3 bg-danger/10 border border-danger/30 rounded-md text-danger text-sm mb-3">{err}</div>}
 
-      {finished ? (
+      {validation.status === 'finishable' ? (
         <div className="space-y-3">
           <div className="p-4 bg-primary/10 border border-primary/30 rounded-md text-primary text-center font-medium">
             {winnerName} llegó a la meta
@@ -143,6 +157,15 @@ export function LiveMatchScreen({
           <button className="btn-primary w-full" disabled={pending} onClick={doFinalize}>
             Finalizar y actualizar rating
           </button>
+          <button className="btn-ghost w-full" disabled={pending} onClick={doUndo}>
+            Deshacer última mano
+          </button>
+        </div>
+      ) : validation.status === 'tied_at_goal' ? (
+        <div className="space-y-3">
+          <div className="p-4 bg-danger/10 border border-danger/30 rounded-md text-danger text-center font-medium">
+            Empate — jueguen una mano adicional para desempatar
+          </div>
           <button className="btn-ghost w-full" disabled={pending} onClick={doUndo}>
             Deshacer última mano
           </button>
