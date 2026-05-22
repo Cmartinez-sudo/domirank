@@ -3,7 +3,7 @@ import { Avatar } from "@/components/Avatar";
 import { supabaseServer } from "@/lib/supabase/server";
 import { DOMIRANK_MIN_GAMES } from "@/lib/rating";
 import { PageTransition } from "@/components/Motion";
-import { TierBadge } from "@/components/RatingInfo";
+import { TierBadge, LeaderboardColumnsInfo } from "@/components/RatingInfo";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +44,10 @@ export default async function Leaderboard({
     <PageTransition>
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-3xl font-bold">Ranking</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-3xl font-bold">Ranking</h1>
+          <LeaderboardColumnsInfo tab={tab} />
+        </div>
         <div className="flex gap-1 bg-surface rounded-md p-1 border border-border">
           <TabLink href="/leaderboard?tab=global"  active={tab === "global"}>DomiRank Global</TabLink>
           <TabLink href="/leaderboard?tab=singles" active={tab === "singles"}>Singles</TabLink>
@@ -140,7 +143,7 @@ export default async function Leaderboard({
 
       <p className="text-text-mute text-xs text-center">
         {tab === "global"
-          ? `DomiRank Global combina tus ratings de singles y parejas ponderando por certeza (1/σ²). Cuanto más juegas un formato, más pesa. Mínimo ${DOMIRANK_MIN_GAMES} partidas totales.`
+          ? `DomiRank Global fusiona solo los formatos que has jugado, ponderados por certeza (1/σ²). Formatos sin partidas no cuentan. Mínimo ${DOMIRANK_MIN_GAMES} partidas totales para aparecer aquí.`
           : "Rating = μ − 3σ (OpenSkill ordinal). W% = partidas ganadas. μ es el skill estimado, σ la incertidumbre."}
       </p>
     </div>

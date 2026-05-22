@@ -51,7 +51,7 @@ export function RatingInfoTooltip() {
           <div className="text-sm font-semibold mb-2">Escala DomiRank 1-20</div>
           <p className="text-text-dim text-xs mb-3">
             Tu rating OpenSkill interno (μ − 3σ) se mapea a una escala visible de 1 a 20.
-            Anclas: 0 → 1.0 · 35 → 20.0.
+            Anclas: 0 → 1.0 · 28 → 20.0.
           </p>
           <div className="space-y-1">
             {SKILL_TIERS.map((t) => (
@@ -69,6 +69,86 @@ export function RatingInfoTooltip() {
           <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0"
             style={{ borderLeft: "6px solid transparent", borderRight: "6px solid transparent", borderTop: "6px solid var(--color-border)" }}
           />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Tooltip explicando las columnas del Ranking. Variantes por tab:
+ *   - global  → S/P = "partidas singles · partidas parejas"
+ *   - singles/doubles → W% = "porcentaje de partidas ganadas"
+ */
+export function LeaderboardColumnsInfo({ tab }: { tab: "global" | "singles" | "doubles" }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function close(e: MouseEvent | TouchEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", close);
+    document.addEventListener("touchstart", close);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("touchstart", close);
+    };
+  }, [open]);
+
+  const rows: Array<{ k: string; t: string }> = [
+    { k: "#", t: "Posición en el ranking. Top 3 marcados con medalla." },
+    { k: "Jugador", t: "Username y display name. Click para ir al perfil." },
+    {
+      k: "DomiRank",
+      t: tab === "global"
+        ? "Tu rating visible (1-20), fusión Bayesiana inverse-variance SOLO de los formatos que has jugado. No es promedio: pesa por certeza (1/σ²)."
+        : "Tu rating visible (1-20) en este formato. = to_display(μ − 3σ).",
+    },
+    { k: "μ (mu)", t: "Skill estimado interno (OpenSkill). Empieza en 25.0 y se mueve con cada partida confirmada." },
+    { k: "σ (sigma)", t: "Incertidumbre. Empieza en ~8.33 y baja a medida que juegas más. σ menor = el sistema confía más en tu μ." },
+    {
+      k: "Partidas",
+      t: tab === "global"
+        ? "Total de partidas confirmadas en TODOS los formatos. Mínimo 5 para aparecer en el global."
+        : "Partidas confirmadas en este formato específico.",
+    },
+    tab === "global"
+      ? { k: "S / P", t: "Partidas en singles · partidas en parejas (doble-6)." }
+      : { k: "W%", t: "Porcentaje de partidas ganadas en este formato." },
+  ];
+
+  return (
+    <div className="relative inline-block" ref={ref}>
+      <button
+        type="button"
+        aria-label="Qué significa cada columna"
+        className="w-5 h-5 rounded-full border border-border text-text-mute text-xs font-bold leading-none hover:border-primary hover:text-primary transition-colors"
+        onClick={() => setOpen((v) => !v)}
+      >
+        i
+      </button>
+
+      {open && (
+        <div
+          className="absolute top-full mt-2 right-0 z-50 w-80 rounded-xl border border-border bg-surface shadow-lg p-4 text-left"
+          role="tooltip"
+        >
+          <div className="text-sm font-semibold mb-3">Columnas del Ranking</div>
+          <dl className="space-y-2.5">
+            {rows.map((r) => (
+              <div key={r.k} className="grid grid-cols-[5rem_1fr] gap-3">
+                <dt className="text-xs font-semibold text-primary font-mono">{r.k}</dt>
+                <dd className="text-xs text-text-dim leading-relaxed">{r.t}</dd>
+              </div>
+            ))}
+          </dl>
+          {tab === "global" && (
+            <div className="mt-3 pt-3 border-t border-border/50 text-xs text-text-mute leading-relaxed">
+              <strong className="text-text-dim">Importante:</strong> si solo juegas un formato (e.g., solo parejas), tu DomiRank Global = tu rating de parejas. Los formatos que no has tocado no cuentan.
+            </div>
+          )}
         </div>
       )}
     </div>
