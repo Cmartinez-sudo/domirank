@@ -113,17 +113,19 @@ console.log("\n=== Test 6: Free-for-all (4 jugadores, ranking lineal) ===");
 
 console.log("\n=== Test 7: DomiRank Global — combinación Bayesiana 2-bucket (legacy) ===");
 {
-  const c1 = globalRatingFromTwoFormats(25, 25/3, 25, 25/3);
-  assert(Math.abs(c1.mu - 25) < 0.01, `Defaults dan μ_global ≈ 25 (got ${c1.mu.toFixed(3)})`);
+  // Sin partidas en ningún formato → fallback defaults
+  const c1 = globalRatingFromTwoFormats(25, 25/3, 0, 25, 25/3, 0);
+  assert(Math.abs(c1.mu - 25) < 0.01, `Sin partidas → μ_global = 25 (default) (got ${c1.mu.toFixed(3)})`);
+  assert(Math.abs(c1.sigma - 25/3) < 0.01, `Sin partidas → σ_global = 8.33 (default)`);
 
-  const c2 = globalRatingFromTwoFormats(25, 25/3, 30, 2.5);
+  // Solo doubles jugado: el global ES el doubles (opción A)
+  const c2 = globalRatingFromTwoFormats(25, 25/3, 0, 30, 2.5, 10);
   console.log(`    Solo parejas d6 (μ=30 σ=2.5): global μ=${c2.mu.toFixed(2)} σ=${c2.sigma.toFixed(2)} peso=${(c2.weights.d6_doubles*100).toFixed(0)}%`);
-  // Con 4 buckets (uno con info, 3 defaults), el dominante pesa ~79%,
-  // suficiente para que el global se acerque al lado con info (μ→30) sin saturarse.
-  assert(c2.mu > 28.5 && c2.mu < 30.0, `Global μ entre 28.5 y 30 (atraído por formato dominante)`);
-  assert(c2.weights.d6_doubles > 0.75, `d6_doubles pesa >75% cuando solo juegas eso (vs los 3 defaults restantes)`);
+  assert(Math.abs(c2.mu - 30) < 0.001, `Global == doubles exacto cuando solo jugaste doubles`);
+  assert(c2.weights.d6_doubles === 1, `d6_doubles pesa 100% (los otros 3 están fuera por games=0)`);
 
-  const c3 = globalRatingFromTwoFormats(28, 2, 32, 4);
+  // Ambos formatos jugados: fusión Bayesiana clásica
+  const c3 = globalRatingFromTwoFormats(28, 2, 5, 32, 4, 10);
   console.log(`    Singles d6 (μ=28 σ=2) vs Doubles d6 (μ=32 σ=4): global μ=${c3.mu.toFixed(2)} (peso singles ${(c3.weights.d6_singles*100).toFixed(0)}%)`);
   assert(c3.weights.d6_singles > 0.7, `σ menor pesa más en el global`);
   assert(c3.mu < 30, `Global se acerca al lado con σ menor`);
@@ -131,37 +133,40 @@ console.log("\n=== Test 7: DomiRank Global — combinación Bayesiana 2-bucket (
 
 console.log("\n=== Test 8: DomiRank Global — 4 buckets (singles/doubles × d6/d9) ===");
 {
-  // Defaults en todo → μ=25, σ menor que cualquier bucket individual
+  // Nadie ha jugado nada → fallback defaults
   const c1 = globalRating({
-    d6_singles: { mu: 25, sigma: 25/3 },
-    d6_doubles: { mu: 25, sigma: 25/3 },
-    d9_singles: { mu: 25, sigma: 25/3 },
-    d9_doubles: { mu: 25, sigma: 25/3 },
+    d6_singles: { mu: 25, sigma: 25/3, games: 0 },
+    d6_doubles: { mu: 25, sigma: 25/3, games: 0 },
+    d9_singles: { mu: 25, sigma: 25/3, games: 0 },
+    d9_doubles: { mu: 25, sigma: 25/3, games: 0 },
   });
-  assert(Math.abs(c1.mu - 25) < 0.01, `4 defaults → μ_global = 25`);
-  assert(c1.sigma < 25/3 / 1.9, `σ_global con 4 buckets default = ${c1.sigma.toFixed(2)}, debe ser ~25/3/2 ≈ 4.17`);
-  console.log(`    4 defaults: σ_global = ${c1.sigma.toFixed(2)} (la mitad de individual)`);
+  assert(Math.abs(c1.mu - 25) < 0.01, `Sin partidas → μ_global = 25`);
+  assert(Math.abs(c1.sigma - 25/3) < 0.01, `Sin partidas → σ_global = 8.33`);
+  console.log(`    Sin partidas: μ=${c1.mu.toFixed(2)} σ=${c1.sigma.toFixed(2)} (defaults)`);
 
-  // Solo doubles d6 jugado → global domina d6_doubles
+  // Solo d6_doubles jugado → global == d6_doubles exacto
   const c2 = globalRating({
-    d6_singles: { mu: 25, sigma: 25/3 },
-    d6_doubles: { mu: 30, sigma: 2.5 },
-    d9_singles: { mu: 25, sigma: 25/3 },
-    d9_doubles: { mu: 25, sigma: 25/3 },
+    d6_singles: { mu: 25, sigma: 25/3, games: 0 },
+    d6_doubles: { mu: 30, sigma: 2.5,  games: 10 },
+    d9_singles: { mu: 25, sigma: 25/3, games: 0 },
+    d9_doubles: { mu: 25, sigma: 25/3, games: 0 },
   });
   console.log(`    Solo d6_doubles activo: μ=${c2.mu.toFixed(2)} σ=${c2.sigma.toFixed(2)} (peso d6_d=${(c2.weights.d6_doubles*100).toFixed(0)}%)`);
-  assert(c2.weights.d6_doubles > 0.75, `d6_doubles pesa >75% del global con 3 buckets default`);
+  assert(c2.weights.d6_doubles === 1, `d6_doubles pesa 100% — únicos buckets vacíos excluidos`);
+  assert(Math.abs(c2.mu - 30) < 0.001, `Global == d6_doubles cuando es el único jugado`);
+  assert(Math.abs(c2.sigma - 2.5) < 0.001, `σ_global == σ_d6_doubles`);
 
-  // Jugador balanceado en d6 y d9 (caso cubano-venezolano)
+  // Dos buckets jugados (d6 doubles + d9 doubles) — fusión de ambos, singles fuera
   const c3 = globalRating({
-    d6_singles: { mu: 25, sigma: 25/3 },
-    d6_doubles: { mu: 30, sigma: 2.5 },
-    d9_singles: { mu: 25, sigma: 25/3 },
-    d9_doubles: { mu: 28, sigma: 3.0 },
+    d6_singles: { mu: 25, sigma: 25/3, games: 0 },
+    d6_doubles: { mu: 30, sigma: 2.5,  games: 10 },
+    d9_singles: { mu: 25, sigma: 25/3, games: 0 },
+    d9_doubles: { mu: 28, sigma: 3.0,  games: 5  },
   });
-  console.log(`    d6 (30/2.5) + d9 (28/3): μ=${c3.mu.toFixed(2)} σ=${c3.sigma.toFixed(2)}`);
+  console.log(`    d6_doubles (30/2.5) + d9_doubles (28/3): μ=${c3.mu.toFixed(2)} σ=${c3.sigma.toFixed(2)}`);
   assert(c3.mu > 28 && c3.mu < 30, `Global queda entre los dos buckets jugados`);
   assert(c3.sigma < 2.5, `σ baja al combinar dos buckets con info`);
+  assert(c3.weights.d6_singles === 0 && c3.weights.d9_singles === 0, `Singles excluidos (games=0)`);
 }
 
 console.log(`\n=========================================`);

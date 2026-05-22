@@ -70,14 +70,17 @@ export type RatingBucketKey = 'd6_singles' | 'd6_doubles' | 'd9_singles' | 'd9_d
 export const RATING_BUCKETS: RatingBucketKey[] = ['d6_singles', 'd6_doubles', 'd9_singles', 'd9_doubles'];
 
 /**
- * DomiRank Global: fusión Bayesiana inverse-variance de los 4 buckets.
- * Cada bucket es una estimación parcial del skill latente del jugador.
+ * DomiRank Global: fusión Bayesiana inverse-variance SOLO de los buckets
+ * que el jugador ha jugado (games > 0). Los buckets vacíos quedan fuera
+ * para no jalar el global hacia el default μ=25.
  *
  *   μ_global = Σ μ_i · p_i / Σ p_i      donde p_i = 1/σ²_i (precisión)
  *   σ²_global = 1 / Σ p_i
  *
- * Si un jugador nunca jugó un bucket, σ alto (default 8.33) hace que apenas
- * pese en el global. Sin casos especiales.
+ * Edge case: jugador sin partidas en ningún bucket → defaults μ=25, σ=8.33.
+ * Pesos devueltos son 0 para buckets excluidos.
+ *
+ * Mantener consistente con calc_global_ordinal_v2 en SQL (migración 0023).
  */
 export function globalRating(buckets: { [K in RatingBucketKey]: Bucket }): {
   mu: number;
@@ -87,14 +90,26 @@ export function globalRating(buckets: { [K in RatingBucketKey]: Bucket }): {
 } {
   let muNum = 0;
   let precSum = 0;
-  const weights = {} as { [K in RatingBucketKey]: number };
   const precs = {} as { [K in RatingBucketKey]: number };
+  const weights = {} as { [K in RatingBucketKey]: number };
   for (const k of RATING_BUCKETS) {
     const b = buckets[k];
-    const p = 1 / (b.sigma * b.sigma);
+    const played = (b.games ?? 0) > 0;
+    const p = played ? 1 / (b.sigma * b.sigma) : 0;
     precs[k] = p;
-    muNum += b.mu * p;
-    precSum += p;
+    if (played) {
+      muNum += b.mu * p;
+      precSum += p;
+    }
+  }
+  if (precSum === 0) {
+    for (const k of RATING_BUCKETS) weights[k] = 0;
+    return {
+      mu: DEFAULT_MU,
+      sigma: DEFAULT_SIGMA,
+      ordinal: DEFAULT_MU - 3 * DEFAULT_SIGMA,
+      weights,
+    };
   }
   for (const k of RATING_BUCKETS) weights[k] = precs[k] / precSum;
   const mu = muNum / precSum;
@@ -103,18 +118,19 @@ export function globalRating(buckets: { [K in RatingBucketKey]: Bucket }): {
 }
 
 /**
- * Variante simplificada: pasa solo singles+doubles y asume d9 vacíos (defaults).
- * Mantiene compatibilidad con código que aún no diferencia por set.
+ * Variante simplificada: pasa solo singles+doubles y asume d9 vacíos.
+ * Útil para callers que aún no diferencian por set. Los d9 se marcan
+ * con games=0 → quedan fuera de la fusión automáticamente.
  */
 export function globalRatingFromTwoFormats(
-  singlesMu: number, singlesSigma: number,
-  doublesMu: number, doublesSigma: number,
+  singlesMu: number, singlesSigma: number, singlesGames: number,
+  doublesMu: number, doublesSigma: number, doublesGames: number,
 ) {
   return globalRating({
-    d6_singles: { mu: singlesMu, sigma: singlesSigma },
-    d6_doubles: { mu: doublesMu, sigma: doublesSigma },
-    d9_singles: { mu: DEFAULT_MU, sigma: DEFAULT_SIGMA },
-    d9_doubles: { mu: DEFAULT_MU, sigma: DEFAULT_SIGMA },
+    d6_singles: { mu: singlesMu, sigma: singlesSigma, games: singlesGames },
+    d6_doubles: { mu: doublesMu, sigma: doublesSigma, games: doublesGames },
+    d9_singles: { mu: DEFAULT_MU, sigma: DEFAULT_SIGMA, games: 0 },
+    d9_doubles: { mu: DEFAULT_MU, sigma: DEFAULT_SIGMA, games: 0 },
   });
 }
 
