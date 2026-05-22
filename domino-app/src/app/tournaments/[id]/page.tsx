@@ -8,6 +8,8 @@ import { formatInfo } from "@/lib/tournament-formats";
 import { Bracket } from "@/components/Bracket";
 import { GenerateNextRoundButton, GeneratePairingsButton } from "./TournamentActions";
 import { PageTransition } from "@/components/Motion";
+import { TournamentLeaderboard } from "./TournamentLeaderboard";
+import type { LeaderboardRow } from "@/types/leaderboard";
 
 export const dynamic = "force-dynamic";
 
@@ -27,10 +29,20 @@ export default async function TournamentDetail({
     .single();
   if (!tournament) return notFound();
 
-  const { data: standings } = await supabase
-    .from("tournament_standings")
-    .select("*")
-    .eq("tournament_id", id);
+  // RPC v2 — devuelve standings enriquecidos con streak, last5 y prev_rank
+  const { data: standingsRaw } = await supabase
+    .rpc("get_tournament_standings", { p_tournament_id: id });
+
+  const standings: LeaderboardRow[] = (standingsRaw ?? []).map((r: LeaderboardRow) => ({
+    ...r,
+    rank:        Number(r.rank),
+    wins:        Number(r.wins),
+    losses:      Number(r.losses),
+    win_pct:     Number(r.win_pct),
+    pf:          Number(r.pf),
+    pc:          Number(r.pc),
+    plus_minus:  Number(r.plus_minus),
+  }));
 
   const { data: matches } = await supabase
     .from("matches")
@@ -54,11 +66,7 @@ export default async function TournamentDetail({
 
   const profiles = (tPlayers ?? []).map((tp: any) => tp.profiles).filter(Boolean);
 
-  const sorted = (standings ?? []).slice().sort((a: any, b: any) => {
-    if (b.points_for !== a.points_for) return b.points_for - a.points_for;
-    if (b.wins !== a.wins) return b.wins - a.wins;
-    return (b.points_for - b.points_against) - (a.points_for - a.points_against);
-  });
+  // standings ya viene ordenado por rank desde el RPC
 
   const m = MODALIDADES[tournament.modality as keyof typeof MODALIDADES] ?? MODALIDADES.custom;
   const fmtInfo = formatInfo(tournament.format);
@@ -134,36 +142,13 @@ export default async function TournamentDetail({
           <RoundsView pairings={pairings ?? []} profiles={profiles} tournamentId={id} isOwner={isOwner} />
         )}
 
-        {/* Standings */}
-        <section className="card p-0 overflow-hidden">
-          <h2 className="px-4 py-3 border-b border-border font-semibold">
-            {tournament.format === "points_league" ? "Tabla de puntos" : "Standings"}
-          </h2>
-          {sorted.length === 0 ? (
-            <div className="p-6 text-center text-text-mute">Aún no se han jugado partidas en este torneo.</div>
-          ) : (
-            <div className="divide-y divide-border">
-              {sorted.map((s: any, i: number) => (
-                <div key={s.user_id} className="flex items-center gap-3 px-4 py-3">
-                  <span className="text-text-mute w-6 text-right text-sm font-mono">{i + 1}</span>
-                  <Avatar player={s as any} size={32} />
-                  <Link href={`/profile/${s.username}`} className="font-medium hover:text-primary flex-1 truncate">
-                    {s.display_name || s.username}
-                  </Link>
-                  <div className="text-sm text-text-dim hidden sm:block w-24 text-right">
-                    <span className="text-primary">{s.wins}G</span> · <span className="text-danger">{s.losses}P</span>
-                  </div>
-                  <div className="font-mono text-sm w-28 text-right">
-                    {s.points_for}<span className="text-text-mute mx-1">·</span>{s.points_against}
-                  </div>
-                  <div className="font-mono text-sm font-semibold w-12 text-right">
-                    {s.win_pct ? `${Number(s.win_pct).toFixed(0)}%` : "—"}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+        {/* Standings — Leaderboard v2 */}
+        <TournamentLeaderboard
+          tournamentId={id}
+          initialStandings={standings}
+          viewerId={user?.id ?? null}
+          isOrganizer={isOwner}
+        />
 
         {/* Match list (rotation / points_league always; others as reference) */}
         {(!isRoundFormat && !isBracketFormat) || (matches && matches.length > 0) ? (
