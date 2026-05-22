@@ -88,12 +88,25 @@ export async function applyMatchRating(matchId: string): Promise<{ ok: true } | 
 
   const { data: mps } = await supabase
     .from("match_players")
-    .select("user_id, team, score")
+    .select("user_id, team")
     .eq("match_id", matchId);
   if (!mps || mps.length === 0) return { ok: false, error: "no_players" };
 
+  // Compute team scores DIRECTAMENTE desde match_rounds (source of truth).
+  // match_players.score puede estar stale si RLS bloqueó syncMatchScores
+  // (ver migración 0021). Esto blinda el ranking contra esa inconsistencia.
+  const { data: rounds } = await supabase
+    .from("match_rounds")
+    .select("team, points")
+    .eq("match_id", matchId);
   const teamScores: Record<number, number> = {};
-  for (const r of mps) teamScores[r.team] = (teamScores[r.team] ?? 0) + r.score;
+  for (const r of rounds ?? []) {
+    teamScores[r.team] = (teamScores[r.team] ?? 0) + r.points;
+  }
+  // Asegurar que todos los teams de match_players tengan entry (aunque sea 0)
+  for (const mp of mps) {
+    if (teamScores[mp.team] === undefined) teamScores[mp.team] = 0;
+  }
 
   // Cargar ratings actuales por bucket
   const muCol    = ratingCol(match.set_size as SetCode, match.format as FormatCode, "mu");

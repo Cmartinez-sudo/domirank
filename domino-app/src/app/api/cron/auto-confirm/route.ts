@@ -101,12 +101,24 @@ async function applyRatingForMatch(
 
   const { data: mps } = await supabase
     .from("match_players")
-    .select("user_id, team, score")
+    .select("user_id, team")
     .eq("match_id", matchId);
   if (!mps || mps.length === 0) return false;
 
+  // Compute team scores desde match_rounds (source of truth) en vez de
+  // confiar en match_players.score denormalizado. Service role bypassa RLS
+  // pero aún así preferimos la consistencia de leer del source primario.
+  const { data: rounds } = await supabase
+    .from("match_rounds")
+    .select("team, points")
+    .eq("match_id", matchId);
   const teamScores: Record<number, number> = {};
-  for (const r of mps) teamScores[r.team] = (teamScores[r.team] ?? 0) + r.score;
+  for (const r of rounds ?? []) {
+    teamScores[r.team] = (teamScores[r.team] ?? 0) + r.points;
+  }
+  for (const mp of mps) {
+    if (teamScores[mp.team] === undefined) teamScores[mp.team] = 0;
+  }
 
   const userIds = mps.map((r) => r.user_id);
   const { data: profiles } = await supabase

@@ -170,30 +170,37 @@ export async function finalizeMatch(match_id: string): Promise<{ ok: true } | { 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado." };
 
-  // Sincronizar scores acumulados desde los rounds antes de finalizar
+  // Sincronizar scores acumulados desde los rounds antes de finalizar.
+  // Si syncMatchScores falla (e.g., RLS), no es bloqueante — abajo computamos
+  // directamente desde match_rounds que es la source of truth.
   await syncMatchScores(match_id);
 
-  // Validar que haya ganador definido (no empates).
-  // IMPORTANT: en doubles hay varias filas por equipo con el mismo score denormalizado.
-  // Usar MAX por equipo, no SUM, para evitar doblar el score.
-  const { data: mps } = await supabase
-    .from("match_players")
-    .select("team, score")
+  // Computar team scores DIRECTAMENTE desde match_rounds (source of truth),
+  // no desde match_players.score (denormalizado, puede estar stale si RLS
+  // bloqueó el sync).
+  const { data: rounds, error: rndErr } = await supabase
+    .from("match_rounds")
+    .select("team, points")
     .eq("match_id", match_id);
-  if (!mps || mps.length === 0) return { ok: false, error: "Sin jugadores." };
-  const teamScores: Record<number, number> = {};
-  for (const r of mps) {
-    teamScores[r.team] = Math.max(teamScores[r.team] ?? 0, r.score);
+  if (rndErr) {
+    console.error("[finalizeMatch] match_rounds query failed:", rndErr);
+    return { ok: false, error: "No se pudieron leer los puntos de la partida." };
   }
+  const teamScores: Record<number, number> = { 1: 0, 2: 0 };
+  for (const r of rounds ?? []) {
+    teamScores[r.team] = (teamScores[r.team] ?? 0) + r.points;
+  }
+
   const { data: matchRow } = await supabase
     .from("matches")
     .select("target_points")
     .eq("id", match_id)
     .single();
   if (!matchRow) return { ok: false, error: "Partida no encontrada." };
+
   const validation = validateMatchClosure(
-    teamScores[1] ?? 0,
-    teamScores[2] ?? 0,
+    teamScores[1],
+    teamScores[2],
     matchRow.target_points,
   );
   if (validation.status === 'in_progress') {
@@ -225,19 +232,30 @@ export async function finalizeMatch(match_id: string): Promise<{ ok: true } | { 
    HELPERS
    ============================================================ */
 
+/**
+ * Denormaliza match_rounds → match_players.score por equipo. Best-effort:
+ * si RLS u otro error bloquea el update, lo logueamos pero NO rompemos el
+ * flujo. finalizeMatch/applyMatchRating computan independientemente desde
+ * match_rounds para no depender de esta denormalización.
+ */
 async function syncMatchScores(match_id: string) {
   const supabase = await supabaseServer();
-  const { data: rounds } = await supabase
+  const { data: rounds, error: rndErr } = await supabase
     .from("match_rounds")
     .select("team, points")
     .eq("match_id", match_id);
-  const scores: Record<number, number> = {};
+  if (rndErr) {
+    console.error("[syncMatchScores] rounds fetch failed:", rndErr);
+    return;
+  }
+  const scores: Record<number, number> = { 1: 0, 2: 0 };
   for (const r of rounds ?? []) scores[r.team] = (scores[r.team] ?? 0) + r.points;
   for (const [team, score] of Object.entries(scores)) {
-    await supabase
+    const { error: upErr } = await supabase
       .from("match_players")
       .update({ score })
       .eq("match_id", match_id)
       .eq("team", Number(team));
+    if (upErr) console.error(`[syncMatchScores] update team ${team} failed:`, upErr);
   }
 }
