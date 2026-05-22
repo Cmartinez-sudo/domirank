@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { Avatar } from "@/components/Avatar";
+import { BellOffIcon } from "@/components/icons";
 
 const EASE_OUT: [number, number, number, number] = [0.25, 0.46, 0.45, 0.94];
 
@@ -231,7 +232,9 @@ export function NotificationBell({
               )}
               {!loadingPreviews && previews.length === 0 && (
                 <div className="p-8 text-center text-text-mute text-sm">
-                  <div className="text-3xl mb-2 opacity-50">🔕</div>
+                  <div className="mb-2 flex justify-center opacity-60" aria-hidden>
+                    <BellOffIcon size={36} />
+                  </div>
                   No tienes notificaciones aún.
                 </div>
               )}

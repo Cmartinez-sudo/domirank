@@ -5,6 +5,7 @@ import { DOMIRANK_MIN_GAMES } from "@/lib/rating";
 import { PageTransition, StaggerChildren, StaggerItem } from "@/components/Motion";
 import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
 import { PendingAttestationsCard } from "@/components/dashboard/PendingAttestationsCard";
+import { GameIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -176,7 +177,9 @@ export default async function Dashboard() {
               </ul>
             ) : (
               <div className="text-center py-10">
-                <div className="text-5xl mb-3 select-none">🎲</div>
+                <div className="mb-3 flex justify-center text-text-mute select-none">
+                  <GameIcon size={56} />
+                </div>
                 <p className="text-text-dim font-medium mb-1">Aún no has jugado ninguna partida.</p>
                 <p className="text-text-mute text-sm mb-5">Registra tu primera partida y empieza a construir tu DomiRank.</p>
                 <Link href="/matches/new" className="btn-primary">+ Nueva partida</Link>

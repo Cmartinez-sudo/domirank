@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Avatar } from "@/components/Avatar";
 import { useToast } from "@/components/Toast";
+import { BellOffIcon } from "@/components/icons";
 import { acceptFriendRequest, rejectFriendRequest } from "@/lib/friends";
 import type { AppNotification } from "@/lib/notifications-types";
 
@@ -186,7 +187,9 @@ function NotificationCard({ n }: { n: AppNotification }) {
 function EmptyState() {
   return (
     <div className="card text-center py-12">
-      <div className="text-5xl mb-3 opacity-40 select-none">🔕</div>
+      <div className="mb-3 flex justify-center text-text-mute select-none">
+        <BellOffIcon size={56} />
+      </div>
       <h2 className="text-lg font-semibold">No tienes notificaciones aún</h2>
       <p className="text-text-mute text-sm mt-1 max-w-xs mx-auto">
         Cuando alguien interactúe contigo lo verás aquí.

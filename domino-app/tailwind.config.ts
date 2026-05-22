@@ -16,7 +16,9 @@ const config: Config = {
         "border-strong": "rgba(255,255,255,.14)",
         text:      "#eef2ff",
         "text-dim":"#a6b0c8",
-        "text-mute":"#6b7490",
+        // text-mute: subido de #6b7490 (3.7:1) a #8a93b0 (~5.3:1) sobre bg-surface
+        // para cumplir WCAG AA en texto pequeño (4.5:1 mínimo).
+        "text-mute":"#8a93b0",
         primary:   "#10b981",
         "primary-2":"#059669",
         danger:    "#ef4444",

@@ -8,6 +8,8 @@ import { UserSearch } from "@/components/UserSearch";
 import { RatingBadge } from "@/components/RatingBadge";
 import { PageTransition } from "@/components/Motion";
 import { useToast } from "@/components/Toast";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { FriendsIcon, InboxIcon, SendIcon } from "@/components/icons";
 import {
   acceptFriendRequest,
   rejectFriendRequest,
@@ -55,6 +57,7 @@ export function FriendsPanel({
 }) {
   const [tab, setTab] = useState<"friends" | "incoming" | "outgoing">("friends");
   const [busy, setBusy] = useState(false);
+  const [confirmUnfriend, setConfirmUnfriend] = useState<FriendUser | null>(null);
   const router = useRouter();
   const toast = useToast();
 
@@ -110,7 +113,7 @@ export function FriendsPanel({
           <div className="space-y-3">
             {friends.length === 0 && (
               <EmptyCard
-                icon="🤝"
+                icon={<FriendsIcon size={48} className="text-text-mute" />}
                 title="Aún no tienes amigos"
                 body="Busca jugadores arriba y mándales solicitud desde su perfil."
               />
@@ -120,11 +123,7 @@ export function FriendsPanel({
                 key={f.id}
                 friend={f}
                 busy={busy}
-                onUnfriend={() => {
-                  if (confirm(`¿Quitar a @${f.username} de tus amigos?`)) {
-                    run(() => unfriend(f.id), "Ya no son amigos");
-                  }
-                }}
+                onUnfriend={() => setConfirmUnfriend(f)}
               />
             ))}
           </div>
@@ -134,7 +133,7 @@ export function FriendsPanel({
           <div className="space-y-2">
             {incoming.length === 0 && (
               <EmptyCard
-                icon="📭"
+                icon={<InboxIcon size={48} className="text-text-mute" />}
                 title="Sin solicitudes pendientes"
                 body="Cuando alguien te mande solicitud de amistad, aparecerá aquí."
               />
@@ -163,7 +162,7 @@ export function FriendsPanel({
           <div className="space-y-2">
             {outgoing.length === 0 && (
               <EmptyCard
-                icon="📤"
+                icon={<SendIcon size={48} className="text-text-mute" />}
                 title="No has enviado solicitudes"
                 body="Encuentra jugadores arriba y mándales solicitud desde su perfil."
               />
@@ -183,6 +182,22 @@ export function FriendsPanel({
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmUnfriend !== null}
+        title={confirmUnfriend ? `¿Quitar a @${confirmUnfriend.username} de tus amigos?` : ""}
+        description="No podrán ver el detalle de partidas pendientes ni invitarse fácilmente hasta que vuelvan a ser amigos."
+        confirmLabel="Sí, quitar"
+        destructive
+        pending={busy}
+        onConfirm={async () => {
+          if (!confirmUnfriend) return;
+          const target = confirmUnfriend;
+          setConfirmUnfriend(null);
+          await run(() => unfriend(target.id), "Ya no son amigos");
+        }}
+        onCancel={() => setConfirmUnfriend(null)}
+      />
     </PageTransition>
   );
 }
@@ -311,10 +326,10 @@ function RequestRow({
   );
 }
 
-function EmptyCard({ icon, title, body }: { icon: string; title: string; body: string }) {
+function EmptyCard({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
     <div className="card text-center py-8">
-      <div className="text-4xl mb-3 select-none">{icon}</div>
+      <div className="mb-3 flex justify-center select-none">{icon}</div>
       <div className="font-semibold mb-1">{title}</div>
       <p className="text-text-mute text-sm max-w-xs mx-auto">{body}</p>
     </div>

@@ -45,7 +45,16 @@ export function Avatar({ player, size = 36, className = "" }: Props) {
   if (player.avatar_url) {
     return (
       <div style={style} className={className}>
-        <img src={player.avatar_url} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        {/* width/height declarados para prevenir CLS al cargar */}
+        <img
+          src={player.avatar_url}
+          alt={name}
+          width={size}
+          height={size}
+          loading="lazy"
+          decoding="async"
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
       </div>
     );
   }

@@ -159,8 +159,12 @@ export function AppShell({
             {user ? (
               <div className="flex items-center gap-1">
                 <NotificationBell userId={user.id} initialUnreadCount={unread} />
-                <Link href="/settings" className="flex items-center p-1 rounded-full active:opacity-70 transition-opacity">
-                  {profile && <Avatar player={profile as any} size={34} />}
+                <Link
+                  href="/settings"
+                  aria-label="Ajustes de tu cuenta"
+                  className="flex items-center justify-center w-11 h-11 rounded-full active:opacity-70 hover:bg-surface-2 transition-opacity"
+                >
+                  {profile && <Avatar player={profile as any} size={36} />}
                 </Link>
               </div>
             ) : (

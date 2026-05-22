@@ -1,22 +1,26 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/Toast";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { voidMatch } from "./actions";
 
 export function VoidMatchButton({ matchId }: { matchId: string }) {
   const [open, setOpen]       = useState(false);
   const [pending, setPending] = useState(false);
-  const [err, setErr]         = useState<string | null>(null);
+  const toast = useToast();
 
-  async function confirm() {
+  async function doVoid() {
     setPending(true);
-    setErr(null);
     const res = await voidMatch(matchId);
+    setPending(false);
     if (!res.ok) {
-      setErr(res.error);
-      setPending(false);
+      toast.error(res.error);
+      return;
     }
-    // On success the page re-renders via revalidatePath — no redirect needed
+    setOpen(false);
+    toast.success("Partida anulada. Ratings revertidos.");
+    // Page re-renderea via revalidatePath
   }
 
   return (
@@ -29,36 +33,16 @@ export function VoidMatchButton({ matchId }: { matchId: string }) {
         Anular partida
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-sm bg-surface border border-border rounded-2xl p-6 space-y-4 shadow-2xl">
-            <h2 className="text-xl font-bold">¿Anular esta partida?</h2>
-            <p className="text-text-dim text-sm">
-              Los ratings de todos los jugadores volverán a los valores anteriores a la partida.
-              Esta acción no se puede deshacer.
-            </p>
-            {err && <p className="text-danger text-sm">{err}</p>}
-            <div className="flex gap-3">
-              <button
-                type="button"
-                className="btn-ghost flex-1"
-                onClick={() => { setOpen(false); setErr(null); }}
-                disabled={pending}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                className="btn-primary flex-1 bg-danger/90 hover:bg-danger shadow-none"
-                onClick={confirm}
-                disabled={pending}
-              >
-                {pending ? "Anulando…" : "Sí, anular"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={open}
+        title="¿Anular esta partida?"
+        description="Los ratings de todos los jugadores volverán a los valores anteriores. Esta acción no se puede deshacer."
+        confirmLabel="Sí, anular"
+        destructive
+        pending={pending}
+        onConfirm={doVoid}
+        onCancel={() => setOpen(false)}
+      />
     </>
   );
 }

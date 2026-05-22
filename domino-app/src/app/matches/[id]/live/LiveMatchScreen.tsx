@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { MODALIDADES, SETS, type ModalityCode, type SetCode, type FormatCode } from "@/lib/modalidades";
 import { addRound, undoLastRound, cancelLiveMatch, finalizeMatch } from "@/lib/live-match";
 
@@ -29,6 +30,7 @@ export function LiveMatchScreen({
   const [activeTeam, setActiveTeam] = useState<1 | 2>(1);
   const [input, setInput] = useState(0);
   const [err, setErr] = useState<string | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   const mod = MODALIDADES[modality] ?? MODALIDADES.custom;
   const scoreA = rounds.filter((r) => r.team === 1).reduce((s, r) => s + r.points, 0);
@@ -65,7 +67,14 @@ export function LiveMatchScreen({
   }
   function doUndo() { run(() => undoLastRound(matchId)); }
   async function doCancel() {
-    if (rounds.length > 0 && !confirm("¿Cancelar la partida y perder las manos registradas?")) return;
+    if (rounds.length > 0) {
+      setConfirmCancel(true);
+      return;
+    }
+    await cancelImmediate();
+  }
+  async function cancelImmediate() {
+    setConfirmCancel(false);
     setPending(true);
     try { await cancelLiveMatch(matchId); } finally { setPending(false); }
   }
@@ -197,6 +206,18 @@ export function LiveMatchScreen({
           ))
         )}
       </div>
+
+      <ConfirmDialog
+        open={confirmCancel}
+        title="¿Cancelar la partida?"
+        description={`Vas a perder ${rounds.length} mano${rounds.length === 1 ? "" : "s"} registradas. Esta acción no se puede deshacer.`}
+        confirmLabel="Sí, cancelar"
+        cancelLabel="Seguir jugando"
+        destructive
+        pending={pending}
+        onConfirm={cancelImmediate}
+        onCancel={() => setConfirmCancel(false)}
+      />
     </div>
   );
 }

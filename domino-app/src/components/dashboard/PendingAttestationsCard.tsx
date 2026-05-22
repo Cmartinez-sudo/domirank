@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/server";
+import { PendingIcon } from "@/components/icons";
 
 type PendingMatch = {
   id: string;
@@ -73,7 +74,9 @@ export async function PendingAttestationsCard({ userId }: { userId: string }) {
     >
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold flex items-center gap-2">
-          <span className="text-yellow-400">🟡</span>
+          <span className="text-yellow-400" aria-hidden>
+            <PendingIcon size={20} />
+          </span>
           Pendientes de tu firma ({toShow.length})
         </h2>
       </div>

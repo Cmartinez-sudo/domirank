@@ -2,6 +2,7 @@ import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { PageTransition } from "@/components/Motion";
+import { FlaskIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,9 @@ export default async function TournamentsPage() {
         </div>
 
         <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-yellow-400/5 border border-yellow-400/20 text-sm text-yellow-200/70">
-          <span className="shrink-0 mt-0.5">🧪</span>
+          <span className="shrink-0 mt-0.5" aria-hidden>
+            <FlaskIcon size={18} />
+          </span>
           <span>Los torneos están en fase beta. Puede haber cambios en el flujo. Tu feedback es bienvenido.</span>
         </div>
 

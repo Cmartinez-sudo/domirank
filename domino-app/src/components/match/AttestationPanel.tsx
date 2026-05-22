@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Avatar } from "@/components/Avatar";
 import { useToast } from "@/components/Toast";
+import { PendingIcon, CheckCircleIcon, AlertTriangleIcon, SlashIcon } from "@/components/icons";
 import { attestMatch } from "@/lib/match-attest-actions";
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 
 const EASE_OUT: [number, number, number, number] = [0.25, 0.46, 0.45, 0.94];
 
@@ -252,7 +254,7 @@ function StatusHeader({
     return (
       <div>
         <div className="flex items-center gap-2 text-yellow-400">
-          <span className="text-xl">🟡</span>
+          <PendingIcon size={20} />
           <h3 className="font-semibold">Pendiente de confirmación</h3>
         </div>
         <p className="text-text-dim text-sm mt-2">
@@ -263,7 +265,7 @@ function StatusHeader({
         </p>
         {disputes > 0 && (
           <p className="text-danger text-sm mt-2">
-            ⚠ {disputes} jugador{disputes === 1 ? "" : "es"} reportó un problema. Si llega a 2, la partida pasa a disputa.
+            {disputes} jugador{disputes === 1 ? "" : "es"} reportó un problema. Si llega a 2, la partida pasa a disputa.
           </p>
         )}
       </div>
@@ -273,7 +275,7 @@ function StatusHeader({
     return (
       <div>
         <div className="flex items-center gap-2 text-primary">
-          <span className="text-xl">✅</span>
+          <CheckCircleIcon size={20} />
           <h3 className="font-semibold">Resultado confirmado</h3>
         </div>
         {ratingDelta != null && (
@@ -290,7 +292,7 @@ function StatusHeader({
     return (
       <div>
         <div className="flex items-center gap-2 text-danger">
-          <span className="text-xl">⚠️</span>
+          <AlertTriangleIcon size={20} />
           <h3 className="font-semibold">Partida en disputa</h3>
         </div>
         <p className="text-text-dim text-sm mt-2">
@@ -302,7 +304,7 @@ function StatusHeader({
   return (
     <div>
       <div className="flex items-center gap-2 text-text-mute">
-        <span className="text-xl">⊘</span>
+        <SlashIcon size={20} />
         <h3 className="font-semibold">Partida anulada</h3>
       </div>
       <p className="text-text-dim text-sm mt-2">
@@ -317,7 +319,7 @@ function StatusBanner({ status, hideDetail }: { status: AttestationStatus; hideD
     return (
       <div className="card">
         <div className="flex items-center gap-2 text-yellow-400">
-          <span className="text-xl">🟡</span>
+          <PendingIcon size={20} />
           <h3 className="font-semibold">Pendiente de confirmación</h3>
         </div>
         {!hideDetail && (
@@ -341,23 +343,23 @@ function PlayerRow({
   isScorekeeper: boolean;
   isViewer: boolean;
 }) {
-  let icon: string = "⏳";
+  let icon: React.ReactNode = <PendingIcon size={20} className="text-text-mute" />;
   let label: string = "pendiente";
   let labelColor = "text-text-mute";
 
   if (attestation?.action === "confirm") {
-    icon = "✅";
+    icon = <CheckCircleIcon size={20} className="text-primary" />;
     label = isScorekeeper ? "firmó · scorekeeper" : `firmó · ${relTime(attestation.created_at)}`;
     labelColor = "text-primary";
   } else if (attestation?.action === "dispute") {
-    icon = "⚠";
+    icon = <AlertTriangleIcon size={20} className="text-danger" />;
     label = `reportó problema · ${relTime(attestation.created_at)}`;
     labelColor = "text-danger";
   }
 
   return (
     <div className="flex items-center gap-3 px-3 py-2 bg-surface-2 rounded-xl">
-      <span className="text-lg select-none" aria-hidden>{icon}</span>
+      <span className="select-none flex-shrink-0" aria-hidden>{icon}</span>
       <Avatar player={player as any} size={32} />
       <div className="flex-1 min-w-0">
         <div className="font-medium text-sm truncate">
@@ -390,7 +392,9 @@ function DisputeDetails({
         const player = players.find((p) => p.user_id === d.user_id);
         return (
           <div key={d.user_id} className="flex items-start gap-3 p-3 bg-danger/5 border border-danger/20 rounded-xl">
-            <span className="text-danger select-none">⚠</span>
+            <span className="text-danger select-none flex-shrink-0" aria-hidden>
+              <AlertTriangleIcon size={20} />
+            </span>
             <div className="flex-1 min-w-0">
               <div className="font-medium text-sm">
                 {player?.display_name || player?.username || "Jugador"}
@@ -419,23 +423,30 @@ function ReportDialog({
   setText: (s: string) => void;
   pending: boolean;
 }) {
+  const dialogRef = useFocusTrap<HTMLDivElement>({
+    enabled: true,
+    onEscape: () => { if (!pending) onCancel(); },
+  });
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
+      onClick={(e) => { if (e.target === e.currentTarget && !pending) onCancel(); }}
     >
       <motion.div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="report-dialog-title"
         initial={{ y: 16, scale: 0.97 }}
         animate={{ y: 0, scale: 1 }}
         exit={{ y: 16, scale: 0.97 }}
         transition={{ duration: 0.2, ease: EASE_OUT }}
         className="w-full max-w-md bg-surface border border-border rounded-2xl p-6 space-y-4 shadow-2xl"
       >
-        <h2 className="text-xl font-bold">Reportar problema</h2>
+        <h2 id="report-dialog-title" className="text-xl font-bold">Reportar problema</h2>
         <p className="text-text-dim text-sm">
           ¿Qué no cuadra con el resultado? (opcional)
         </p>

@@ -12,6 +12,7 @@ import {
   type RelationStatus,
 } from "@/lib/friends";
 import { useToast } from "@/components/Toast";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const EASE_OUT: [number, number, number, number] = [0.25, 0.46, 0.45, 0.94];
 
@@ -248,34 +249,16 @@ export function FriendActionButton({
           </div>
         )}
 
-        {confirmOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm" role="dialog" aria-modal="true">
-            <div className="w-full max-w-sm bg-surface border border-border rounded-2xl p-6 space-y-4 shadow-2xl">
-              <h2 className="text-xl font-bold">¿Quitar a @{targetUsername} de tus amigos?</h2>
-              <p className="text-text-dim text-sm">
-                No podrán crear partidas ni torneos juntos hasta que vuelvan a ser amigos.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  className="btn-ghost flex-1"
-                  onClick={() => setConfirmOpen(false)}
-                  disabled={pending}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="btn-primary flex-1 bg-danger/90 hover:bg-danger shadow-none"
-                  onClick={onUnfriend}
-                  disabled={pending}
-                >
-                  Sí, quitar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <ConfirmDialog
+          open={confirmOpen}
+          title={`¿Quitar a @${targetUsername} de tus amigos?`}
+          description="No podrán ver el detalle de partidas pendientes hasta que vuelvan a ser amigos."
+          confirmLabel="Sí, quitar"
+          destructive
+          pending={pending}
+          onConfirm={onUnfriend}
+          onCancel={() => setConfirmOpen(false)}
+        />
       </motion.div>
     </AnimatePresence>
   );

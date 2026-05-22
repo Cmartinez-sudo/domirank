@@ -6,6 +6,7 @@ import { getNotificationCounts } from "@/lib/notifications";
 import type { NotificationCounts } from "@/lib/notifications-types";
 import { AppShell } from "@/components/AppShell";
 import { ToastProvider } from "@/components/Toast";
+import { MotionGate } from "@/components/MotionGate";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
@@ -44,11 +45,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="es" className={inter.className}>
       <body>
-        <ToastProvider>
-          <AppShell user={user} profile={profile} counts={counts}>
-            {children}
-          </AppShell>
-        </ToastProvider>
+        <MotionGate>
+          <ToastProvider>
+            <AppShell user={user} profile={profile} counts={counts}>
+              {children}
+            </AppShell>
+          </ToastProvider>
+        </MotionGate>
       </body>
     </html>
   );
