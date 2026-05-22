@@ -5,7 +5,7 @@
  */
 
 type Props = {
-  player: { username: string; display_name?: string | null; avatar_url?: string | null };
+  player: { username: string; display_name?: string | null; avatar_url?: string | null } | null | undefined;
   size?: number;
   className?: string;
 };
@@ -31,12 +31,37 @@ function initialsFor(name: string): string {
 }
 
 export function Avatar({ player, size = 36, className = "" }: Props) {
-  const name = player.display_name || player.username;
+  // Defensa: el caller puede pasar null (e.g., notificación sin actor,
+  // partida con jugador huérfano). Renderizamos un placeholder neutro
+  // en vez de crashear el render entero.
+  if (!player) {
+    return (
+      <div
+        style={{
+          width: size, height: size, borderRadius: "50%",
+          background: "var(--surface-3)",
+          display: "grid", placeItems: "center", flexShrink: 0,
+          color: "var(--text-mute)",
+          fontWeight: 600,
+          fontSize: Math.round(size * 0.4),
+          lineHeight: 1,
+          userSelect: "none",
+        }}
+        className={className}
+        aria-hidden
+      >
+        ?
+      </div>
+    );
+  }
+
+  const username = player.username || "?";
+  const name = player.display_name || username;
   const style: React.CSSProperties = {
     width: size, height: size, borderRadius: "50%",
     display: "grid", placeItems: "center", flexShrink: 0,
     overflow: "hidden", userSelect: "none",
-    background: player.avatar_url ? "var(--surface-3)" : colorFor(player.username),
+    background: player.avatar_url ? "var(--surface-3)" : colorFor(username),
     color: "white",
     fontWeight: 600,
     fontSize: Math.round(size * 0.4),
