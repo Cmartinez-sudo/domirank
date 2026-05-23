@@ -47,30 +47,49 @@ export function NotificationPermissionPrompt({ confirmedMatchesCount }: Props) {
   if (!visible) return null;
 
   return (
-    <div className="card border-primary/30 bg-surface flex items-start gap-3 mb-4">
-      <div className="mt-0.5 text-primary shrink-0">
+    <section
+      role="region"
+      aria-label="Activar notificaciones"
+      className="card border-primary/30 bg-surface flex items-start gap-3 mb-4 animate-slide-up-fade"
+    >
+      <div className="mt-0.5 text-primary shrink-0" aria-hidden="true">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
           <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
         </svg>
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium">Activa las notificaciones</p>
+        <p className="text-sm font-medium">Activá las notificaciones</p>
         <p className="text-xs text-text-mute mt-0.5">
-          No pierdas partidas pendientes de tu firma. Te avisamos cuando necesitas actuar.
+          No pierdas partidas pendientes de tu firma. Te avisamos cuando necesitás actuar.
         </p>
         <div className="flex gap-2 mt-3">
           <button
             onClick={activate}
             disabled={busy}
-            className="btn-primary !min-h-0 !py-1.5 !px-3 text-xs"
+            aria-busy={busy}
+            className="btn-primary min-h-[40px] py-1.5 px-3.5 text-xs disabled:opacity-60"
           >
-            Activar
+            {busy && (
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                className="animate-spin-fast"
+                aria-hidden="true"
+              >
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" strokeLinecap="round" />
+              </svg>
+            )}
+            {busy ? "Activando…" : "Activar"}
           </button>
           <button
             onClick={dismiss}
             disabled={busy}
-            className="btn-ghost !min-h-0 !py-1.5 !px-3 text-xs"
+            className="btn-ghost min-h-[40px] py-1.5 px-3.5 text-xs"
           >
             Ahora no
           </button>
@@ -79,13 +98,13 @@ export function NotificationPermissionPrompt({ confirmedMatchesCount }: Props) {
       <button
         onClick={dismiss}
         aria-label="Cerrar"
-        className="text-text-mute hover:text-text transition-colors shrink-0 mt-0.5"
+        className="shrink-0 -m-1.5 p-1.5 rounded-md text-text-mute hover:text-text hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
           <line x1="18" y1="6" x2="6" y2="18"/>
           <line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
       </button>
-    </div>
+    </section>
   );
 }

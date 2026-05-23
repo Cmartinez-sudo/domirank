@@ -51,7 +51,7 @@ export function IOSInstallInstructions() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center p-4 bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end justify-center p-4 bg-black/60 backdrop-blur-sm animate-slide-up-fade"
       onClick={(e) => { if (e.target === e.currentTarget) dismiss(); }}
     >
       <div
@@ -60,12 +60,17 @@ export function IOSInstallInstructions() {
         aria-modal="true"
         aria-labelledby="ios-install-title"
         tabIndex={-1}
-        className="card w-full max-w-sm space-y-4 animate-in slide-in-from-bottom-4 duration-300"
+        className="card w-full max-w-sm space-y-4"
+        style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
       >
         <div className="flex items-center justify-between">
           <h2 id="ios-install-title" className="text-base font-semibold">Instalar DomiRank</h2>
-          <button onClick={dismiss} aria-label="Cerrar" className="text-text-mute hover:text-text transition-colors">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <button
+            onClick={dismiss}
+            aria-label="Cerrar"
+            className="-m-1.5 p-1.5 rounded-md text-text-mute hover:text-text hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18"/>
               <line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
@@ -73,37 +78,33 @@ export function IOSInstallInstructions() {
         </div>
 
         <p className="text-sm text-text-mute">
-          Para instalar DomiRank en tu iPhone o iPad, segui estos pasos:
+          Para instalar DomiRank en tu iPhone o iPad, seguí estos pasos:
         </p>
 
         <ol className="space-y-3">
-          {/* Step 1: Tap Share */}
           <li className="flex items-start gap-3">
-            <span className="inline-grid place-items-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold shrink-0 mt-0.5">1</span>
-            <div className="flex-1 min-w-0">
-              <span className="text-sm">Toca el boton </span>
-              {/* iOS Share icon */}
-              <span className="inline-flex items-center gap-1 align-middle">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline text-primary">
+            <span className="inline-grid place-items-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold shrink-0 mt-0.5" aria-hidden="true">1</span>
+            <p className="text-sm flex-1">
+              Tocá el botón
+              <span className="inline-flex items-center align-middle mx-1">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary" aria-label="ícono Compartir">
                   <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
                   <polyline points="16 6 12 2 8 6"/>
                   <line x1="12" y1="2" x2="12" y2="15"/>
                 </svg>
               </span>
-              <span className="text-sm"> Compartir en Safari</span>
-            </div>
+              Compartir en Safari.
+            </p>
           </li>
 
-          {/* Step 2: Add to Home Screen */}
           <li className="flex items-start gap-3">
-            <span className="inline-grid place-items-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold shrink-0 mt-0.5">2</span>
-            <p className="text-sm flex-1">Desplazate y toca <strong>Agregar a pantalla de inicio</strong></p>
+            <span className="inline-grid place-items-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold shrink-0 mt-0.5" aria-hidden="true">2</span>
+            <p className="text-sm flex-1">Desplazate y tocá <strong>Agregar a pantalla de inicio</strong>.</p>
           </li>
 
-          {/* Step 3: Tap Add */}
           <li className="flex items-start gap-3">
-            <span className="inline-grid place-items-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold shrink-0 mt-0.5">3</span>
-            <p className="text-sm flex-1">Toca <strong>Agregar</strong> en la esquina superior derecha</p>
+            <span className="inline-grid place-items-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold shrink-0 mt-0.5" aria-hidden="true">3</span>
+            <p className="text-sm flex-1">Tocá <strong>Agregar</strong> en la esquina superior derecha.</p>
           </li>
         </ol>
 
