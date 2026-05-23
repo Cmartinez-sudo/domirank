@@ -52,7 +52,7 @@ describe('validateMatchClosure', () => {
   });
 
   it('"135" as any, 88, 100 → finishable, winnerTeam: 1 (coerción de tipo)', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line
     expect(validateMatchClosure('135' as any, 88, 100)).toEqual({
       status: 'finishable',
       winnerTeam: 1,
