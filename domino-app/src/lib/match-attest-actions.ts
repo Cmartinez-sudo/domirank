@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
-import { updateRatings, type TeamInput } from "@/lib/rating";
+import { computeRatingPayload } from "@/lib/match-rating-compute";
 import { ratingCol } from "@/lib/rating-buckets";
 import type { SetCode, FormatCode } from "@/lib/modalidades";
 import { buildMatchEmailMeta, sendToUserIds } from "@/lib/match-notifications";
@@ -135,23 +135,13 @@ export async function applyMatchRating(matchId: string): Promise<{ ok: true } | 
     .eq("match_id", matchId);
   if (!mps || mps.length === 0) return { ok: false, error: "no_players" };
 
-  // Compute team scores DIRECTAMENTE desde match_rounds (source of truth).
-  // match_players.score puede estar stale si RLS bloqueó syncMatchScores
-  // (ver migración 0021). Esto blinda el ranking contra esa inconsistencia.
+  // Source of truth for scores: match_rounds. match_players.score may be
+  // stale if RLS blocked syncMatchScores (see migration 0021).
   const { data: rounds } = await supabase
     .from("match_rounds")
     .select("team, points")
     .eq("match_id", matchId);
-  const teamScores: Record<number, number> = {};
-  for (const r of rounds ?? []) {
-    teamScores[r.team] = (teamScores[r.team] ?? 0) + r.points;
-  }
-  // Asegurar que todos los teams de match_players tengan entry (aunque sea 0)
-  for (const mp of mps) {
-    if (teamScores[mp.team] === undefined) teamScores[mp.team] = 0;
-  }
 
-  // Cargar Elo y games actuales por bucket
   const eloCol   = ratingCol(match.set_size as SetCode, match.format as FormatCode, "elo");
   const gamesCol = ratingCol(match.set_size as SetCode, match.format as FormatCode, "games");
   const userIds  = mps.map((r) => r.user_id);
@@ -160,45 +150,19 @@ export async function applyMatchRating(matchId: string): Promise<{ ok: true } | 
     .select(`id, ${eloCol}, ${gamesCol}`)
     .in("id", userIds);
   if (pErr || !profiles) return { ok: false, error: pErr?.message ?? "profiles_load_failed" };
-  const byId = new Map(profiles.map((p: any) => [p.id, p]));
 
-  // Armar teamInputs
-  const teamsMap = new Map<number, typeof mps>();
-  for (const r of mps) {
-    if (!teamsMap.has(r.team)) teamsMap.set(r.team, []);
-    teamsMap.get(r.team)!.push(r);
-  }
-  const teamInputs: TeamInput[] = Array.from(teamsMap.entries())
-    .sort(([a], [b]) => a - b)
-    .map(([team, rows]) => {
-      const rank = 1 + Object.values(teamScores).filter((s) => s > teamScores[team]).length;
-      const score = teamScores[team] ?? 0;
-      return {
-        team,
-        rank: rank as 1 | 2,
-        score,
-        players: rows.map((r) => {
-          const p: any = byId.get(r.user_id);
-          return {
-            user_id:      r.user_id,
-            elo:          Number(p[eloCol]),
-            games_played: Number(p[gamesCol]),
-          };
-        }),
-      };
-    });
-
-  const updates = updateRatings(teamInputs);
+  const computed = computeRatingPayload({
+    format:        match.format as FormatCode,
+    setSize:       match.set_size as SetCode,
+    matchPlayers:  mps,
+    matchRounds:   rounds ?? [],
+    profiles:      profiles as unknown as Array<{ id: string; [k: string]: string | number }>,
+  });
+  if (!computed.ok) return { ok: false, error: computed.error };
 
   const { error: rpcErr } = await supabase.rpc("apply_match_rating", {
     p_match_id: matchId,
-    p_updates: updates.map((u) => ({
-      user_id:    u.user_id,
-      rank:       teamInputs.find((t) => t.players.some((p) => p.user_id === u.user_id))!.rank,
-      elo_before: u.elo_before,
-      elo_after:  u.elo_after,
-      k_used:     u.k_used,
-    })),
+    p_updates:  computed.payload,
   });
 
   if (rpcErr) {

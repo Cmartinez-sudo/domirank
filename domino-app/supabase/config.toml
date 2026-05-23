@@ -1,0 +1,11 @@
+# Supabase project config — only the bits we customize.
+# Full reference: https://supabase.com/docs/guides/cli/config
+
+project_id = "vwpmpmwihmiksgfzypfx"
+
+# This function is invoked by an internal DB trigger (pg_net) and validates
+# the caller itself via the Authorization header. We disable the gateway JWT
+# check so the trigger can authenticate with the new sb_secret_* key (which
+# is not a JWT and would otherwise be rejected as INVALID_JWT_FORMAT).
+[functions.send-push-notification]
+verify_jwt = false
