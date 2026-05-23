@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: ${{ matrix.task }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [typecheck, lint, test, build]
+    defaults:
+      run:
+        working-directory: domino-app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: domino-app/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run ${{ matrix.task }}
+        run: pnpm ${{ matrix.task }}
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ matrix.task == 'build' && 'https://placeholder.supabase.co' || '' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ matrix.task == 'build' && 'placeholder-anon-key' || '' }}
+          NEXT_PUBLIC_APP_URL: http://localhost:3000

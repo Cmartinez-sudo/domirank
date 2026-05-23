@@ -225,6 +225,7 @@ describe("updateRatings — 1v1", () => {
       updateRatings([
         { team: 1, rank: 1, score: 10, players: [{ user_id: "a", elo: 1500, games_played: 0 }] },
         { team: 2, rank: 2, score: 8,  players: [{ user_id: "b", elo: 1500, games_played: 0 }] },
+        // @ts-expect-error — testing runtime guard for >2 teams (rank 3 is intentionally invalid).
         { team: 3, rank: 3, score: 6,  players: [{ user_id: "c", elo: 1500, games_played: 0 }] },
       ])
     ).toThrow();
