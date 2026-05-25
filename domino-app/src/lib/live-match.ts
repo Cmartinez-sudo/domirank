@@ -22,6 +22,8 @@ const StartSchema = z.object({
   team_a_players: z.array(z.string().uuid()).min(1).max(2),
   team_b_players: z.array(z.string().uuid()).min(1).max(2),
   tournament_id: z.string().uuid().nullable().optional(),
+  /** Límite de tiempo en minutos (R6). null = sin límite. */
+  time_limit_minutes: z.number().int().min(5).max(180).nullable().optional(),
 });
 export type StartLiveMatchInput = z.infer<typeof StartSchema>;
 
@@ -50,6 +52,11 @@ export async function startLiveMatch(input: StartLiveMatchInput): Promise<{ ok: 
   // Si ya hay una partida in_progress del usuario, cancelarla primero
   await supabase.from("matches").update({ status: "cancelled" }).eq("created_by", user.id).eq("status", "in_progress");
 
+  // Si la partida tiene límite de tiempo, el timer arranca inmediatamente
+  // al crearla (ya está "in_progress" desde el momento de creación).
+  const now = new Date().toISOString();
+  const timeLimitMinutes = i.time_limit_minutes ?? null;
+
   const { data: match, error: mErr } = await supabase
     .from("matches")
     .insert({
@@ -62,6 +69,9 @@ export async function startLiveMatch(input: StartLiveMatchInput): Promise<{ ok: 
       rated: true,
       created_by: user.id,
       tournament_id: i.tournament_id ?? null,
+      // R6: timer. Si hay time_limit_minutes, timer arranca ya.
+      time_limit_minutes: timeLimitMinutes,
+      timer_started_at: timeLimitMinutes ? now : null,
     })
     .select("id")
     .single();
@@ -79,6 +89,50 @@ export async function startLiveMatch(input: StartLiveMatchInput): Promise<{ ok: 
     return { ok: false, error: mpErr.message };
   }
   return { ok: true, match_id: match.id };
+}
+
+/* ============================================================
+   START TIMER — arranca el cronómetro de la partida (idempotente)
+   ============================================================ */
+
+/**
+ * Setea timer_started_at en el match si aún no está seteado.
+ * Idempotente: la query incluye `.is("timer_started_at", null)` por lo que
+ * si el timer ya arrancó no se sobreescribe.
+ *
+ * Solo aplica si el match tiene time_limit_minutes configurado.
+ */
+export async function startTimer(match_id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = await supabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "No autenticado." };
+
+  const { data: match } = await supabase
+    .from("matches")
+    .select("created_by, time_limit_minutes, timer_started_at, status")
+    .eq("id", match_id)
+    .single();
+
+  if (!match) return { ok: false, error: "Partida no encontrada." };
+  if (match.created_by !== user.id) return { ok: false, error: "Solo el creador puede iniciar el timer." };
+  if (match.status !== "in_progress") return { ok: false, error: "La partida no está en curso." };
+
+  // Sin time_limit_minutes no hay timer que iniciar
+  if (!(match as Record<string, unknown>).time_limit_minutes) {
+    return { ok: false, error: "Esta partida no tiene límite de tiempo." };
+  }
+
+  // Idempotente: solo actualiza si timer_started_at es null
+  const { error } = await supabase
+    .from("matches")
+    .update({ timer_started_at: new Date().toISOString() })
+    .eq("id", match_id)
+    .is("timer_started_at", null);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/matches/${match_id}/live`);
+  return { ok: true };
 }
 
 /* ============================================================
@@ -195,21 +249,36 @@ export async function finalizeMatch(match_id: string): Promise<{ ok: true } | { 
 
   const { data: matchRow } = await supabase
     .from("matches")
-    .select("target_points")
+    .select("target_points, time_limit_minutes, timer_started_at")
     .eq("id", match_id)
     .single();
   if (!matchRow) return { ok: false, error: "Partida no encontrada." };
 
+  // `time_expired` no es una columna en DB (Postgres no permite now() en
+  // GENERATED ALWAYS AS STORED). Se calcula acá desde timer_started_at +
+  // time_limit_minutes. Es la única fuente de verdad server-side.
+  const timerStartedAt = (matchRow as Record<string, unknown>).timer_started_at as string | null;
+  const timeLimitMinutes = (matchRow as Record<string, unknown>).time_limit_minutes as number | null;
+
+  let timeExpired = false;
+  if (timerStartedAt && timeLimitMinutes) {
+    const endMs = new Date(timerStartedAt).getTime() + timeLimitMinutes * 60 * 1000;
+    timeExpired = Date.now() > endMs;
+  }
   const validation = validateMatchClosure(
     teamScores[1],
     teamScores[2],
     matchRow.target_points,
+    timeExpired,
   );
   if (validation.status === 'in_progress') {
     return { ok: false, error: "Ningún equipo ha llegado a la meta aún." };
   }
   if (validation.status === 'tied_at_goal') {
     return { ok: false, error: "Empate — deben jugar una mano adicional para desempatar." };
+  }
+  if (validation.status === 'time_expired_finishable' && validation.winnerTeam === null) {
+    return { ok: false, error: "Tiempo agotado con empate — deben jugar una mano adicional para desempatar." };
   }
 
   // Llamar SQL RPC: mueve a pending_attestation + auto-attest scorekeeper

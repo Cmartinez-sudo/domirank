@@ -78,14 +78,14 @@ export function IOSInstallInstructions() {
         </div>
 
         <p className="text-sm text-text-mute">
-          Para instalar DomiRank en tu iPhone o iPad, seguí estos pasos:
+          Para instalar DomiRank en tu iPhone o iPad, sigue estos pasos:
         </p>
 
         <ol className="space-y-3">
           <li className="flex items-start gap-3">
             <span className="inline-grid place-items-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold shrink-0 mt-0.5" aria-hidden="true">1</span>
             <p className="text-sm flex-1">
-              Tocá el botón
+              Toca el botón
               <span className="inline-flex items-center align-middle mx-1">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary" aria-label="ícono Compartir">
                   <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
@@ -99,12 +99,12 @@ export function IOSInstallInstructions() {
 
           <li className="flex items-start gap-3">
             <span className="inline-grid place-items-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold shrink-0 mt-0.5" aria-hidden="true">2</span>
-            <p className="text-sm flex-1">Desplazate y tocá <strong>Agregar a pantalla de inicio</strong>.</p>
+            <p className="text-sm flex-1">Desplázate y toca <strong>Agregar a pantalla de inicio</strong>.</p>
           </li>
 
           <li className="flex items-start gap-3">
             <span className="inline-grid place-items-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold shrink-0 mt-0.5" aria-hidden="true">3</span>
-            <p className="text-sm flex-1">Tocá <strong>Agregar</strong> en la esquina superior derecha.</p>
+            <p className="text-sm flex-1">Toca <strong>Agregar</strong> en la esquina superior derecha.</p>
           </li>
         </ol>
 

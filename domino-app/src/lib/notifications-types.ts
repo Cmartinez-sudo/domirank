@@ -11,13 +11,22 @@ export type NotificationType =
   | "match_confirmed"
   | "match_disputed"
   | "match_auto_confirmed"
+  | "tournament_added"
+  | "tournament_started"
+  | "tournament_round_ready"
+  | "tournament_match_ready"
+  | "tournament_finished"
+  | "pair_invite_received"
+  | "pair_invite_accepted"
   | string;
 
 export type AppNotification = {
   id: string;
   type: NotificationType;
-  payload: Record<string, any>;
+  payload: Record<string, string | number | boolean | null>;
   ref_match_id: string | null;
+  ref_tournament_id: string | null;
+  ref_user_id: string | null;
   read_at: string | null;
   created_at: string;
   /** Perfil del usuario relevante (sender, actor, scorekeeper) si aplica */

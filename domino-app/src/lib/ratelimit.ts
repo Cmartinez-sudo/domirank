@@ -4,10 +4,11 @@
  * Set both env vars in Vercel to activate in production.
  *
  * Limits (sliding window):
- *   auth       — 10 attempts / 1 min  per IP     (brute-force / signup spam)
- *   matchStart — 15 matches  / 1 hour per user   (rating manipulation)
- *   tournament —  5 created  / 1 day  per user   (spam)
- *   friendReq  — 20 requests / 1 hour per user   (spam)
+ *   auth               — 10 attempts / 1 min  per IP     (brute-force / signup spam)
+ *   matchStart         — 15 matches  / 1 hour per user   (rating manipulation)
+ *   tournament         —  5 created  / 1 day  per user   (spam)
+ *   friendReq          — 20 requests / 1 hour per user   (spam)
+ *   tournamentMutation — 30 ops      / 1 min  per user   (R5 pair management)
  */
 
 import { Ratelimit }  from "@upstash/ratelimit";
@@ -25,10 +26,11 @@ function make(requests: number, window: string): Ratelimit | null {
 }
 
 export const rl = {
-  auth:       make(10, "1 m"),
-  matchStart: make(15, "1 h"),
-  tournament: make(5,  "1 d"),
-  friendReq:  make(20, "1 h"),
+  auth:               make(10, "1 m"),
+  matchStart:         make(15, "1 h"),
+  tournament:         make(5,  "1 d"),
+  friendReq:          make(20, "1 h"),
+  tournamentMutation: make(30, "1 m"),
 };
 
 export async function checkLimit(
@@ -39,5 +41,5 @@ export async function checkLimit(
   const { success } = await limiter.limit(identifier);
   return success
     ? { allowed: true }
-    : { allowed: false, error: "Demasiados intentos. Espera un momento antes de continuar." };
+    : { allowed: false, error: "Demasiadas operaciones. Intentá de nuevo en un minuto." };
 }

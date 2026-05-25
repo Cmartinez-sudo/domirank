@@ -62,7 +62,10 @@ export function useTournamentRealtimeStandings(
     const supabase = supabaseBrowser();
 
     const channel = supabase
-      .channel(`tournament-matches-${tournamentId}`)
+      .channel(`tournament-standings-${tournamentId}`)
+      // Solo escucha matches confirmados → actualizar standings.
+      // Los cambios de ronda y status los maneja useTournamentMetaChanges
+      // (en TournamentRealtimeRefresher), evitando doble canal.
       .on(
         "postgres_changes",
         {
@@ -72,12 +75,11 @@ export function useTournamentRealtimeStandings(
           filter: `tournament_id=eq.${tournamentId}`,
         },
         (payload) => {
-          // Solo refetch si el match pasó a confirmed
           const newStatus = (payload.new as { status?: string })?.status;
           if (newStatus === "confirmed") {
             scheduleRefetch();
           }
-        }
+        },
       )
       .subscribe();
 

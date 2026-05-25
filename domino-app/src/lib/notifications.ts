@@ -27,7 +27,7 @@ export async function getNotifications(limit: number = 50): Promise<AppNotificat
 
   const { data: rows } = await supabase
     .from("notifications")
-    .select("id, type, payload, ref_match_id, read_at, created_at")
+    .select("id, type, payload, ref_match_id, ref_tournament_id, ref_user_id, read_at, created_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -73,8 +73,10 @@ export async function getNotifications(limit: number = 50): Promise<AppNotificat
     return {
       id:                 r.id,
       type:               r.type,
-      payload:            r.payload as Record<string, any>,
+      payload:            r.payload as Record<string, string | number | boolean | null>,
       ref_match_id:       (r as any).ref_match_id ?? null,
+      ref_tournament_id:  (r as any).ref_tournament_id ?? null,
+      ref_user_id:        (r as any).ref_user_id ?? null,
       read_at:            r.read_at,
       created_at:         r.created_at,
       actor:              actorId ? actors.get(actorId) ?? null : null,

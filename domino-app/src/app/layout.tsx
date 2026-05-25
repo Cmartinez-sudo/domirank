@@ -5,11 +5,13 @@ import { getCurrentUser, getCurrentProfile } from "@/lib/auth";
 import { getNotificationCounts } from "@/lib/notifications";
 import type { NotificationCounts } from "@/lib/notifications-types";
 import { AppShell } from "@/components/AppShell";
+import { TournamentPopupGate } from "@/components/tournament/TournamentPopupGate";
 import { ToastProvider } from "@/components/Toast";
 import { MotionGate } from "@/components/MotionGate";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { IOSInstallInstructions } from "@/components/pwa/IOSInstallInstructions";
+import type { PendingTournament } from "@/components/tournament/TournamentPopup";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
@@ -43,6 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   let user: { id: string } | null = null;
   let profile: any = null;
   let counts: NotificationCounts | null = null;
+  let pendingTournaments: PendingTournament[] = [];
 
   try {
     const u = await getCurrentUser();
@@ -50,6 +53,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       user = { id: u.id };
       try { profile = await getCurrentProfile(); } catch (e) { console.error("[layout] profile failed:", e); }
       try { counts = await getNotificationCounts(u.id); } catch (e) { console.error("[layout] counts failed:", e); }
+      try {
+        const supabase = await (await import("@/lib/supabase/server")).supabaseServer();
+        const { data } = await supabase.rpc("get_user_pending_tournaments", {
+          p_user_id: u.id,
+        });
+        pendingTournaments = (data ?? []) as PendingTournament[];
+      } catch (e) {
+        console.error("[layout] pendingTournaments failed:", e);
+      }
     }
   } catch (e) {
     console.error("[layout] getCurrentUser failed:", e);
@@ -80,6 +92,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </AppShell>
           </ToastProvider>
         </MotionGate>
+        {user && <TournamentPopupGate pendingTournaments={pendingTournaments} />}
         <ServiceWorkerRegister />
         <InstallPrompt />
         <IOSInstallInstructions />

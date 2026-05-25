@@ -20,14 +20,40 @@ export default async function LivePage({
     .eq("id", id)
     .single();
   if (!match) return notFound();
-
-  // Solo el creador puede continuar la partida en vivo
-  if (match.created_by !== user.id) {
-    if (match.status !== "in_progress") redirect(`/matches/${id}`);
-    redirect(`/matches/${id}`);
-  }
-  if (match.status !== "in_progress") redirect(`/matches/${id}`);
   if (match.status === "cancelled") redirect(`/dashboard`);
+  if (match.status !== "in_progress") redirect(`/matches/${id}`);
+
+  // Determinar si el usuario es jugador de esta partida
+  const { data: myMatchPlayer } = await supabase
+    .from("match_players")
+    .select("user_id")
+    .eq("match_id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const isPlayer = Boolean(myMatchPlayer);
+
+  // Si no es jugador, verificar si es participante del torneo (modo espectador)
+  let isSpectator = false;
+  if (!isPlayer) {
+    const tournamentId = (match as Record<string, unknown>).tournament_id as string | null;
+    if (tournamentId) {
+      const { data: tp } = await supabase
+        .from("tournament_players")
+        .select("user_id")
+        .eq("tournament_id", tournamentId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      // El organizador del torneo también puede espectarse
+      const { data: tourney } = await supabase
+        .from("tournaments")
+        .select("created_by")
+        .eq("id", tournamentId)
+        .maybeSingle();
+      isSpectator = Boolean(tp) || tourney?.created_by === user.id;
+    }
+    if (!isSpectator) redirect(`/matches/${id}`);
+  }
 
   const { data: mps } = await supabase
     .from("match_players")
@@ -44,6 +70,22 @@ export default async function LivePage({
   const teamA = (mps ?? []).filter((r: any) => r.team === 1).map((r: any) => r.profiles);
   const teamB = (mps ?? []).filter((r: any) => r.team === 2).map((r: any) => r.profiles);
 
+  // Columnas de timer (migración 0029). Cast transitorio hasta regenerar tipos Supabase.
+  // TODO: eliminar los casts una vez regenerados los tipos con `supabase gen types typescript`.
+  const matchAny = match as Record<string, unknown>;
+
+  // Fetch tournament name if match belongs to a tournament (Feature 3)
+  let tournamentName: string | null = null;
+  const tournamentId = matchAny.tournament_id as string | null;
+  if (tournamentId) {
+    const { data: tourney } = await supabase
+      .from("tournaments")
+      .select("name")
+      .eq("id", tournamentId)
+      .maybeSingle();
+    tournamentName = tourney?.name ?? null;
+  }
+
   return (
     <LiveMatchScreen
       matchId={id}
@@ -56,6 +98,11 @@ export default async function LivePage({
       teamA={teamA as any}
       teamB={teamB as any}
       rounds={(rounds ?? []) as any}
+      timeLimitMinutes={(matchAny.time_limit_minutes as number | null) ?? null}
+      timerStartedAt={(matchAny.timer_started_at as string | null) ?? null}
+      isSpectator={isSpectator}
+      tournamentId={tournamentId}
+      tournamentName={tournamentName}
     />
   );
 }

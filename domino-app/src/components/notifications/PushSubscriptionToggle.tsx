@@ -120,7 +120,7 @@ export function PushSubscriptionToggle() {
 
       {denied && (
         <p className="text-xs text-text-mute">
-          Tenés notificaciones bloqueadas. Cambialo desde la configuracion de tu navegador.
+          Tienes notificaciones bloqueadas. Cámbialo desde la configuración de tu navegador.
         </p>
       )}
 

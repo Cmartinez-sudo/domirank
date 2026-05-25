@@ -1,25 +1,27 @@
-import { requireOnboardedUser, getCurrentProfile } from "@/lib/auth";
-import { NewTournamentForm } from "./NewTournamentForm";
+import { requireOnboardedUser } from "@/lib/auth";
+import { WizardEntry } from "./WizardEntry";
+import { supabaseServer } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Punto de entrada del wizard de torneo.
+ * Si hay draft en localStorage → modal "¿Continuar borrador?".
+ * Si no → redirect inmediato al step-1 (manejado por WizardEntry en cliente).
+ */
 export default async function NewTournamentPage() {
-  await requireOnboardedUser();
-  const profile: any = await getCurrentProfile();
+  const user = await requireOnboardedUser();
+  const supabase = await supabaseServer();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, username, display_name, avatar_url, country, default_modality")
+    .eq("id", user.id)
+    .single();
+
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
-      <h1 className="text-3xl font-bold">Nuevo torneo</h1>
-      <p className="text-text-dim">Sistema de rotación: cada partida se eligen 4 jugadores, se sortean parejas y se juega.</p>
-      <NewTournamentForm
-        currentUser={{
-          id: profile.id,
-          username: profile.username,
-          display_name: profile.display_name,
-          avatar_url: profile.avatar_url,
-          country: profile.country,
-        }}
-        defaultModality={profile?.default_modality ?? "dom"}
-      />
-    </div>
+    <WizardEntry
+      userId={user.id}
+      defaultModality={(profile as any)?.default_modality ?? "dom"}
+    />
   );
 }
