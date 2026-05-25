@@ -7,7 +7,7 @@ import { Avatar } from "@/components/Avatar";
 import { UserSearch } from "@/components/UserSearch";
 import { RatingBadge } from "@/components/RatingBadge";
 import { MODALIDADES, type ModalityCode } from "@/lib/modalidades";
-import { createTournament } from "@/lib/tournaments";
+
 import { TOURNAMENT_FORMATS, FORMAT_LIST, type TournamentFormat } from "@/lib/tournament-formats";
 
 type PublicUser = {
@@ -42,36 +42,10 @@ export function NewTournamentForm({ currentUser, defaultModality }: { currentUse
     if (code !== "custom") setPointsToWin(MODALIDADES[code].target);
   }
 
-  async function submit(e: React.FormEvent) {
+  function submit(e: React.FormEvent) {
     e.preventDefault();
-    setErr(null);
-    if (!name.trim()) return setErr("Pon un nombre al torneo.");
-    if (players.length < 4) return setErr("Necesitas al menos 4 jugadores (te contamos a ti).");
-
-    setPending(true);
-    try {
-      const r = await createTournament({
-        name: name.trim(),
-        visibility,
-        modality,
-        format,
-        points_to_win: pointsToWin,
-        rounds,
-        continuous,
-        rated,
-        player_ids: players.map((p) => p.id),
-      });
-      if (r.ok) {
-        router.push(`/tournaments/${r.tournament_id}`);
-        router.refresh();
-      } else {
-        setErr(r.error);
-        setPending(false);
-      }
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Error");
-      setPending(false);
-    }
+    // Deprecated: este formulario fue reemplazado por el wizard de 9 pasos.
+    router.push("/tournaments/new/step-1");
   }
 
   return (
@@ -213,7 +187,7 @@ export function NewTournamentForm({ currentUser, defaultModality }: { currentUse
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
           {players.map((p) => (
             <div key={p.id} className="flex items-center gap-2 p-2 bg-surface-2 rounded-xl">
-              <Avatar player={p as any} size={32} />
+              <Avatar player={p} size={32} />
               <div className="flex-1 min-w-0">
                 <div className="text-sm truncate">{p.display_name || p.username}</div>
               </div>

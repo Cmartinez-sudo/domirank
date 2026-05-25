@@ -8,6 +8,7 @@ import { Avatar } from "@/components/Avatar";
 import { useToast } from "@/components/Toast";
 import { BellOffIcon } from "@/components/icons";
 import { acceptFriendRequest, rejectFriendRequest } from "@/lib/friends";
+import { respondPairInvite } from "@/lib/tournament-pairs-actions";
 import type { AppNotification } from "@/lib/notifications-types";
 
 const EASE_OUT: [number, number, number, number] = [0.25, 0.46, 0.45, 0.94];
@@ -59,6 +60,7 @@ function NotificationCard({ n }: { n: AppNotification }) {
   let href: string | null = null;
 
   const matchHref = n.ref_match_id ? `/matches/${n.ref_match_id}` : null;
+  const tournamentHref = n.ref_tournament_id ? `/tournaments/${n.ref_tournament_id}` : null;
 
   if (n.type === "friend_request_received") {
     body = <><strong>{actorName}</strong> quiere ser tu amigo</>;
@@ -147,6 +149,87 @@ function NotificationCard({ n }: { n: AppNotification }) {
   } else if (n.type === "match_disputed") {
     body = <>Tu partida pasó a disputa</>;
     href = matchHref;
+  } else if (n.type === "tournament_added") {
+    const tName = String(n.payload?.tournament_name ?? "");
+    body = <>Te agregaron al torneo {tName ? <strong>{tName}</strong> : "un torneo"}</>;
+    href = tournamentHref;
+  } else if (n.type === "tournament_started") {
+    const tName = String(n.payload?.tournament_name ?? "");
+    body = <>El torneo {tName ? <strong>{tName}</strong> : ""} ya comenzó</>;
+    href = tournamentHref;
+    if (tournamentHref) {
+      inline = (
+        <Link href={tournamentHref} className="inline-block text-primary text-sm mt-2 hover:underline">
+          Ver torneo
+        </Link>
+      );
+    }
+  } else if (n.type === "tournament_round_ready") {
+    body = <>Nueva ronda disponible en tu torneo</>;
+    href = tournamentHref;
+  } else if (n.type === "tournament_match_ready") {
+    body = <>Tu próxima partida está lista</>;
+    href = tournamentHref;
+  } else if (n.type === "tournament_finished") {
+    const tName = String(n.payload?.tournament_name ?? "");
+    body = <>El torneo {tName ? <strong>{tName}</strong> : ""} terminó. Mira los resultados finales.</>;
+    href = tournamentHref;
+  } else if (n.type === "pair_invite_received") {
+    const inviterName = String(n.payload?.inviter_name ?? actorName);
+    const tName = String(n.payload?.tournament_name ?? "");
+    const inviteId = String(n.payload?.invite_id ?? "");
+    body = (
+      <>
+        <strong>{inviterName}</strong> te invita a ser su partner en{" "}
+        {tName ? <strong>{tName}</strong> : "un torneo"}
+      </>
+    );
+    if (inviteId && !acted) {
+      inline = (
+        <div className="flex gap-2 mt-2">
+          <button
+            type="button"
+            disabled={pending}
+            onClick={async () => {
+              setPending(true);
+              const r = await respondPairInvite(inviteId, "accept");
+              setPending(false);
+              if (!r.ok) { toast.error(r.error); return; }
+              setActed("accepted");
+              toast.success("Invitación aceptada");
+              router.refresh();
+            }}
+            className="btn-primary text-sm py-1.5 px-3"
+          >
+            {pending ? "…" : "Aceptar"}
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={async () => {
+              setPending(true);
+              const r = await respondPairInvite(inviteId, "decline");
+              setPending(false);
+              if (!r.ok) { toast.error(r.error); return; }
+              setActed("rejected");
+              toast.info("Invitación rechazada");
+              router.refresh();
+            }}
+            className="btn-ghost text-sm py-1.5 px-3 text-text-mute hover:text-danger"
+          >
+            Rechazar
+          </button>
+        </div>
+      );
+    } else if (acted === "accepted") {
+      inline = <div className="text-primary text-xs mt-2">Aceptada</div>;
+    } else if (acted === "rejected") {
+      inline = <div className="text-text-mute text-xs mt-2">Rechazada</div>;
+    }
+    href = tournamentHref;
+  } else if (n.type === "pair_invite_accepted") {
+    body = <><strong>{actorName}</strong> aceptó tu invitación de partner</>;
+    href = tournamentHref;
   } else {
     body = <>Nueva notificación</>;
   }
@@ -171,7 +254,10 @@ function NotificationCard({ n }: { n: AppNotification }) {
 
   // Si la card tiene acciones inline (botones), no envolver en Link (los botones
   // se traganarían el click). Si no, envolver en Link al perfil del actor.
-  if (inline && n.type === "friend_request_received" && n.pending_request_id && !acted) {
+  const hasActionButtons =
+    (inline && n.type === "friend_request_received" && n.pending_request_id && !acted) ||
+    (inline && n.type === "pair_invite_received" && !acted);
+  if (hasActionButtons) {
     return content;
   }
   if (href) {

@@ -59,9 +59,9 @@ export function NotificationPermissionPrompt({ confirmedMatchesCount }: Props) {
         </svg>
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium">Activá las notificaciones</p>
+        <p className="text-sm font-medium">Activa las notificaciones</p>
         <p className="text-xs text-text-mute mt-0.5">
-          No pierdas partidas pendientes de tu firma. Te avisamos cuando necesitás actuar.
+          No pierdas partidas pendientes de tu firma. Te avisamos cuando necesitas actuar.
         </p>
         <div className="flex gap-2 mt-3">
           <button

@@ -7,11 +7,13 @@
   },
   "scripts": {
     "dev": "next dev",
+    "dev:lan": "next dev -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test:rating": "tsx scripts/test-rating.ts",
+    "seed:users": "tsx scripts/seed-test-users.ts",
     "test": "vitest run"
   },
   "dependencies": {

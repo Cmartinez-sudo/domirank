@@ -9,3 +9,9 @@ project_id = "vwpmpmwihmiksgfzypfx"
 # is not a JWT and would otherwise be rejected as INVALID_JWT_FORMAT).
 [functions.send-push-notification]
 verify_jwt = false
+
+# Invocada por el trigger notify_round_complete() via pg_net cuando todas las
+# partidas de una ronda pasan a 'confirmed'. Usa el mismo patrón de auth que
+# send-push-notification: valida Bearer <SERVICE_ROLE_KEY> internamente.
+[functions.generate-tournament-round]
+verify_jwt = false

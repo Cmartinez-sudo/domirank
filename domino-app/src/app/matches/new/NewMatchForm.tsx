@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { UserSearch } from "@/components/UserSearch";
 import { RatingBadge } from "@/components/RatingBadge";
 import { MODALIDADES, type ModalityCode, type SetCode, type FormatCode } from "@/lib/modalidades";
 import { startLiveMatch } from "@/lib/live-match";
+import { linkMatchToPairing } from "@/lib/tournament-pairing-link";
 
 type Player = {
   id: string;
@@ -26,6 +27,9 @@ export function NewMatchForm({
   defaultModality: ModalityCode;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const presetTournamentId = searchParams.get("tournament");
+  const presetPairingId = searchParams.get("pairing");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -83,15 +87,26 @@ export function NewMatchForm({
         capicua_bonus: capicua,
         team_a_players: teamA.map((p) => p.id),
         team_b_players: teamB.map((p) => p.id),
-        tournament_id: null,
+        tournament_id: presetTournamentId ?? null,
       });
-      if (res.ok) {
-        router.push(`/matches/${res.match_id}/live`);
-        router.refresh();
-      } else {
+      if (!res.ok) {
         setError(res.error);
         setPending(false);
+        return;
       }
+
+      // Si viene un pairing_id del query param, vincularlo al match recién creado
+      if (presetPairingId) {
+        const linkRes = await linkMatchToPairing(presetPairingId, res.match_id);
+        if (!linkRes.ok) {
+          setError(linkRes.error);
+          setPending(false);
+          return;
+        }
+      }
+
+      router.push(`/matches/${res.match_id}/live`);
+      router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
       setPending(false);
