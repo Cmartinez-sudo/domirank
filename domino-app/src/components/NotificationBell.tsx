@@ -213,7 +213,7 @@ export function NotificationBell({
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.15 }}
             role="menu"
-            className="hidden md:block absolute right-0 top-full mt-2 w-[360px] bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden z-50"
+            className="hidden md:block absolute left-0 top-full mt-2 w-[380px] max-w-[calc(100vw-2rem)] bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden z-50"
           >
             <div className="px-4 py-3 border-b border-border flex items-center justify-between">
               <span className="font-semibold text-sm">Notificaciones</span>
