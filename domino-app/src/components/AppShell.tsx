@@ -223,24 +223,59 @@ export function AppShell({
                   href={it.href}
                   aria-current={active ? "page" : undefined}
                   aria-label={it.isCenter ? "Nueva partida" : undefined}
-                  className={`flex flex-col items-center justify-center gap-1 transition-all ${
+                  className={`group flex flex-col items-center justify-center gap-1 transition-all ${
                     it.isCenter ? "" : active ? "text-primary" : "text-text-mute"
                   }`}
                 >
                   {it.isCenter ? (
                     <span
-                      className="relative grid place-items-center w-[52px] h-[52px] rounded-full text-black -mt-8 transition-transform active:scale-95 overflow-visible"
+                      className="relative grid place-items-center w-14 h-14 rounded-full -mt-8 overflow-hidden transition-all duration-200 ease-out hover:scale-105 active:scale-95 active:shadow-[0_0_32px_6px_rgba(16,185,129,0.75),0_4px_16px_rgba(16,185,129,0.45)] group-focus-visible:ring-2 group-focus-visible:ring-emerald-300 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-bg"
+                      style={{
+                        background:
+                          "radial-gradient(circle, #10b981 0%, #059669 70%, transparent 100%)",
+                        boxShadow:
+                          "0 0 24px 4px rgba(16,185,129,0.55), 0 4px 16px rgba(16,185,129,0.35)",
+                      }}
                     >
-                      <span
-                        className="absolute inset-0 rounded-full"
-                        style={{
-                          background: active
-                            ? "linear-gradient(135deg,#059669,#047857)"
-                            : "linear-gradient(135deg,#10b981,#059669)",
-                          boxShadow: "0 4px 20px rgba(16,185,129,.5)",
-                        }}
-                      />
-                      {it.icon}
+                      <svg
+                        width="32"
+                        height="22"
+                        viewBox="0 0 36 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        style={{ transform: "rotate(-18deg)" }}
+                        aria-hidden="true"
+                      >
+                        <rect
+                          x="0.5"
+                          y="0.5"
+                          width="35"
+                          height="23"
+                          rx="3"
+                          fill="#0a0e1a"
+                          stroke="rgba(255,255,255,0.08)"
+                          strokeWidth="0.4"
+                        />
+                        <line
+                          x1="18"
+                          y1="3"
+                          x2="18"
+                          y2="21"
+                          stroke="rgba(255,255,255,0.85)"
+                          strokeWidth="0.6"
+                          strokeLinecap="round"
+                        />
+                        {/* Izquierda: 5 pips (X) */}
+                        <circle cx="5"  cy="6"  r="1.3" fill="#fff" />
+                        <circle cx="13" cy="6"  r="1.3" fill="#fff" />
+                        <circle cx="9"  cy="12" r="1.3" fill="#fff" />
+                        <circle cx="5"  cy="18" r="1.3" fill="#fff" />
+                        <circle cx="13" cy="18" r="1.3" fill="#fff" />
+                        {/* Derecha: 3 pips (diagonal) */}
+                        <circle cx="23" cy="6"  r="1.3" fill="#fff" />
+                        <circle cx="27" cy="12" r="1.3" fill="#fff" />
+                        <circle cx="31" cy="18" r="1.3" fill="#fff" />
+                      </svg>
                     </span>
                   ) : (
                     <span className={`relative transition-transform ${active ? "scale-110" : "opacity-50"}`}>
