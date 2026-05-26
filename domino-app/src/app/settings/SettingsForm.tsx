@@ -6,6 +6,8 @@ import { Avatar } from "@/components/Avatar";
 import { COUNTRIES, MODALIDADES, type ModalityCode, type CountryCode } from "@/lib/modalidades";
 import { updateProfile, uploadAvatar, removeAvatar, signOut } from "@/lib/settings";
 import { PushSubscriptionToggle } from "@/components/notifications/PushSubscriptionToggle";
+import { ModalityPreferencesSection } from "./ModalityPreferencesSection";
+import type { UserPreferences } from "@/types/user-preferences";
 
 type Profile = {
   id: string;
@@ -17,7 +19,15 @@ type Profile = {
   email_notifications: boolean;
 };
 
-export function SettingsForm({ email, profile }: { email: string; profile: Profile }) {
+export function SettingsForm({
+  email,
+  profile,
+  initialPreferences,
+}: {
+  email: string;
+  profile: Profile;
+  initialPreferences?: UserPreferences | null;
+}) {
   const [pending, setPending] = useState(false);
   const [name, setName] = useState(profile.display_name ?? "");
   const [country, setCountry] = useState<CountryCode | null>(profile.country);
@@ -145,6 +155,9 @@ export function SettingsForm({ email, profile }: { email: string; profile: Profi
         <h2 className="font-semibold text-sm mb-3">Notificaciones push</h2>
         <PushSubscriptionToggle />
       </section>
+
+      {/* ── Preferencias de partida ─────────────────────────────────────── */}
+      <ModalityPreferencesSection initialPreferences={initialPreferences} />
 
       {msg && (
         <div className={`p-3 rounded-md text-sm ${msg.kind === "ok" ? "bg-primary/10 border border-primary/30 text-primary" : "bg-danger/10 border border-danger/30 text-danger"}`}>
