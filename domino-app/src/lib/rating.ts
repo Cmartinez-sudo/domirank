@@ -84,8 +84,11 @@ export function kFactorFor(player: { elo: number; games_played: number }): numbe
 
 // ─── Core Elo computation ────────────────────────────────────────────────────
 
-/** Expected win probability for team with `myElo` vs `opponentElo`. */
+/** Expected win probability for team with `myElo` vs `opponentElo`.
+ *  Returns 0.5 if either input is not finite — defensive, should never occur
+ *  in normal data but prevents NaN poisoning the rest of the pipeline. */
 function expected(myElo: number, opponentElo: number): number {
+  if (!Number.isFinite(myElo) || !Number.isFinite(opponentElo)) return 0.5;
   return 1 / (1 + Math.pow(10, (opponentElo - myElo) / 400));
 }
 
@@ -130,6 +133,14 @@ export function updateRatings(teams: TeamInput[]): PlayerRatingUpdate[] {
   for (const t of teams) {
     if (t.players.length < 1) {
       throw new Error(`El equipo ${t.team} no tiene jugadores`);
+    }
+    for (const p of t.players) {
+      if (!Number.isFinite(p.elo)) {
+        throw new Error(`Elo inválido (${p.elo}) para jugador ${p.user_id}`);
+      }
+    }
+    if (!Number.isFinite(t.score)) {
+      throw new Error(`Score inválido (${t.score}) para equipo ${t.team}`);
     }
   }
 
