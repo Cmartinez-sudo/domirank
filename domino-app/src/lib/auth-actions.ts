@@ -16,8 +16,15 @@ function getIp(): string {
   const xff = h.get("x-forwarded-for");
   if (xff) {
     const parts = xff.split(",").map((s) => s.trim()).filter(Boolean);
-    return parts[parts.length - 1] ?? "anon";
+    const last = parts[parts.length - 1];
+    if (last) return last;
   }
+  // Last-resort fallback: derive from user-agent so a single shared "anon"
+  // bucket can't be saturated by one bad actor and block every IP-less caller
+  // (e.g. a misconfigured proxy strips the header). User-agents are easily
+  // spoofed, but rotating UAs to bypass the limit forces real cost.
+  const ua = h.get("user-agent");
+  if (ua) return `ua:${ua.slice(0, 100)}`;
   return "anon";
 }
 
