@@ -256,10 +256,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const teamBScore = players.filter((mp) => mp.team === 2).reduce((s, mp) => s + mp.score, 0);
       const teamAWon = teamAScore > teamBScore;
 
+      // Integer scoring: 1 win = 3_000_000, +pointsFor como tiebreak.
+      // Mismo invariante que tournament-formats-engine.computeStandings:
+      // 1 win siempre > cualquier acumulado de pointsFor (max ~13k).
       const sA = standingsMap.get(keyA);
       const sB = standingsMap.get(keyB);
-      if (sA) sA.score += (teamAWon ? 3 : 0) + teamAScore / 10000;
-      if (sB) sB.score += (teamAWon ? 0 : 3) + teamBScore / 10000;
+      if (sA) sA.score += (teamAWon ? 3_000_000 : 0) + teamAScore;
+      if (sB) sB.score += (teamAWon ? 0 : 3_000_000) + teamBScore;
     }
 
     const standings = Array.from(standingsMap.values()).sort((a, b) => b.score - a.score);
