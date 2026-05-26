@@ -16,3 +16,5 @@ agentdb.rvf
 agentdb.rvf.lock
 ruvector.db
 supabase/.temp/
+playwright-report/
+test-results/

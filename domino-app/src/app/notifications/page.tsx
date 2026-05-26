@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { getNotifications, markAllRead } from "@/lib/notifications";
 import { NotificationsList } from "./NotificationsList";
+import { SecondaryPageShell } from "@/components/SecondaryPageShell";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +15,10 @@ export default async function NotificationsPage() {
   await markAllRead();
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
-      <h1 className="text-3xl font-bold">Notificaciones</h1>
-      <NotificationsList items={items} />
-    </div>
+    <SecondaryPageShell title="Notificaciones" fallbackPath="/dashboard">
+      <div className="max-w-2xl mx-auto px-4 py-5 space-y-4">
+        <NotificationsList items={items} />
+      </div>
+    </SecondaryPageShell>
   );
 }

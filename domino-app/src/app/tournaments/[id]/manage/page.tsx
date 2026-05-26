@@ -3,6 +3,8 @@ import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
 import { ManagePageClient } from "./ManagePageClient";
+import { SecondaryPageShell } from "@/components/SecondaryPageShell";
+import { BACK_FALLBACKS } from "@/lib/back-fallbacks";
 
 export const dynamic = "force-dynamic";
 
@@ -44,12 +46,19 @@ export default async function ManagePage({ params }: Props) {
     .eq("status", "pending");
 
   return (
-    <ManagePageClient
-      tournament={tournament as any}
-      players={(players ?? []).map((p: any) => p.profiles).filter(Boolean)}
-      pairs={(pairs ?? []) as any[]}
-      invites={(invites ?? []) as any[]}
-      userId={user.id}
-    />
+    <SecondaryPageShell
+      title="Gestionar torneo"
+      fallbackPath={`/tournaments/${id}`}
+    >
+      <div className="max-w-4xl mx-auto px-4 py-5">
+        <ManagePageClient
+          tournament={tournament as any}
+          players={(players ?? []).map((p: any) => p.profiles).filter(Boolean)}
+          pairs={(pairs ?? []) as any[]}
+          invites={(invites ?? []) as any[]}
+          userId={user.id}
+        />
+      </div>
+    </SecondaryPageShell>
   );
 }
