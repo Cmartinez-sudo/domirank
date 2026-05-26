@@ -367,8 +367,12 @@ function computeStandingsFromPairings(teams: Team[], pairings: any[]): Standing[
     }
   }
 
+  // Integer ranking: wins * 1e6 + pointsFor. Evita inestabilidad de
+  // floating point cuando pointsFor es grande (un torneo largo puede
+  // acumular >10000 pts y romper el invariante "1 win > cualquier tiebreak").
+  // 1e6 cubre cualquier pointsFor real (64 partidos × 200 pts = 12.8k).
   for (const s of map.values()) {
-    s.score = s.wins * 3 + s.pointsFor / 10000;
+    s.score = s.wins * 1_000_000 + s.pointsFor;
   }
 
   return Array.from(map.values()).sort((a, b) => b.score - a.score);
