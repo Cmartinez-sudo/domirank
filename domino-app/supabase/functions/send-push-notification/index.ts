@@ -27,6 +27,15 @@ if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
 }
 
+// ── Input validation ─────────────────────────────────────────────────────────
+// Defense in depth: even though the only caller today is the DB trigger
+// passing the service-role key, validate UUID format on inputs to fail fast
+// on malformed payloads (logging noise, accidental misuse, future callers).
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuid(v: unknown): v is string {
+  return typeof v === "string" && UUID_RE.test(v);
+}
+
 // ── Payload builder ──────────────────────────────────────────────────────────
 
 type NotifRow = {
@@ -128,9 +137,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   try {
     const body = await req.json();
+    if (!isUuid(body?.notification_id) || !isUuid(body?.user_id)) {
+      throw new Error("invalid uuid");
+    }
     notification_id = body.notification_id;
     user_id         = body.user_id;
-    if (!notification_id || !user_id) throw new Error("missing fields");
   } catch {
     return new Response(JSON.stringify({ error: "invalid_body" }), {
       status: 400,

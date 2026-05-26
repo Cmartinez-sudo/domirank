@@ -203,3 +203,18 @@ describe('bergerSchedule — edge cases', () => {
     }
   });
 });
+
+describe('bergerSchedule — DoS cap (M5)', () => {
+  it('64 equipos sigue siendo válido (límite superior)', () => {
+    const schedule = bergerSchedule(64);
+    expect(schedule.length).toBe((64 / 2) * 63);
+  });
+
+  it('65 equipos lanza error (excede cap)', () => {
+    expect(() => bergerSchedule(65)).toThrow(/excede el cap/);
+  });
+
+  it('1000 equipos lanza error (no compila el O(n²))', () => {
+    expect(() => bergerSchedule(1000)).toThrow(/excede el cap/);
+  });
+});

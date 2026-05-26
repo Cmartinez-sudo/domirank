@@ -400,3 +400,76 @@ describe("displayToElo (inverse of toDisplayRating)", () => {
     expect(displayToElo(20.0)).toBeCloseTo(2200, 0);
   });
 });
+
+// ─── Defensive guards against non-finite inputs (M4) ─────────────────────────
+
+describe("updateRatings — defensive guards", () => {
+  const baseTeam = (elo: number, score: number, team: 1 | 2, rank: 1 | 2) => ({
+    team,
+    rank,
+    score,
+    players: [{ user_id: `u${team}`, elo, games_played: 30 }],
+  });
+
+  it("rechaza un jugador con elo NaN", () => {
+    expect(() =>
+      updateRatings([
+        { team: 1, rank: 1, score: 50, players: [{ user_id: "a", elo: NaN, games_played: 30 }] },
+        baseTeam(1500, 30, 2, 2),
+      ]),
+    ).toThrow(/Elo inválido/);
+  });
+
+  it("rechaza un jugador con elo Infinity", () => {
+    expect(() =>
+      updateRatings([
+        { team: 1, rank: 1, score: 50, players: [{ user_id: "a", elo: Infinity, games_played: 30 }] },
+        baseTeam(1500, 30, 2, 2),
+      ]),
+    ).toThrow(/Elo inválido/);
+  });
+
+  it("rechaza un jugador con elo -Infinity", () => {
+    expect(() =>
+      updateRatings([
+        { team: 1, rank: 1, score: 50, players: [{ user_id: "a", elo: -Infinity, games_played: 30 }] },
+        baseTeam(1500, 30, 2, 2),
+      ]),
+    ).toThrow(/Elo inválido/);
+  });
+
+  it("rechaza score NaN", () => {
+    expect(() =>
+      updateRatings([
+        { team: 1, rank: 1, score: NaN, players: [{ user_id: "a", elo: 1500, games_played: 30 }] },
+        baseTeam(1500, 30, 2, 2),
+      ]),
+    ).toThrow(/Score inválido/);
+  });
+});
+
+describe("winProbability — defensive guards", () => {
+  it("devuelve 0.5 si algún jugador tiene elo NaN (no propaga NaN)", () => {
+    const result = winProbability(
+      [{ user_id: "a", elo: NaN, games_played: 0 }],
+      [{ user_id: "b", elo: 1500, games_played: 0 }],
+    );
+    expect(Number.isFinite(result)).toBe(true);
+    expect(result).toBe(0.5);
+  });
+
+  it("devuelve 0.5 con elo Infinity en cualquier lado", () => {
+    expect(
+      winProbability(
+        [{ user_id: "a", elo: Infinity, games_played: 0 }],
+        [{ user_id: "b", elo: 1500, games_played: 0 }],
+      ),
+    ).toBe(0.5);
+    expect(
+      winProbability(
+        [{ user_id: "a", elo: 1500, games_played: 0 }],
+        [{ user_id: "b", elo: -Infinity, games_played: 0 }],
+      ),
+    ).toBe(0.5);
+  });
+});

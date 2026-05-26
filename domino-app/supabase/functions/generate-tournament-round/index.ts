@@ -29,6 +29,12 @@ function isAuthorized(req: Request): boolean {
   return token === expectedKey;
 }
 
+// ── Input validation ─────────────────────────────────────────────────────────
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuid(v: unknown): v is string {
+  return typeof v === "string" && UUID_RE.test(v);
+}
+
 // ── Berger schedule (circle method) — portado de tournament-formats-engine.ts ─
 //
 // Mantiene sincronía conceptual con el TS del frontend. Si el algoritmo
@@ -145,9 +151,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   try {
     const body = await req.json();
+    if (!isUuid(body?.tournament_id)) {
+      throw new Error("invalid tournament_id");
+    }
+    completed_round = Number(body?.completed_round ?? 1);
+    // Cap defensivo: rondas razonables. 100 cubre cualquier formato real.
+    if (
+      !Number.isInteger(completed_round) ||
+      completed_round < 1 ||
+      completed_round > 100
+    ) {
+      throw new Error("invalid completed_round");
+    }
     tournament_id = body.tournament_id;
-    completed_round = Number(body.completed_round ?? 1);
-    if (!tournament_id) throw new Error("missing tournament_id");
   } catch {
     return new Response(JSON.stringify({ error: "invalid_body" }), {
       status: 400,
