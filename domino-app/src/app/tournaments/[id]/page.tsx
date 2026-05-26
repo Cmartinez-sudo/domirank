@@ -5,6 +5,8 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { MODALIDADES } from "@/lib/modalidades";
 import { getCurrentUser } from "@/lib/auth";
 import { formatInfo } from "@/lib/tournament-formats";
+import { SecondaryPageShell } from "@/components/SecondaryPageShell";
+import { BACK_FALLBACKS } from "@/lib/back-fallbacks";
 import { Bracket } from "@/components/Bracket";
 // BracketPairing + BracketProfile match the private types inside Bracket.tsx
 type BracketPairing = {
@@ -171,9 +173,12 @@ export default async function TournamentDetail({
   const totalRounds = (tournament as { total_rounds?: number | null }).total_rounds ?? null;
   const currentRound = (tournament as { current_round?: number | null }).current_round ?? null;
 
+  const tournamentName = (tournament as { name: string }).name;
+
   return (
+    <SecondaryPageShell title={tournamentName} fallbackPath={BACK_FALLBACKS.tournament_detail}>
     <PageTransition>
-      <div className="space-y-4">
+      <div className="max-w-4xl mx-auto px-4 py-5 space-y-4">
         {/* ── Realtime refresher (Client) ── */}
         <TournamentRealtimeRefresher tournamentId={id} />
 
@@ -274,6 +279,7 @@ export default async function TournamentDetail({
         )}
       </div>
     </PageTransition>
+    </SecondaryPageShell>
   );
 }
 

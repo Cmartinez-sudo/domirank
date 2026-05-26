@@ -12,6 +12,8 @@ import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { IOSInstallInstructions } from "@/components/pwa/IOSInstallInstructions";
 import type { PendingTournament } from "@/components/tournament/TournamentPopup";
+import { AnalyticsProvider } from "@/components/AnalyticsProvider";
+import type { User } from "@supabase/supabase-js";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
@@ -43,6 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Defensa: que un fallo en CUALQUIERA de estas queries no rompa el layout
   // entero (sino, el usuario ve global-error en cualquier ruta).
   let user: { id: string } | null = null;
+  let fullUser: User | null = null;
   let profile: any = null;
   let counts: NotificationCounts | null = null;
   let pendingTournaments: PendingTournament[] = [];
@@ -51,6 +54,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     const u = await getCurrentUser();
     if (u) {
       user = { id: u.id };
+      fullUser = u;
       try { profile = await getCurrentProfile(); } catch (e) { console.error("[layout] profile failed:", e); }
       try { counts = await getNotificationCounts(u.id); } catch (e) { console.error("[layout] counts failed:", e); }
       try {
@@ -85,17 +89,22 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link rel="apple-touch-startup-image" media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/icons/apple-splash-2048-2732.png" />
       </head>
       <body>
-        <MotionGate>
-          <ToastProvider>
-            <AppShell user={user} profile={profile} counts={counts}>
-              {children}
-            </AppShell>
-          </ToastProvider>
-        </MotionGate>
-        {user && <TournamentPopupGate pendingTournaments={pendingTournaments} />}
-        <ServiceWorkerRegister />
-        <InstallPrompt />
-        <IOSInstallInstructions />
+        <AnalyticsProvider
+          user={fullUser}
+          profile={profile ? { username: profile.username, country: profile.country } : null}
+        >
+          <MotionGate>
+            <ToastProvider>
+              <AppShell user={user} profile={profile} counts={counts}>
+                {children}
+              </AppShell>
+            </ToastProvider>
+          </MotionGate>
+          {user && <TournamentPopupGate pendingTournaments={pendingTournaments} />}
+          <ServiceWorkerRegister />
+          <InstallPrompt />
+          <IOSInstallInstructions />
+        </AnalyticsProvider>
       </body>
     </html>
   );

@@ -1,4 +1,5 @@
 import { requireOnboardedUser, getCurrentProfile } from "@/lib/auth";
+import { getUserPreferences } from "@/lib/user-preferences-actions";
 import { NewMatchForm } from "./NewMatchForm";
 import { TournamentFastPath } from "./TournamentFastPath";
 
@@ -30,6 +31,16 @@ export default async function NewMatchPage({
   // ── Wizard normal ─────────────────────────────────────────
   const profile: any = await getCurrentProfile();
 
+  // Fetch preferences server-side para evitar round-trip del cliente.
+  // Si falla (ej: migración 0034 aún no aplicada), initialPreferences será
+  // null y el hook cliente usará los defaults seguros.
+  let initialPreferences = null;
+  try {
+    initialPreferences = await getUserPreferences();
+  } catch (err) {
+    console.warn("[NewMatchPage] No se pudieron cargar preferences:", err);
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-4">
       <h1 className="text-3xl font-bold">Nueva partida</h1>
@@ -46,6 +57,7 @@ export default async function NewMatchPage({
           country: profile.country,
         }}
         defaultModality={profile?.default_modality ?? "ven"}
+        initialPreferences={initialPreferences}
       />
     </div>
   );

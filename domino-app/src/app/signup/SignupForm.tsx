@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { signUpWithPassword, signInWithOAuth } from "@/lib/auth-actions";
+import { analytics } from "@/lib/analytics";
 
 export function SignupForm() {
   const [pending, setPending] = useState(false);
@@ -27,6 +28,7 @@ export function SignupForm() {
       if (!r.ok) {
         setError(r.error);
       } else {
+        analytics.track("user_signed_up", { method: "email" });
         setSentEmail(String(fd.get("email") ?? ""));
         setSent(true);
       }

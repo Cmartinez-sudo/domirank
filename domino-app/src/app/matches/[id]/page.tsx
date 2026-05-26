@@ -4,6 +4,8 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
 import { VoidMatchButton } from "./VoidMatchButton";
 import { AttestationPanel, type AttestationStatus, type AttestPlayer, type Attestation } from "@/components/match/AttestationPanel";
+import { SecondaryPageShell } from "@/components/SecondaryPageShell";
+import { BACK_FALLBACKS } from "@/lib/back-fallbacks";
 
 export const dynamic = "force-dynamic";
 
@@ -72,14 +74,14 @@ export default async function MatchDetail({
   const canVoid   = isCreator && status === "confirmed";
 
   return (
-    <div className="space-y-6">
+    <SecondaryPageShell title="Partida" fallbackPath={BACK_FALLBACKS.match_detail}>
+    <div className="max-w-4xl mx-auto px-4 py-5 space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="text-text-mute text-sm">
             {match.format === "singles" ? "Singles" : "Parejas"} · a {match.target_points} pts ·{" "}
             {new Date(match.created_at).toLocaleString("es")}
           </div>
-          <h1 className="text-3xl font-bold mt-1">Partida</h1>
         </div>
         {canVoid && <VoidMatchButton matchId={id} />}
       </div>
@@ -145,5 +147,6 @@ export default async function MatchDetail({
         })}
       </div>
     </div>
+    </SecondaryPageShell>
   );
 }

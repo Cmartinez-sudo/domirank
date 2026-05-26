@@ -6,6 +6,8 @@ import { Avatar } from "@/components/Avatar";
 import { NavigationLoader } from "@/components/NavigationLoader";
 import { RealtimeNotifications } from "@/components/RealtimeNotifications";
 import { NotificationBell } from "@/components/NotificationBell";
+import { PodiumIcon } from "@/components/icons/PodiumIcon";
+import { TrophyIcon } from "@/components/icons/TrophyIcon";
 
 type NavItem = { href: string; label: string; icon: React.ReactNode; isCenter?: boolean; beta?: boolean; badge?: number };
 
@@ -13,23 +15,30 @@ const ICON = {
   home: (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
   ),
-  trophy: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
-  ),
+  podium: <PodiumIcon />,
+  trophy: <TrophyIcon />,
   domino: (
-    <svg width="28" height="28" viewBox="0 0 24 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      className="relative"
+      width="24"
+      height="36"
+      viewBox="0 0 24 36"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ transform: "rotate(-12deg)" }}
+    >
       {/* Outline */}
       <rect x="2" y="2" width="20" height="32" rx="3" ry="3"
             fill="currentColor" stroke="rgba(0,0,0,0.18)" strokeWidth="0.5" />
       {/* Línea divisora */}
       <line x1="4" y1="18" x2="20" y2="18" stroke="rgba(255,255,255,0.95)" strokeWidth="0.8" />
-      {/* Mitad superior: 5 pips */}
+      {/* Mitad superior: 5 pips (X pattern: 4 corners + center) */}
       <circle cx="7"  cy="6"  r="1.5" fill="#000" />
       <circle cx="17" cy="6"  r="1.5" fill="#000" />
       <circle cx="12" cy="11" r="1.5" fill="#000" />
       <circle cx="7"  cy="15" r="1.5" fill="#000" />
       <circle cx="17" cy="15" r="1.5" fill="#000" />
-      {/* Mitad inferior: 3 pips */}
+      {/* Mitad inferior: 3 pips (diagonal: top-right, center, bottom-left) */}
       <circle cx="17" cy="22" r="1.5" fill="#000" />
       <circle cx="12" cy="26" r="1.5" fill="#000" />
       <circle cx="7"  cy="30" r="1.5" fill="#000" />
@@ -37,9 +46,6 @@ const ICON = {
   ),
   users: (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-  ),
-  pollas: (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v6"/><path d="M5 9V7l1.5-3h11L19 7v2"/><path d="M5 9h14v8a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4Z"/></svg>
   ),
   book: (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
@@ -78,9 +84,9 @@ export function AppShell({
   const unread = counts?.unread ?? 0;
   const items: NavItem[] = [
     { href: "/dashboard",    label: "Inicio",   icon: ICON.home },
-    { href: "/leaderboard",  label: "Ranking",  icon: ICON.trophy },
+    { href: "/leaderboard",  label: "Ranking",  icon: ICON.podium },
     { href: "/matches/new",  label: "Jugar",    icon: ICON.domino, isCenter: true },
-    { href: "/tournaments",  label: "Torneos",  icon: ICON.pollas, beta: true },
+    { href: "/tournaments",  label: "Torneos",  icon: ICON.trophy, beta: true },
     { href: "/friends",      label: "Amigos",   icon: ICON.users },
   ];
 
@@ -216,15 +222,24 @@ export function AppShell({
                   key={it.href}
                   href={it.href}
                   aria-current={active ? "page" : undefined}
+                  aria-label={it.isCenter ? "Nueva partida" : undefined}
                   className={`flex flex-col items-center justify-center gap-1 transition-all ${
                     it.isCenter ? "" : active ? "text-primary" : "text-text-mute"
                   }`}
                 >
                   {it.isCenter ? (
                     <span
-                      className="grid place-items-center w-[52px] h-[52px] rounded-full text-black -mt-8 shadow-[0_4px_20px_rgba(16,185,129,.5)] transition-transform active:scale-95"
-                      style={{ background: active ? "linear-gradient(135deg,#059669,#047857)" : "linear-gradient(135deg,#10b981,#059669)" }}
+                      className="relative grid place-items-center w-[52px] h-[52px] rounded-full text-black -mt-8 transition-transform active:scale-95 overflow-visible"
                     >
+                      <span
+                        className="absolute inset-0 rounded-full"
+                        style={{
+                          background: active
+                            ? "linear-gradient(135deg,#059669,#047857)"
+                            : "linear-gradient(135deg,#10b981,#059669)",
+                          boxShadow: "0 4px 20px rgba(16,185,129,.5)",
+                        }}
+                      />
                       {it.icon}
                     </span>
                   ) : (

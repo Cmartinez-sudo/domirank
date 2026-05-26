@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { StepHeader } from "@/components/tournament-wizard/StepHeader";
-import { StepFooter } from "@/components/tournament-wizard/StepFooter";
+import { WizardStepLayout } from "@/components/wizard/WizardStepLayout";
 import { useTournamentDraft } from "@/hooks/useTournamentDraft";
 
 export function Step1Form({ userId }: { userId: string }) {
@@ -25,10 +24,15 @@ export function Step1Form({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="flex flex-col min-h-dvh">
-      <StepHeader currentStep={1} />
-
-      <main className="flex-1 max-w-2xl mx-auto w-full px-4 pt-8 pb-32">
+    <WizardStepLayout
+      currentStep={1}
+      primaryAction={{
+        label: "Continuar",
+        onClick: handleContinue,
+        disabled: !isValid,
+      }}
+    >
+      <div className="max-w-2xl mx-auto w-full px-4 pt-8">
         <h1 className="text-2xl font-bold mb-2">¿Cómo se llama el torneo?</h1>
         <p className="text-text-mute mb-8">
           Usa un nombre que identifique bien el evento.
@@ -51,17 +55,13 @@ export function Step1Form({ userId }: { userId: string }) {
 
         <div className="flex justify-between mt-2" id="name-hint" aria-live="polite">
           <p className="text-text-mute text-xs">
-            {name.trim().length < 3
-              ? `Mínimo 3 caracteres`
-              : ""}
+            {name.trim().length < 3 ? "Mínimo 3 caracteres" : ""}
           </p>
           <p className={`text-xs ${name.length > 54 ? "text-warning" : "text-text-mute"}`}>
             {name.length}/60
           </p>
         </div>
-      </main>
-
-      <StepFooter onContinue={handleContinue} disabled={!isValid} />
-    </div>
+      </div>
+    </WizardStepLayout>
   );
 }

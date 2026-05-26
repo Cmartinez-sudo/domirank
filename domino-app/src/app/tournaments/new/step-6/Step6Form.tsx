@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { StepHeader } from "@/components/tournament-wizard/StepHeader";
-import { StepFooter } from "@/components/tournament-wizard/StepFooter";
+import { WizardStepLayout } from "@/components/wizard/WizardStepLayout";
 import { useTournamentDraft } from "@/hooks/useTournamentDraft";
 
 type InscriptionMode = "pre_formed" | "individual_manual";
@@ -55,10 +54,11 @@ export function Step6Form({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="flex flex-col min-h-dvh">
-      <StepHeader currentStep={6} />
-
-      <main className="flex-1 max-w-2xl mx-auto w-full px-4 pt-8 pb-32">
+    <WizardStepLayout
+      currentStep={6}
+      primaryAction={{ label: "Continuar", onClick: handleContinue }}
+    >
+      <div className="max-w-2xl mx-auto w-full px-4 pt-8">
         <h1 className="text-2xl font-bold mb-2">¿Cómo se inscriben los jugadores?</h1>
         <p className="text-text-mute mb-8">
           Define si los jugadores se organizan en parejas antes de empezar o si lo haces tú después.
@@ -98,9 +98,7 @@ export function Step6Form({ userId }: { userId: string }) {
             );
           })}
         </div>
-      </main>
-
-      <StepFooter onContinue={handleContinue} />
-    </div>
+      </div>
+    </WizardStepLayout>
   );
 }

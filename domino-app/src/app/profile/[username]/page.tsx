@@ -6,6 +6,9 @@ import { DOMIRANK_MIN_GAMES } from "@/lib/rating";
 import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
 import { FriendActionButton } from "@/components/FriendActionButton";
 import { getRelationStatus, type RelationStatus } from "@/lib/friends";
+import { SecondaryPageShell } from "@/components/SecondaryPageShell";
+import { BACK_FALLBACKS } from "@/lib/back-fallbacks";
+import { RemoveFriendAction } from "./RemoveFriendAction";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +69,11 @@ export default async function PublicProfile({
   }
 
   return (
-    <div className="space-y-6">
+    <SecondaryPageShell
+      title={p.display_name || p.username}
+      fallbackPath={BACK_FALLBACKS.profile}
+    >
+    <div className="max-w-4xl mx-auto px-4 py-5 space-y-6">
       <div className="card">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4 flex-1">
@@ -168,6 +175,15 @@ export default async function PublicProfile({
         )}
       </div>
 
+      {relation.kind === "friends" && !isOwnProfile && (
+        <div className="flex justify-end pt-2">
+          <RemoveFriendAction
+            targetUserId={p.id}
+            displayName={p.display_name || p.username}
+          />
+        </div>
+      )}
+
       <div className="card">
         <h2 className="text-xl font-semibold mb-3">Historial reciente</h2>
         {history && history.length > 0 ? (
@@ -213,6 +229,7 @@ export default async function PublicProfile({
         )}
       </div>
     </div>
+    </SecondaryPageShell>
   );
 }
 

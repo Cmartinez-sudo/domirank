@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { StepHeader } from "@/components/tournament-wizard/StepHeader";
-import { StepFooter } from "@/components/tournament-wizard/StepFooter";
+import { WizardStepLayout } from "@/components/wizard/WizardStepLayout";
 import { useTournamentDraft } from "@/hooks/useTournamentDraft";
 
 type TimeMode = "timed" | "goal";
@@ -52,10 +51,15 @@ export function Step8Form({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="flex flex-col min-h-dvh">
-      <StepHeader currentStep={8} />
-
-      <main className="flex-1 max-w-2xl mx-auto w-full px-4 pt-8 pb-32">
+    <WizardStepLayout
+      currentStep={8}
+      primaryAction={{
+        label: "Continuar",
+        onClick: handleContinue,
+        disabled: !isValid,
+      }}
+    >
+      <div className="max-w-2xl mx-auto w-full px-4 pt-8">
         <h1 className="text-2xl font-bold mb-2">¿Cómo se terminan las partidas?</h1>
         <p className="text-text-mute mb-8">
           Puedes jugar con cronómetro o hasta que una pareja llegue a la meta de puntos.
@@ -233,9 +237,7 @@ export function Step8Form({ userId }: { userId: string }) {
             <span className="text-text-mute text-sm">mesa{numBoards !== 1 ? "s" : ""}</span>
           </div>
         </div>
-      </main>
-
-      <StepFooter onContinue={handleContinue} disabled={!isValid} />
-    </div>
+      </div>
+    </WizardStepLayout>
   );
 }

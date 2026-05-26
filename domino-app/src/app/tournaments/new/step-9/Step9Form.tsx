@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { StepHeader } from "@/components/tournament-wizard/StepHeader";
+import { WizardStepLayout } from "@/components/wizard/WizardStepLayout";
 import { useTournamentDraft } from "@/hooks/useTournamentDraft";
 import { createTournament } from "@/lib/tournaments";
 import type { CreateTournamentInput } from "@/lib/tournament-schema";
+import { analytics } from "@/lib/analytics";
 
 const FORMAT_LABELS: Record<string, string> = {
   single_elim: "Eliminación directa",
@@ -121,6 +122,11 @@ export function Step9Form({ userId }: { userId: string }) {
       const result = await createTournament(input);
 
       if (result.ok) {
+        analytics.track("tournament_created", {
+          format: input.format,
+          modality: input.modality,
+          num_boards: input.num_boards,
+        });
         clearDraft();
         router.push(`/tournaments/${result.tournament_id}/manage`);
         router.refresh();
@@ -135,10 +141,17 @@ export function Step9Form({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="flex flex-col min-h-dvh">
-      <StepHeader currentStep={9} />
-
-      <main className="flex-1 max-w-2xl mx-auto w-full px-4 pt-8 pb-32">
+    <WizardStepLayout
+      currentStep={9}
+      primaryAction={{
+        label: pending ? "Creando torneo…" : "Crear torneo →",
+        onClick: handleCreate,
+        disabled: pending,
+        pending,
+      }}
+      forceSticky
+    >
+      <div className="max-w-2xl mx-auto w-full px-4 pt-8">
         <h1 className="text-2xl font-bold mb-2">Todo listo. Revisa antes de crear.</h1>
         <p className="text-text-mute mb-8">
           Toca cualquier fila para volver y editar ese paso.
@@ -175,29 +188,7 @@ export function Step9Form({ userId }: { userId: string }) {
             {error}
           </div>
         )}
-
-        <div
-          className="fixed bottom-0 inset-x-0 z-20 bg-bg/95 backdrop-blur-md border-t border-border"
-          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-        >
-          <div className="max-w-2xl mx-auto px-4 py-3">
-            <button
-              type="button"
-              onClick={handleCreate}
-              disabled={pending}
-              aria-busy={pending}
-              className="btn-primary w-full text-base py-3.5 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {pending ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" aria-hidden="true" />
-                  Creando torneo…
-                </span>
-              ) : "Crear torneo →"}
-            </button>
-          </div>
-        </div>
-      </main>
-    </div>
+      </div>
+    </WizardStepLayout>
   );
 }

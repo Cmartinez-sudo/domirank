@@ -8,13 +8,11 @@ import { UserSearch } from "@/components/UserSearch";
 import { RatingBadge } from "@/components/RatingBadge";
 import { PageTransition } from "@/components/Motion";
 import { useToast } from "@/components/Toast";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { FriendsIcon, InboxIcon, SendIcon } from "@/components/icons";
 import {
   acceptFriendRequest,
   rejectFriendRequest,
   cancelFriendRequest,
-  unfriend,
 } from "@/lib/friends";
 
 type FriendUser = {
@@ -57,7 +55,6 @@ export function FriendsPanel({
 }) {
   const [tab, setTab] = useState<"friends" | "incoming" | "outgoing">("friends");
   const [busy, setBusy] = useState(false);
-  const [confirmUnfriend, setConfirmUnfriend] = useState<FriendUser | null>(null);
   const router = useRouter();
   const toast = useToast();
 
@@ -122,8 +119,6 @@ export function FriendsPanel({
               <FriendCard
                 key={f.id}
                 friend={f}
-                busy={busy}
-                onUnfriend={() => setConfirmUnfriend(f)}
               />
             ))}
           </div>
@@ -183,21 +178,6 @@ export function FriendsPanel({
         )}
       </div>
 
-      <ConfirmDialog
-        open={confirmUnfriend !== null}
-        title={confirmUnfriend ? `¿Quitar a @${confirmUnfriend.username} de tus amigos?` : ""}
-        description="No podrán ver el detalle de partidas pendientes ni invitarse fácilmente hasta que vuelvan a ser amigos."
-        confirmLabel="Sí, quitar"
-        destructive
-        pending={busy}
-        onConfirm={async () => {
-          if (!confirmUnfriend) return;
-          const target = confirmUnfriend;
-          setConfirmUnfriend(null);
-          await run(() => unfriend(target.id), "Ya no son amigos");
-        }}
-        onCancel={() => setConfirmUnfriend(null)}
-      />
     </PageTransition>
   );
 }
@@ -206,12 +186,8 @@ export function FriendsPanel({
 
 function FriendCard({
   friend,
-  busy,
-  onUnfriend,
 }: {
   friend: FriendUser;
-  busy: boolean;
-  onUnfriend: () => void;
 }) {
   const wins   = friend.total_wins   ?? 0;
   const losses = friend.total_losses ?? 0;
@@ -219,18 +195,22 @@ function FriendCard({
   const winRate = games > 0 ? Math.round((wins / games) * 100) : null;
 
   return (
-    <div className="card">
+    <Link
+      href={`/profile/${friend.username}`}
+      aria-label={`Ver perfil de ${friend.display_name ?? friend.username}`}
+      className="card block hover:bg-surface-2 active:scale-[.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition-colors duration-150"
+    >
       <div className="flex items-start gap-3">
-        <Link href={`/profile/${friend.username}`} className="shrink-0">
+        <span className="shrink-0">
           <Avatar player={friend as any} size={56} />
-        </Link>
+        </span>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 flex-wrap">
-            <Link href={`/profile/${friend.username}`} className="hover:text-primary">
+            <div>
               <div className="font-semibold truncate">{friend.display_name || friend.username}</div>
               <div className="text-text-mute text-xs truncate">@{friend.username}</div>
-            </Link>
+            </div>
             <RatingBadge
               display={friend.global_display ?? null}
               games={friend.total_games}
@@ -257,27 +237,9 @@ function FriendCard({
               Última partida: {relTime(friend.last_match_at)}
             </div>
           )}
-
-          <div className="flex items-center gap-2 mt-3">
-            <Link
-              href={`/profile/${friend.username}`}
-              className="btn-ghost text-sm py-1.5 px-3"
-            >
-              Ver perfil
-            </Link>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onUnfriend}
-              className="text-text-mute hover:text-danger text-xs underline-offset-2 hover:underline ml-auto"
-              aria-label={`Quitar a ${friend.username} de amigos`}
-            >
-              Quitar
-            </button>
-          </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

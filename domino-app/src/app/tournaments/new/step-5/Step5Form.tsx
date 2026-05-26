@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { StepHeader } from "@/components/tournament-wizard/StepHeader";
-import { StepFooter } from "@/components/tournament-wizard/StepFooter";
+import { WizardStepLayout } from "@/components/wizard/WizardStepLayout";
 import { useTournamentDraft } from "@/hooks/useTournamentDraft";
 
 const PRESETS_BY_FORMAT: Record<string, number[]> = {
@@ -37,10 +36,15 @@ export function Step5Form({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="flex flex-col min-h-dvh">
-      <StepHeader currentStep={5} />
-
-      <main className="flex-1 max-w-2xl mx-auto w-full px-4 pt-8 pb-32">
+    <WizardStepLayout
+      currentStep={5}
+      primaryAction={{
+        label: "Continuar",
+        onClick: handleContinue,
+        disabled: !selected,
+      }}
+    >
+      <div className="max-w-2xl mx-auto w-full px-4 pt-8">
         <h1 className="text-2xl font-bold mb-2">
           {isRR ? "¿Cuántas parejas participan?" : "¿Cuántos jugadores van a jugar?"}
         </h1>
@@ -82,9 +86,7 @@ export function Step5Form({ userId }: { userId: string }) {
             );
           })}
         </div>
-      </main>
-
-      <StepFooter onContinue={handleContinue} disabled={!selected} />
-    </div>
+      </div>
+    </WizardStepLayout>
   );
 }

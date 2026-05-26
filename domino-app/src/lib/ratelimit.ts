@@ -9,6 +9,7 @@
  *   tournament         —  5 created  / 1 day  per user   (spam)
  *   friendReq          — 20 requests / 1 hour per user   (spam)
  *   tournamentMutation — 30 ops      / 1 min  per user   (R5 pair management)
+ *   preferences        — 30 ops      / 1 min  per user   (user preferences upsert)
  */
 
 import { Ratelimit }  from "@upstash/ratelimit";
@@ -31,6 +32,7 @@ export const rl = {
   tournament:         make(5,  "1 d"),
   friendReq:          make(20, "1 h"),
   tournamentMutation: make(30, "1 m"),
+  preferences:        make(30, "1 m"),
 };
 
 export async function checkLimit(
