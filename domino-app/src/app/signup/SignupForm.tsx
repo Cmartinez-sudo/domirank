@@ -90,11 +90,11 @@ export function SignupForm() {
           <input type="checkbox" name="terms_accepted" required className="mt-1" />
           <span className="text-text-dim">
             Acepto los{" "}
-            <Link href="/terms" target="_blank" className="text-primary hover:underline">
+            <Link href="/terms" target="_blank" rel="noopener" className="text-primary hover:underline">
               Términos
             </Link>{" "}
             y la{" "}
-            <Link href="/privacy" target="_blank" className="text-primary hover:underline">
+            <Link href="/privacy" target="_blank" rel="noopener" className="text-primary hover:underline">
               Política de privacidad
             </Link>{" "}
             de DomiRank.
