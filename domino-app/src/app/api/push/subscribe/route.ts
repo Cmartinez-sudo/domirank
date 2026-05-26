@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
+import { pushSubscribeSchema, MAX_PUSH_BODY_BYTES } from "@/lib/push-schema";
+import { rl, checkLimit } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
 
@@ -14,19 +16,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  let body: { endpoint?: string; keys?: { p256dh?: string; auth?: string }; user_agent?: string };
+  const contentLength = Number(request.headers.get("content-length") ?? "0");
+  if (contentLength > MAX_PUSH_BODY_BYTES) {
+    return NextResponse.json({ error: "payload_too_large" }, { status: 413 });
+  }
+
+  const limit = await checkLimit(rl.push, `push:${user.id}`);
+  if (!limit.allowed) {
+    return NextResponse.json({ error: limit.error }, { status: 429 });
+  }
+
+  let raw: unknown;
   try {
-    body = await request.json();
+    raw = await request.json();
   } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
 
-  const { endpoint, keys, user_agent } = body;
-  if (!endpoint || !keys?.p256dh || !keys?.auth) {
-    return NextResponse.json({ error: "missing_fields" }, { status: 400 });
+  const parsed = pushSubscribeSchema.safeParse(raw);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "invalid_payload" }, { status: 400 });
   }
+  const { endpoint, keys, user_agent } = parsed.data;
 
-  // Upsert — if the same endpoint already exists for this user, update it.
   const { error } = await supabase.from("push_subscriptions").upsert(
     {
       user_id:    user.id,
