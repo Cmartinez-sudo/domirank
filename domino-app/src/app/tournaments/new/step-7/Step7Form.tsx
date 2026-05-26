@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { StepHeader } from "@/components/tournament-wizard/StepHeader";
-import { StepFooter } from "@/components/tournament-wizard/StepFooter";
+import { WizardStepLayout } from "@/components/wizard/WizardStepLayout";
 import { PlayerSearch } from "@/components/tournament-wizard/PlayerSearch";
 import { PairDualSelector } from "@/components/tournament-wizard/PairDualSelector";
 import { useTournamentDraft } from "@/hooks/useTournamentDraft";
@@ -72,10 +71,16 @@ export function Step7Form({ userId, currentUser }: Props) {
   }
 
   return (
-    <div className="flex flex-col min-h-dvh">
-      <StepHeader currentStep={7} />
-
-      <main className="flex-1 max-w-2xl mx-auto w-full px-4 pt-8 pb-36">
+    <WizardStepLayout
+      currentStep={7}
+      primaryAction={{
+        label: `Continuar (${totalPlayers} jugadores)`,
+        onClick: handleContinue,
+      }}
+      hint="Puedes agregar más jugadores después del torneo creado."
+      forceSticky
+    >
+      <div className="max-w-2xl mx-auto w-full px-4 pt-8">
         <h1 className="text-2xl font-bold mb-1">¿Quiénes van a participar?</h1>
         <p className="text-text-mute mb-2">
           Puedes agregar más jugadores después también.
@@ -222,13 +227,7 @@ export function Step7Form({ userId, currentUser }: Props) {
             placeholder="Busca por @usuario o nombre…"
           />
         )}
-      </main>
-
-      <StepFooter
-        onContinue={handleContinue}
-        continueLabel={`Continuar (${totalPlayers} jugadores)`}
-        hint="Puedes agregar más jugadores después del torneo creado."
-      />
-    </div>
+      </div>
+    </WizardStepLayout>
   );
 }

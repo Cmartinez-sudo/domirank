@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { StepHeader } from "@/components/tournament-wizard/StepHeader";
-import { StepFooter } from "@/components/tournament-wizard/StepFooter";
+import { WizardStepLayout } from "@/components/wizard/WizardStepLayout";
 import { useTournamentDraft } from "@/hooks/useTournamentDraft";
 
 const ICON_GLOBE = (
@@ -74,10 +73,11 @@ export function Step2Form({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="flex flex-col min-h-dvh">
-      <StepHeader currentStep={2} />
-
-      <main className="flex-1 max-w-2xl mx-auto w-full px-4 pt-8 pb-32">
+    <WizardStepLayout
+      currentStep={2}
+      primaryAction={{ label: "Continuar", onClick: handleContinue }}
+    >
+      <div className="max-w-2xl mx-auto w-full px-4 pt-8">
         <h1 className="text-2xl font-bold mb-2">¿Quién puede ver el torneo?</h1>
         <p className="text-text-mute mb-8">
           Puedes cambiar esto después mientras el torneo esté abierto.
@@ -125,9 +125,7 @@ export function Step2Form({ userId }: { userId: string }) {
             Se generará un código de 6 dígitos automáticamente al crear el torneo.
           </div>
         )}
-      </main>
-
-      <StepFooter onContinue={handleContinue} />
-    </div>
+      </div>
+    </WizardStepLayout>
   );
 }

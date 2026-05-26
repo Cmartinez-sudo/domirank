@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { StepHeader } from "@/components/tournament-wizard/StepHeader";
-import { StepFooter } from "@/components/tournament-wizard/StepFooter";
+import { WizardStepLayout } from "@/components/wizard/WizardStepLayout";
 import { useTournamentDraft } from "@/hooks/useTournamentDraft";
 
 type Format = "single_elim" | "round_robin" | "swiss";
@@ -85,10 +84,11 @@ export function Step3Form({ userId }: { userId: string }) {
   }
 
   return (
-    <div className="flex flex-col min-h-dvh">
-      <StepHeader currentStep={3} />
-
-      <main className="flex-1 max-w-2xl mx-auto w-full px-4 pt-8 pb-32">
+    <WizardStepLayout
+      currentStep={3}
+      primaryAction={{ label: "Continuar", onClick: handleContinue }}
+    >
+      <div className="max-w-2xl mx-auto w-full px-4 pt-8">
         <h1 className="text-2xl font-bold mb-2">¿Qué formato usamos?</h1>
         <p className="text-text-mute mb-8">
           Define cómo se estructura la competencia.
@@ -129,9 +129,7 @@ export function Step3Form({ userId }: { userId: string }) {
             );
           })}
         </div>
-      </main>
-
-      <StepFooter onContinue={handleContinue} />
-    </div>
+      </div>
+    </WizardStepLayout>
   );
 }
