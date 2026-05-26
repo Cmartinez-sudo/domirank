@@ -22,6 +22,20 @@ function safeNext(next: string | null): string | null {
   return next;
 }
 
+/**
+ * Returns just the pathname portion of a same-origin path, stripping any
+ * query string or hash. Used in logs to avoid leaking tokens (e.g. the
+ * Supabase recovery code carried in `?next=/reset-password?token=...`
+ * or `?next=/x#access_token=...`).
+ */
+function logSafePath(path: string | null): string {
+  if (!path) return "(none)";
+  const qIdx = path.indexOf("?");
+  const hIdx = path.indexOf("#");
+  const cut = [qIdx, hIdx].filter((i) => i >= 0).sort((a, b) => a - b)[0];
+  return cut !== undefined ? path.slice(0, cut) : path;
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
@@ -33,7 +47,7 @@ export async function GET(request: Request) {
   const forwardedProto = h.get("x-forwarded-proto") ?? "https";
   const origin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : url.origin;
 
-  console.log("[auth/callback] origin:", origin, "code present:", !!code, "next:", requestedNext);
+  console.log("[auth/callback] origin:", origin, "code present:", !!code, "next:", logSafePath(requestedNext));
 
   if (!code) {
     console.warn("[auth/callback] no code in callback URL");
@@ -66,6 +80,6 @@ export async function GET(request: Request) {
     }
   }
 
-  console.log("[auth/callback] redirecting to", `${origin}${target}`);
+  console.log("[auth/callback] redirecting to", `${origin}${logSafePath(target)}`);
   return NextResponse.redirect(`${origin}${target}`);
 }
