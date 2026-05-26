@@ -3,6 +3,7 @@ import {
   pushSubscribeSchema,
   pushUnsubscribeSchema,
   pushEndpointSchema,
+  isAllowedPushHost,
   MAX_PUSH_BODY_BYTES,
 } from '../push-schema';
 
@@ -113,5 +114,59 @@ describe('pushUnsubscribeSchema', () => {
 describe('MAX_PUSH_BODY_BYTES', () => {
   it('es 4096 (4 KiB) — margen sobre payload típico', () => {
     expect(MAX_PUSH_BODY_BYTES).toBe(4096);
+  });
+});
+
+describe('isAllowedPushHost (M8 whitelist)', () => {
+  it('acepta FCM (Chrome/Edge/Android)', () => {
+    expect(isAllowedPushHost('fcm.googleapis.com')).toBe(true);
+  });
+
+  it('acepta Mozilla (Firefox)', () => {
+    expect(isAllowedPushHost('updates.push.services.mozilla.com')).toBe(true);
+  });
+
+  it('acepta hosts bajo .push.apple.com (Safari WebPush)', () => {
+    expect(isAllowedPushHost('web.push.apple.com')).toBe(true);
+    expect(isAllowedPushHost('api.push.apple.com')).toBe(true);
+  });
+
+  it('acepta hosts bajo .notify.windows.com (Edge legacy / WNS)', () => {
+    expect(isAllowedPushHost('db5.notify.windows.com')).toBe(true);
+  });
+
+  it('rechaza dominios no listados', () => {
+    expect(isAllowedPushHost('attacker.com')).toBe(false);
+    expect(isAllowedPushHost('evil.example.org')).toBe(false);
+  });
+
+  it('rechaza intentos de tricky subdomain ("fcm.googleapis.com.attacker.com")', () => {
+    expect(isAllowedPushHost('fcm.googleapis.com.attacker.com')).toBe(false);
+  });
+
+  it('rechaza intentos de suffix-match con dominio falso ("evilpush.apple.com.attacker.com")', () => {
+    expect(isAllowedPushHost('push.apple.com.attacker.com')).toBe(false);
+  });
+
+  it('rechaza host vacío', () => {
+    expect(isAllowedPushHost('')).toBe(false);
+  });
+});
+
+describe('pushEndpointSchema — host whitelist integration', () => {
+  it('rechaza https://attacker.com/x aunque sea https válido', () => {
+    expect(pushEndpointSchema.safeParse('https://attacker.com/x').success).toBe(false);
+  });
+
+  it('acepta endpoint Mozilla', () => {
+    expect(
+      pushEndpointSchema.safeParse('https://updates.push.services.mozilla.com/wpush/v2/abc').success,
+    ).toBe(true);
+  });
+
+  it('acepta endpoint Safari WebPush', () => {
+    expect(
+      pushEndpointSchema.safeParse('https://web.push.apple.com/abc123').success,
+    ).toBe(true);
   });
 });
