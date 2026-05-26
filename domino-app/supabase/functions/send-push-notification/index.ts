@@ -27,6 +27,27 @@ if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
 }
 
+// ── In-memory rate limit ─────────────────────────────────────────────────────
+// Per-user bucket: max 10 calls / 60s. Defense in depth against a leaked
+// service-role key — a leak still has a small per-instance ceiling.
+// Note: edge functions may scale across instances; this is per-instance only.
+// For cross-instance limits, fold in Upstash Redis (out of scope here).
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX_PER_WINDOW = 10;
+const callCount = new Map<string, { count: number; resetAt: number }>();
+
+function rateLimitOk(key: string): boolean {
+  const now = Date.now();
+  const entry = callCount.get(key);
+  if (!entry || entry.resetAt < now) {
+    callCount.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_MAX_PER_WINDOW) return false;
+  entry.count++;
+  return true;
+}
+
 // ── Input validation ─────────────────────────────────────────────────────────
 // Defense in depth: even though the only caller today is the DB trigger
 // passing the service-role key, validate UUID format on inputs to fail fast
@@ -145,6 +166,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
   } catch {
     return new Response(JSON.stringify({ error: "invalid_body" }), {
       status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  if (!rateLimitOk(`push:${user_id}`)) {
+    return new Response(JSON.stringify({ error: "rate_limited" }), {
+      status: 429,
       headers: { "Content-Type": "application/json" },
     });
   }

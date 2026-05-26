@@ -35,6 +35,26 @@ function isUuid(v: unknown): v is string {
   return typeof v === "string" && UUID_RE.test(v);
 }
 
+// ── In-memory rate limit ─────────────────────────────────────────────────────
+// Per-tournament bucket: max 5 calls / 60s. Generating the same round more
+// than 5 times per minute is always a bug or abuse — the trigger only fires
+// once per round transition normally. Per-instance only.
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX_PER_WINDOW = 5;
+const callCount = new Map<string, { count: number; resetAt: number }>();
+
+function rateLimitOk(key: string): boolean {
+  const now = Date.now();
+  const entry = callCount.get(key);
+  if (!entry || entry.resetAt < now) {
+    callCount.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_MAX_PER_WINDOW) return false;
+  entry.count++;
+  return true;
+}
+
 // ── Berger schedule (circle method) — portado de tournament-formats-engine.ts ─
 //
 // Mantiene sincronía conceptual con el TS del frontend. Si el algoritmo
@@ -106,10 +126,12 @@ function buildSwissPairings(
 
   const result: Pairing[] = [];
   const used = new Set<string>();
+  const byeTeams: string[] = [];
 
   for (let i = 0; i < sorted.length; i++) {
     const keyA = sorted[i].userIds.join(",");
     if (used.has(keyA)) continue;
+    let matched = false;
     for (let j = i + 1; j < sorted.length; j++) {
       const keyB = sorted[j].userIds.join(",");
       if (used.has(keyB)) continue;
@@ -122,10 +144,25 @@ function buildSwissPairings(
         });
         used.add(keyA);
         used.add(keyB);
+        matched = true;
         break;
       }
     }
+    // BYE implícito: si no encontramos rival, el equipo se queda sin match.
+    // Documentado en SECURITY_AUDIT.md L2.
+    if (!matched) {
+      used.add(keyA);
+      byeTeams.push(keyA);
+    }
   }
+
+  if (byeTeams.length > 0) {
+    console.warn(
+      `[swiss-edge] round ${round}: ${byeTeams.length} team(s) without pairing (implicit BYE):`,
+      byeTeams,
+    );
+  }
+
   return result;
 }
 
@@ -167,6 +204,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
   } catch {
     return new Response(JSON.stringify({ error: "invalid_body" }), {
       status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  if (!rateLimitOk(`round:${tournament_id}`)) {
+    return new Response(JSON.stringify({ error: "rate_limited" }), {
+      status: 429,
       headers: { "Content-Type": "application/json" },
     });
   }
@@ -256,10 +300,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const teamBScore = players.filter((mp) => mp.team === 2).reduce((s, mp) => s + mp.score, 0);
       const teamAWon = teamAScore > teamBScore;
 
+      // Integer scoring: 1 win = 3_000_000, +pointsFor como tiebreak.
+      // Mismo invariante que tournament-formats-engine.computeStandings:
+      // 1 win siempre > cualquier acumulado de pointsFor (max ~13k).
       const sA = standingsMap.get(keyA);
       const sB = standingsMap.get(keyB);
-      if (sA) sA.score += (teamAWon ? 3 : 0) + teamAScore / 10000;
-      if (sB) sB.score += (teamAWon ? 0 : 3) + teamBScore / 10000;
+      if (sA) sA.score += (teamAWon ? 3_000_000 : 0) + teamAScore;
+      if (sB) sB.score += (teamAWon ? 0 : 3_000_000) + teamBScore;
     }
 
     const standings = Array.from(standingsMap.values()).sort((a, b) => b.score - a.score);
