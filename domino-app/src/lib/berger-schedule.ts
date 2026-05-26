@@ -42,8 +42,22 @@ export type BergerMatchup = {
  * // 3 equipos → 3 rondas, 1 matchup real + 1 bye por ronda
  * bergerSchedule(3)
  */
+/**
+ * Hard cap defensivo: el wizard / tournament-schema ya limita max_players a 64
+ * (que para doubles = 32 teams, para singles = 64 teams). Esta constante actúa
+ * como circuit-breaker si alguien bypasea la validación de capa superior — un
+ * torneo de N=1000 equipos produciría 500 matchups por ronda y 999 rondas =
+ * ~500k filas, bloqueando el evento loop o un round-trip a la DB.
+ */
+export const MAX_TEAMS_PER_TOURNAMENT = 64;
+
 export function bergerSchedule(teamCount: number): BergerMatchup[] {
   if (teamCount < 2) return [];
+  if (teamCount > MAX_TEAMS_PER_TOURNAMENT) {
+    throw new Error(
+      `bergerSchedule: teamCount=${teamCount} excede el cap (${MAX_TEAMS_PER_TOURNAMENT})`,
+    );
+  }
 
   // N par → N-1 rondas; N impar → agrega BYE ficticio → N+1 → N rondas
   const n = teamCount % 2 === 0 ? teamCount : teamCount + 1;
