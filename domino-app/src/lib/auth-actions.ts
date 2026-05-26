@@ -130,7 +130,12 @@ export async function signInWithMagicLink(formData: FormData) {
       data: { signup_method: "magic_link", terms_accepted: true },
     },
   });
-  if (error) return { ok: false as const, error: error.message };
+  if (error) {
+    // Anti-enumeration: respuesta uniforme tanto si Supabase rechaza por
+    // rate limit, email inválido en su lado, o problema transitorio.
+    // Log server-side para investigación.
+    console.error("signInWithMagicLink failed:", error.message);
+  }
   return { ok: true as const };
 }
 
@@ -170,7 +175,11 @@ export async function requestPasswordReset(formData: FormData) {
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
     redirectTo: `${getOrigin()}/auth/callback?next=/reset-password`,
   });
-  if (error) return { ok: false as const, error: error.message };
+  if (error) {
+    // Anti-enumeration: igual que magic link, no diferenciar entre
+    // "email no existe", rate limit del proveedor, o error transitorio.
+    console.error("requestPasswordReset failed:", error.message);
+  }
   return { ok: true as const };
 }
 
