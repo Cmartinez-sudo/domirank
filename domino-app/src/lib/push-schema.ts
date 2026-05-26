@@ -7,11 +7,39 @@ import { z } from "zod";
 //   user_agent string from navigator.userAgent; cap at 512
 // Cap = (typical * ~3) margin without enabling DoS via giant payloads.
 
+// Known push providers used by the major browsers (Chrome/Edge/Firefox/Safari).
+// Anything outside this set is rejected: stops a compromised client/extension
+// from registering an attacker-controlled URL that web-push would later POST to.
+const ALLOWED_PUSH_HOST_EXACT = new Set<string>([
+  "fcm.googleapis.com", // Chrome, Edge (current), Android Chrome, Opera
+  "updates.push.services.mozilla.com", // Firefox
+]);
+
+const ALLOWED_PUSH_HOST_SUFFIXES = [
+  ".push.apple.com", // Safari WebPush (web.push.apple.com, etc.)
+  ".notify.windows.com", // Edge legacy / WNS
+] as const;
+
+export function isAllowedPushHost(host: string): boolean {
+  if (ALLOWED_PUSH_HOST_EXACT.has(host)) return true;
+  return ALLOWED_PUSH_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix));
+}
+
 export const pushEndpointSchema = z
   .string()
   .url()
   .max(2048)
-  .refine((u) => u.startsWith("https://"), { message: "endpoint must be https" });
+  .refine((u) => u.startsWith("https://"), { message: "endpoint must be https" })
+  .refine(
+    (u) => {
+      try {
+        return isAllowedPushHost(new URL(u).host);
+      } catch {
+        return false;
+      }
+    },
+    { message: "endpoint host not in allowed push services" },
+  );
 
 export const pushSubscribeSchema = z.object({
   endpoint: pushEndpointSchema,
