@@ -37,9 +37,24 @@ self.addEventListener("push", (event: PushEvent) => {
   );
 });
 
+// Coerce payload.url into a same-origin path. Push payloads come from our own
+// backend today, but the SW must defend against a compromised/MITM payload that
+// injects an absolute URL pointing at a phishing site. Anything that does not
+// resolve to our origin is replaced with "/".
+function safeNotificationUrl(raw: unknown): string {
+  if (typeof raw !== "string" || raw.length === 0) return "/";
+  try {
+    const resolved = new URL(raw, self.location.origin);
+    if (resolved.origin !== self.location.origin) return "/";
+    return resolved.pathname + resolved.search + resolved.hash;
+  } catch {
+    return "/";
+  }
+}
+
 self.addEventListener("notificationclick", (event: NotificationEvent) => {
   event.notification.close();
-  const url: string = (event.notification.data as { url?: string })?.url || "/";
+  const url = safeNotificationUrl((event.notification.data as { url?: unknown })?.url);
   event.waitUntil(
     (async () => {
       const allClients = await self.clients.matchAll({
@@ -47,7 +62,7 @@ self.addEventListener("notificationclick", (event: NotificationEvent) => {
         includeUncontrolled: true,
       });
       for (const client of allClients) {
-        if (client.url.includes(self.location.origin) && "focus" in client) {
+        if (client.url.startsWith(self.location.origin) && "focus" in client) {
           (client as WindowClient).navigate(url);
           return (client as WindowClient).focus();
         }

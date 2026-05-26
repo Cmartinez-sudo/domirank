@@ -101,8 +101,8 @@ export default function ComoFuncionaPage() {
       <Section n={7} title="Para nerdear">
         <p>
           · Weng & Lin (2011). <em>A Bayesian approximation method for online ranking</em>.{" "}
-          <a className="text-primary hover:underline" target="_blank" rel="noopener" href="https://jmlr.org/papers/v12/weng11a.html">JMLR</a>.
-          <br />· OpenSkill: <a className="text-primary hover:underline" target="_blank" rel="noopener" href="https://openskill.me/">openskill.me</a>.
+          <a className="text-primary hover:underline" target="_blank" rel="noopener noreferrer" href="https://jmlr.org/papers/v12/weng11a.html">JMLR</a>.
+          <br />· OpenSkill: <a className="text-primary hover:underline" target="_blank" rel="noopener noreferrer" href="https://openskill.me/">openskill.me</a>.
           <br />· Plackett-Luce (1975): modelo probabilístico de permutaciones.
         </p>
       </Section>

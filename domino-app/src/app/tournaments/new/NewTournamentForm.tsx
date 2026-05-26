@@ -89,6 +89,7 @@ export function NewTournamentForm({ currentUser, defaultModality }: { currentUse
           <Link
             href="/tournaments/formatos"
             target="_blank"
+            rel="noopener"
             className="text-xs text-primary hover:underline"
           >
             ¿Cómo elegir? →
