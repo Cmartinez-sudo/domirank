@@ -126,10 +126,12 @@ function buildSwissPairings(
 
   const result: Pairing[] = [];
   const used = new Set<string>();
+  const byeTeams: string[] = [];
 
   for (let i = 0; i < sorted.length; i++) {
     const keyA = sorted[i].userIds.join(",");
     if (used.has(keyA)) continue;
+    let matched = false;
     for (let j = i + 1; j < sorted.length; j++) {
       const keyB = sorted[j].userIds.join(",");
       if (used.has(keyB)) continue;
@@ -142,10 +144,25 @@ function buildSwissPairings(
         });
         used.add(keyA);
         used.add(keyB);
+        matched = true;
         break;
       }
     }
+    // BYE implícito: si no encontramos rival, el equipo se queda sin match.
+    // Documentado en SECURITY_AUDIT.md L2.
+    if (!matched) {
+      used.add(keyA);
+      byeTeams.push(keyA);
+    }
   }
+
+  if (byeTeams.length > 0) {
+    console.warn(
+      `[swiss-edge] round ${round}: ${byeTeams.length} team(s) without pairing (implicit BYE):`,
+      byeTeams,
+    );
+  }
+
   return result;
 }
 
