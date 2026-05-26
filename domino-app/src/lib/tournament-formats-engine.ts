@@ -263,6 +263,7 @@ function generateSwissRound(
 
   const result: { round: number; board: number; teamA: Team; teamB: Team }[] = [];
   const used = new Set<string>();
+  const byeTeams: string[] = [];
 
   for (let i = 0; i < sorted.length; i++) {
     const keyA = sorted[i].userIds.join(",");
@@ -282,8 +283,25 @@ function generateSwissRound(
         break;
       }
     }
-    // Bye if no opponent found (odd teams)
-    if (!matched) used.add(keyA);
+    // BYE implícito: si no encontramos rival (cantidad impar, o todos los
+    // rivales viables ya jugaron entre sí), el equipo se queda sin match
+    // esta ronda. NO insertamos un pairing tipo BYE en tournament_pairings,
+    // así que la UI no muestra a este equipo en la ronda. Su `pointsFor`
+    // no avanza y su `score` queda congelado — lo cual distorsiona ligeramente
+    // el ranking en torneos largos. Documentado como SECURITY_AUDIT.md L2.
+    // TODO: emitir un pairing BYE explícito con board=0 para que la UI
+    // pueda mostrar "X descansa esta ronda".
+    if (!matched) {
+      used.add(keyA);
+      byeTeams.push(keyA);
+    }
+  }
+
+  if (byeTeams.length > 0) {
+    console.warn(
+      `[swiss] round ${round}: ${byeTeams.length} team(s) without pairing (implicit BYE):`,
+      byeTeams,
+    );
   }
 
   return result;
