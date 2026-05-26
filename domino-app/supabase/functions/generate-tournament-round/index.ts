@@ -35,6 +35,26 @@ function isUuid(v: unknown): v is string {
   return typeof v === "string" && UUID_RE.test(v);
 }
 
+// ── In-memory rate limit ─────────────────────────────────────────────────────
+// Per-tournament bucket: max 5 calls / 60s. Generating the same round more
+// than 5 times per minute is always a bug or abuse — the trigger only fires
+// once per round transition normally. Per-instance only.
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX_PER_WINDOW = 5;
+const callCount = new Map<string, { count: number; resetAt: number }>();
+
+function rateLimitOk(key: string): boolean {
+  const now = Date.now();
+  const entry = callCount.get(key);
+  if (!entry || entry.resetAt < now) {
+    callCount.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_MAX_PER_WINDOW) return false;
+  entry.count++;
+  return true;
+}
+
 // ── Berger schedule (circle method) — portado de tournament-formats-engine.ts ─
 //
 // Mantiene sincronía conceptual con el TS del frontend. Si el algoritmo
@@ -167,6 +187,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
   } catch {
     return new Response(JSON.stringify({ error: "invalid_body" }), {
       status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  if (!rateLimitOk(`round:${tournament_id}`)) {
+    return new Response(JSON.stringify({ error: "rate_limited" }), {
+      status: 429,
       headers: { "Content-Type": "application/json" },
     });
   }
