@@ -13,6 +13,7 @@ import {
 } from "@/lib/friends";
 import { useToast } from "@/components/Toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { analytics } from "@/lib/analytics";
 
 const EASE_OUT: [number, number, number, number] = [0.25, 0.46, 0.45, 0.94];
 
@@ -109,7 +110,11 @@ export function FriendActionButton({
   function onAdd() {
     runAction(
       { kind: "outgoing_pending", requestId: "optimistic" },
-      () => sendFriendRequest(targetUserId),
+      async () => {
+        const r = await sendFriendRequest(targetUserId);
+        if (r.ok) analytics.track("friend_request_sent", { target_user_id: targetUserId });
+        return r;
+      },
       `Solicitud enviada a @${targetUsername}`
     );
   }

@@ -9,6 +9,7 @@ import { PendingIcon, CheckCircleIcon, AlertTriangleIcon, SlashIcon } from "@/co
 import { attestMatch } from "@/lib/match-attest-actions";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
+import { analytics } from "@/lib/analytics";
 
 const EASE_OUT: [number, number, number, number] = [0.25, 0.46, 0.45, 0.94];
 
@@ -116,6 +117,7 @@ export function AttestationPanel(props: Props) {
       toast.error(r.error);
       return;
     }
+    analytics.track("match_attested", { match_id: props.matchId, action });
     if (r.newStatus === "confirmed") {
       toast.success("Resultado confirmado · rating aplicado");
     } else if (r.newStatus === "disputed") {

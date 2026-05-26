@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { COUNTRIES, MODALIDADES, type CountryCode, type ModalityCode } from "@/lib/modalidades";
 import { initialRatingFromAssessment } from "@/lib/rating";
 import { saveOnboarding } from "./actions";
+import { analytics } from "@/lib/analytics";
 
 const QUESTIONS = [
   {
@@ -100,6 +101,8 @@ export function OnboardingForm({
         setPending(false);
         return;
       }
+      const stepsCompleted = skillPoints !== undefined ? QUESTIONS.length : 0;
+      analytics.track("user_completed_onboarding", { steps_completed: stepsCompleted });
       window.location.assign(res.next);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Error");

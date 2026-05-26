@@ -10,6 +10,7 @@ import { MODALIDADES, SETS, type ModalityCode, type SetCode, type FormatCode } f
 import { addRound, undoLastRound, cancelLiveMatch, finalizeMatch } from "@/lib/live-match";
 import { validateMatchClosure } from "@/lib/match-validation";
 import { useMatchTimer } from "@/hooks/useMatchTimer";
+import { analytics } from "@/lib/analytics";
 
 type PublicUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; country: string | null };
 type Round = { id: number; round_number: number; team: number; points: number; kind: string; created_at: string };
@@ -118,8 +119,17 @@ export function LiveMatchScreen({
     setPending(true);
     try {
       const r = await finalizeMatch(matchId);
-      if (r.ok) router.push(`/matches/${matchId}`);
-      else setErr(r.error);
+      if (r.ok) {
+        const winnerTeam =
+          (validation.status === "finishable" || validation.status === "time_expired_finishable") &&
+          validation.winnerTeam != null
+            ? validation.winnerTeam === 1 ? nameA : nameB
+            : "unknown";
+        analytics.track("match_finalized", { match_id: matchId, winner_team: winnerTeam });
+        router.push(`/matches/${matchId}`);
+      } else {
+        setErr(r.error);
+      }
     } finally {
       setPending(false);
     }
