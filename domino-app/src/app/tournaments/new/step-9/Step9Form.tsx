@@ -13,6 +13,7 @@ const FORMAT_LABELS: Record<string, string> = {
   single_elim: "Eliminación directa",
   round_robin: "Todos contra todos",
   swiss: "Sistema suizo",
+  polla: "Polla (liga continua)",
 };
 
 const MODALITY_LABELS: Record<string, string> = {
@@ -78,6 +79,13 @@ export function Step9Form({ userId }: { userId: string }) {
       value: MODE_LABELS[draft.inscription_mode ?? "pre_formed"] ?? "—",
       step: 6,
     },
+    ...(draft.format === "polla"
+      ? [{
+          label: "Modo",
+          value: (draft.is_open_ended ?? false) ? "Indefinida" : "Con número fijo de rondas",
+          step: 6,
+        }]
+      : []),
     {
       label: "Participantes pre-cargados",
       value: `${totalPlayers} jugadores${(draft.pre_formed_pairs?.length ?? 0) > 0 ? ` · ${draft.pre_formed_pairs?.length} parejas` : ""}`,
@@ -119,6 +127,7 @@ export function Step9Form({ userId }: { userId: string }) {
         participant_ids: draft.participant_ids ?? [],
         pre_formed_pairs: draft.pre_formed_pairs ?? [],
         rated,
+        is_open_ended: draft.is_open_ended ?? false,
       };
 
       const result = await createTournament(input);
