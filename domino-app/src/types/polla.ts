@@ -29,6 +29,9 @@ export type PollaRivalRow = {
   win_pct:         number; // always an integer (0–100)
 };
 
+/** Modo de inscripción de un torneo. */
+export type InscriptionMode = "pre_formed" | "individual_manual" | "polla";
+
 /** Una partida tal como la muestra el accordion de la polla. */
 export type PollaMatchPreview = {
   match_id:        string;

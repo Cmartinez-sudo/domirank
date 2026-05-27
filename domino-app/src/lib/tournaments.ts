@@ -55,6 +55,21 @@ export async function createTournament(input: CreateTournamentInput) {
   }
   const f = parsed.data;
 
+  // Cross-field guard: format='polla' iff inscription_mode='polla'.
+  // Auto-corrige el caso de llamadas legacy del wizard pre-refactor
+  // (format='polla' + inscription_mode='pre_formed'). El caso inverso
+  // (inscription_mode='polla' sin format='polla') sí es error.
+  const isPollaFormat = f.format === "polla";
+  const isPollaInscription = f.inscription_mode === "polla";
+  if (isPollaFormat && !isPollaInscription) {
+    (f as { inscription_mode: typeof f.inscription_mode }).inscription_mode = "polla";
+  } else if (!isPollaFormat && isPollaInscription) {
+    return {
+      ok: false as const,
+      error: "inscription_mode='polla' sólo es válido para format='polla'.",
+    };
+  }
+
   const supabase = await supabaseServer();
   const {
     data: { user },
