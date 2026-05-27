@@ -190,6 +190,31 @@ describe('createTournamentSchema', () => {
     expect(createTournamentSchema.safeParse({ ...VALID_BASE, rated: 1 }).success).toBe(false);
   });
 
+  // ── Polla format ───────────────────────────────────────────
+  it('acepta format=polla', () => {
+    expect(createTournamentSchema.safeParse({ ...VALID_BASE, format: 'polla' }).success).toBe(true);
+  });
+
+  it('is_open_ended default false', () => {
+    const parsed = createTournamentSchema.safeParse({ ...VALID_BASE, format: 'polla' });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.is_open_ended).toBe(false);
+  });
+
+  it('acepta is_open_ended true', () => {
+    const parsed = createTournamentSchema.safeParse({
+      ...VALID_BASE, format: 'polla', is_open_ended: true
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.is_open_ended).toBe(true);
+  });
+
+  it('rechaza is_open_ended no-boolean', () => {
+    expect(createTournamentSchema.safeParse({
+      ...VALID_BASE, format: 'polla', is_open_ended: 'yes'
+    }).success).toBe(false);
+  });
+
   // ── input completo válido ──────────────────────────────────
   it('valida un input completo realista', () => {
     const full = {
