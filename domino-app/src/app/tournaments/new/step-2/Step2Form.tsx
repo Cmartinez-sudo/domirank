@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { WizardStepLayout } from "@/components/wizard/WizardStepLayout";
 import { useTournamentDraft } from "@/hooks/useTournamentDraft";
@@ -67,6 +67,14 @@ export function Step2Form({ userId }: { userId: string }) {
     (draft.visibility as Visibility) ?? "private",
   );
 
+  const isPolla = draft.format === "polla";
+
+  useEffect(() => {
+    if (isPolla && draft.visibility !== "private") {
+      setField({ visibility: "private" });
+    }
+  }, [isPolla, draft.visibility, setField]);
+
   function handleContinue() {
     setField({ visibility, currentStep: 3 });
     router.push("/tournaments/new/step-3");
@@ -86,29 +94,33 @@ export function Step2Form({ userId }: { userId: string }) {
         <div className="space-y-3">
           {OPTIONS.map((opt) => {
             const selected = visibility === opt.value;
+            const disabledByPolla = isPolla && opt.value !== "private";
             return (
               <button
                 key={opt.value}
                 type="button"
-                onClick={() => setVisibility(opt.value)}
+                onClick={() => !disabledByPolla && setVisibility(opt.value)}
+                disabled={disabledByPolla}
                 className={`w-full flex items-start gap-4 p-4 rounded-2xl border text-left transition-all ${
-                  selected
+                  disabledByPolla
+                    ? "opacity-40 cursor-not-allowed bg-surface-2 border-border"
+                    : selected
                     ? "bg-primary/10 border-primary/50 shadow-sm"
                     : "bg-surface-2 border-border hover:border-border-strong hover:bg-surface-3"
                 }`}
               >
                 <span
-                  className={`mt-0.5 shrink-0 ${selected ? "text-primary" : "text-text-mute"}`}
+                  className={`mt-0.5 shrink-0 ${selected && !disabledByPolla ? "text-primary" : "text-text-mute"}`}
                 >
                   {opt.icon}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className={`font-semibold ${selected ? "text-primary" : "text-text"}`}>
+                  <div className={`font-semibold ${selected && !disabledByPolla ? "text-primary" : "text-text"}`}>
                     {opt.label}
                   </div>
                   <div className="text-text-mute text-sm mt-0.5">{opt.desc}</div>
                 </div>
-                {selected && (
+                {selected && !disabledByPolla && (
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
                     strokeLinejoin="round" className="text-primary shrink-0 mt-0.5">
@@ -119,6 +131,12 @@ export function Step2Form({ userId }: { userId: string }) {
             );
           })}
         </div>
+
+        {isPolla && (
+          <p className="text-text-mute text-xs mt-2">
+            Las pollas son privadas por default. Solo los participantes la ven.
+          </p>
+        )}
 
         {visibility === "code" && (
           <div className="mt-4 p-3 bg-info/10 border border-info/20 rounded-xl text-sm text-text-dim">
