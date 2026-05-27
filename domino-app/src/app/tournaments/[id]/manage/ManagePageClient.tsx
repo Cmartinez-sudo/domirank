@@ -408,9 +408,7 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
       {/* Polla: roster de inscritos */}
       {isPolla && (
         <section className="card space-y-3">
-          <div className="text-text-mute text-xs uppercase tracking-wide">
-            Inscritos: {players.length} / {tournament.max_players}
-          </div>
+          <h2 className="font-semibold">Jugadores inscritos</h2>
           <div className="divide-y divide-border">
             {players.map((p) => (
               <div key={p.id} className="flex items-center justify-between py-2.5">
@@ -422,8 +420,9 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
                   <button
                     type="button"
                     // TODO: handler removeFromTournament — funcionalidad pendiente.
-                    onClick={() => setErr("Quitar jugador: funcionalidad pendiente")}
-                    className="text-text-mute text-sm hover:text-danger"
+                    disabled
+                    title="Quitar jugador: funcionalidad pendiente"
+                    className="text-text-mute text-sm opacity-50 cursor-not-allowed"
                   >
                     Quitar
                   </button>
@@ -435,8 +434,9 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
             <button
               type="button"
               // TODO: handler openAddPlayerModal — funcionalidad pendiente.
-              onClick={() => setErr("Agregar jugador: funcionalidad pendiente")}
-              className="btn-secondary w-full"
+              disabled
+              title="Agregar jugador: funcionalidad pendiente"
+              className="btn-secondary w-full opacity-50 cursor-not-allowed"
             >
               + Agregar jugador
             </button>
@@ -451,7 +451,9 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
             <h2 className="font-semibold">Iniciar torneo</h2>
             <p className="text-text-mute text-sm mt-0.5">
               {canStart
-                ? "Todo listo. Todos los jugadores tienen pareja."
+                ? isPolla
+                  ? "Todo listo. El torneo está completo."
+                  : "Todo listo. Todos los jugadores tienen pareja."
                 : isPolla
                 ? `Faltan ${tournament.max_players - players.length} jugadores.`
                 : isPreFormed
