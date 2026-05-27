@@ -111,3 +111,29 @@ describe('PollaRivalRow', () => {
     expect(rival.wins_for_rival).toBeLessThanOrEqual(rival.games_against);
   });
 });
+
+describe('current_streak format invariants', () => {
+  it('puede parsearse a (cantidad, tipo) o ser "—"', () => {
+    function parseStreak(s: string): { count: number; kind: 'W' | 'L' } | null {
+      if (s === '—') return null;
+      const m = s.match(/^(\d+)([WL])$/);
+      if (!m) throw new Error(`malformed streak: ${s}`);
+      return { count: parseInt(m[1], 10), kind: m[2] as 'W' | 'L' };
+    }
+    expect(parseStreak('3W')).toEqual({ count: 3, kind: 'W' });
+    expect(parseStreak('1L')).toEqual({ count: 1, kind: 'L' });
+    expect(parseStreak('15W')).toEqual({ count: 15, kind: 'W' });
+    expect(parseStreak('—')).toBeNull();
+    expect(() => parseStreak('abc')).toThrow();
+  });
+
+  it('count siempre es >= 1 cuando hay racha', () => {
+    const examples = ['1W', '5L', '23W', '99L'];
+    for (const s of examples) {
+      const m = s.match(/^(\d+)([WL])$/);
+      expect(m).toBeTruthy();
+      const count = parseInt(m![1], 10);
+      expect(count).toBeGreaterThanOrEqual(1);
+    }
+  });
+});

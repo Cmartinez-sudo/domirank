@@ -95,7 +95,7 @@ create or replace view public.polla_current_season_pairings as
 
 Migration **`0040_polla_rpcs.sql`** crea 4 funciones, todas `security definer set search_path = public`, `grant execute to authenticated`.
 
-### `calc_streak(p_user_id, p_tournament_id, p_season) returns text`
+### `calc_streak(p_user_id, p_tournament_id) returns text`
 
 Calcula la racha actual del jugador en la temporada.
 
@@ -103,6 +103,8 @@ Calcula la racha actual del jugador en la temporada.
 - Determina W/L sumando scores por team: `won := (sum(score) filter team = mp.team) > (sum(score) filter team <> mp.team)`.
 - Recorre desde la más reciente hasta encontrar cambio de resultado.
 - Devuelve `"3W"`, `"1L"`, o `"—"` si no jugó.
+
+> **Decisión final:** la función toma 2 args y resuelve `current_season` internamente desde `tournaments`. Si en el futuro hace falta calcular racha de una temporada histórica, se agrega una función separada `calc_streak_for_season(user_id, tournament_id, season)` para no romper el contrato actual.
 
 ### `polla_standings(p_tournament_id) returns table`
 

@@ -71,7 +71,7 @@ returns table (
   partner_id      uuid,
   games_together  int,
   wins_together   int,
-  win_pct         numeric
+  win_pct         int
 )
 language sql
 security definer
@@ -95,6 +95,10 @@ as $$
        and m.status = 'confirmed'
   ),
   partner_pairs as (
+    -- Note: tied matches (my_team_score = opp_team_score) evaluate `won` to FALSE.
+    -- NULL scores (no match_players rows for a team) would evaluate to NULL and
+    -- be excluded from wins count by `filter (where won)`, but still counted
+    -- in games_together. Domino ties are unusual; this edge case is documented.
     select pmp.user_id as partner_id,
            mm.my_team_score > mm.opp_team_score as won
       from my_matches mm
@@ -107,10 +111,13 @@ as $$
          count(*)::int as games_together,
          count(*) filter (where won)::int as wins_together,
          case when count(*) > 0
-              then round(count(*) filter (where won) * 100.0 / count(*), 1)
+              then round(count(*) filter (where won) * 100.0 / count(*))::int
               else 0 end as win_pct
     from partner_pairs
    group by partner_id
+   -- Sort by absolute wins (volume-weighted "best"), not win rate.
+   -- A partner with 3W of 10 games ranks above a partner with 2W of 2 games.
+   -- Tie-break by games together (more shared experience = "better").
    order by wins_together desc nulls last, games_together desc nulls last
    limit 1;
 $$;
@@ -126,7 +133,7 @@ returns table (
   rival_id         uuid,
   games_against    int,
   wins_for_rival   int,
-  win_pct          numeric
+  win_pct          int
 )
 language sql
 security definer
@@ -150,6 +157,10 @@ as $$
        and m.status = 'confirmed'
   ),
   rival_pairs as (
+    -- Note: tied matches (my_team_score = opp_team_score) evaluate `rival_won` to FALSE.
+    -- NULL scores (no match_players rows for a team) would evaluate to NULL and
+    -- be excluded from wins count by `filter (where rival_won)`, but still counted
+    -- in games_against. Domino ties are unusual; this edge case is documented.
     select rmp.user_id as rival_id,
            mm.my_team_score < mm.opp_team_score as rival_won
       from my_matches mm
@@ -161,10 +172,13 @@ as $$
          count(*)::int as games_against,
          count(*) filter (where rival_won)::int as wins_for_rival,
          case when count(*) > 0
-              then round(count(*) filter (where rival_won) * 100.0 / count(*), 1)
+              then round(count(*) filter (where rival_won) * 100.0 / count(*))::int
               else 0 end as win_pct
     from rival_pairs
    group by rival_id
+   -- Sort by absolute wins (volume-weighted "worst"), not win rate.
+   -- A rival with 3W of 10 games ranks above a rival with 2W of 2 games.
+   -- Tie-break by games against (more shared experience = "worse").
    order by wins_for_rival desc nulls last, games_against desc nulls last
    limit 1;
 $$;
@@ -233,17 +247,23 @@ begin
          coalesce(a.win_pct, 0)       as win_pct,
          coalesce(a.games_played, 0)  as games_played,
          public.calc_streak(tp.user_id, p_tournament_id) as current_streak,
-         (select bp.partner_id  from public.polla_best_partner(tp.user_id, p_tournament_id) bp) as best_partner_id,
-         (select p2.display_name from public.profiles p2
-           where p2.id = (select bp.partner_id from public.polla_best_partner(tp.user_id, p_tournament_id) bp)
-         ) as best_partner_name,
-         (select wr.rival_id    from public.polla_worst_rival(tp.user_id, p_tournament_id) wr) as worst_rival_id,
-         (select p3.display_name from public.profiles p3
-           where p3.id = (select wr.rival_id from public.polla_worst_rival(tp.user_id, p_tournament_id) wr)
-         ) as worst_rival_name
+         partner_info.partner_id   as best_partner_id,
+         partner_info.partner_name as best_partner_name,
+         rival_info.rival_id       as worst_rival_id,
+         rival_info.rival_name     as worst_rival_name
     from public.tournament_players tp
     join public.profiles p on p.id = tp.user_id
     left join aggregated a on a.user_id = tp.user_id
+    left join lateral (
+      select bp.partner_id, p2.display_name as partner_name
+        from public.polla_best_partner(tp.user_id, p_tournament_id) bp
+        left join public.profiles p2 on p2.id = bp.partner_id
+    ) partner_info on true
+    left join lateral (
+      select wr.rival_id, p3.display_name as rival_name
+        from public.polla_worst_rival(tp.user_id, p_tournament_id) wr
+        left join public.profiles p3 on p3.id = wr.rival_id
+    ) rival_info on true
    where tp.tournament_id = p_tournament_id
    order by total_points desc, wins desc;
 end;

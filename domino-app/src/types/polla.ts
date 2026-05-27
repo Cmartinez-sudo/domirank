@@ -19,12 +19,12 @@ export type PollaPartnerRow = {
   partner_id:     string;
   games_together: number;
   wins_together:  number;
-  win_pct:        number;
+  win_pct:        number; // always an integer (0–100)
 };
 
 export type PollaRivalRow = {
   rival_id:        string;
   games_against:   number;
   wins_for_rival:  number;
-  win_pct:        number;
+  win_pct:         number; // always an integer (0–100)
 };
