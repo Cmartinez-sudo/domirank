@@ -19,7 +19,11 @@ export function PollaConfigStep({ userId }: Props) {
       </div>
 
       <div className="space-y-2">
-        <label className="flex items-start gap-3 p-3 rounded-md border cursor-pointer hover:border-border-strong transition-colors">
+        <label className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer transition-colors duration-150
+          ${isOpenEnded === true
+            ? "border-primary bg-primary/10"
+            : "border-border hover:border-border-strong"
+          }`}>
           <input
             type="radio"
             name="polla_mode"
@@ -33,7 +37,11 @@ export function PollaConfigStep({ userId }: Props) {
           </div>
         </label>
 
-        <label className="flex items-start gap-3 p-3 rounded-md border cursor-pointer hover:border-border-strong transition-colors">
+        <label className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer transition-colors duration-150
+          ${isOpenEnded === false
+            ? "border-primary bg-primary/10"
+            : "border-border hover:border-border-strong"
+          }`}>
           <input
             type="radio"
             name="polla_mode"
