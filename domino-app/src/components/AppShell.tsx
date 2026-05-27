@@ -229,52 +229,58 @@ export function AppShell({
                 >
                   {it.isCenter ? (
                     <span
-                      className="relative grid place-items-center w-14 h-14 rounded-full -mt-8 overflow-hidden transition-all duration-200 ease-out hover:scale-105 active:scale-95 active:shadow-[0_0_32px_6px_rgba(16,185,129,0.75),0_4px_16px_rgba(16,185,129,0.45)] group-focus-visible:ring-2 group-focus-visible:ring-emerald-300 group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-bg"
+                      className="relative flex items-center justify-center -mt-7 transition-all duration-200 ease-out hover:scale-105 active:scale-95 active:[filter:drop-shadow(0_3px_4px_rgba(0,0,0,0.3))] group-focus-visible:[outline:2px_solid_#34d399] group-focus-visible:outline-offset-4 group-focus-visible:rounded-md"
                       style={{
-                        background:
-                          "radial-gradient(circle, #10b981 0%, #059669 70%, transparent 100%)",
-                        boxShadow:
-                          "0 0 24px 4px rgba(16,185,129,0.55), 0 4px 16px rgba(16,185,129,0.35)",
+                        filter:
+                          "drop-shadow(0 6px 8px rgba(0,0,0,0.35)) drop-shadow(0 2px 4px rgba(0,0,0,0.25)) drop-shadow(0 4px 12px rgba(16,185,129,0.25))",
                       }}
                     >
                       <svg
-                        width="32"
-                        height="22"
+                        width="52"
+                        height="34"
                         viewBox="0 0 36 24"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
-                        style={{ transform: "rotate(-18deg)" }}
+                        style={{ transform: "rotate(-15deg)" }}
                         aria-hidden="true"
                       >
+                        <defs>
+                          <linearGradient id="domino-tile-gradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#f8fafc" />
+                            <stop offset="100%" stopColor="#e2e8f0" />
+                          </linearGradient>
+                        </defs>
+                        {/* Cuerpo de la ficha — marfil con gradient sutil */}
                         <rect
                           x="0.5"
                           y="0.5"
                           width="35"
                           height="23"
                           rx="3"
-                          fill="#0a0e1a"
-                          stroke="rgba(255,255,255,0.08)"
-                          strokeWidth="0.4"
+                          fill="url(#domino-tile-gradient)"
+                          stroke="rgba(0,0,0,0.15)"
+                          strokeWidth="0.5"
                         />
+                        {/* Línea divisora central */}
                         <line
                           x1="18"
                           y1="3"
                           x2="18"
                           y2="21"
-                          stroke="rgba(255,255,255,0.85)"
+                          stroke="#1a1a1a"
                           strokeWidth="0.6"
                           strokeLinecap="round"
                         />
                         {/* Izquierda: 5 pips (X) */}
-                        <circle cx="5"  cy="6"  r="1.3" fill="#fff" />
-                        <circle cx="13" cy="6"  r="1.3" fill="#fff" />
-                        <circle cx="9"  cy="12" r="1.3" fill="#fff" />
-                        <circle cx="5"  cy="18" r="1.3" fill="#fff" />
-                        <circle cx="13" cy="18" r="1.3" fill="#fff" />
+                        <circle cx="5"  cy="6"  r="1.3" fill="#1a1a1a" />
+                        <circle cx="13" cy="6"  r="1.3" fill="#1a1a1a" />
+                        <circle cx="9"  cy="12" r="1.3" fill="#1a1a1a" />
+                        <circle cx="5"  cy="18" r="1.3" fill="#1a1a1a" />
+                        <circle cx="13" cy="18" r="1.3" fill="#1a1a1a" />
                         {/* Derecha: 3 pips (diagonal) */}
-                        <circle cx="23" cy="6"  r="1.3" fill="#fff" />
-                        <circle cx="27" cy="12" r="1.3" fill="#fff" />
-                        <circle cx="31" cy="18" r="1.3" fill="#fff" />
+                        <circle cx="23" cy="6"  r="1.3" fill="#1a1a1a" />
+                        <circle cx="27" cy="12" r="1.3" fill="#1a1a1a" />
+                        <circle cx="31" cy="18" r="1.3" fill="#1a1a1a" />
                       </svg>
                     </span>
                   ) : (
