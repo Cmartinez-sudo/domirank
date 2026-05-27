@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { startNewSeason } from "@/lib/polla-actions";
+import { useModalA11y } from "@/hooks/useModalA11y";
 
 type Props = {
   tournamentId: string;
@@ -12,6 +13,7 @@ type Props = {
 
 export function NewSeasonDialog({ tournamentId, currentSeason, onClose }: Props) {
   const router = useRouter();
+  const dialogRef = useModalA11y({ onClose });
   const [confirmText, setConfirmText] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,18 +40,24 @@ export function NewSeasonDialog({ tournamentId, currentSeason, onClose }: Props)
 
   return (
     <div
-      role="dialog"
-      aria-modal="true"
       className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={onClose}
     >
       <div
-        className="bg-bg w-full sm:max-w-md sm:rounded-2xl border-t sm:border border-border p-5 space-y-4"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-season-title"
+        className="bg-bg w-full sm:max-w-md sm:rounded-2xl border-t sm:border border-border p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] space-y-4 animate-slide-up-fade"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 text-warning">
-          <span className="text-xl" aria-hidden="true">⚠️</span>
-          <h2 className="text-lg font-semibold">Nueva temporada</h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="flex-shrink-0">
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <h2 id="new-season-title" className="text-lg font-semibold">Nueva temporada</h2>
         </div>
 
         <p className="text-sm">Vas a empezar la <strong>Temporada {newSeason}</strong>. Esto va a:</p>
@@ -66,15 +74,22 @@ export function NewSeasonDialog({ tournamentId, currentSeason, onClose }: Props)
           <input
             id="confirm-input"
             type="text"
+            placeholder="nueva temporada"
+            autoComplete="off"
             value={confirmText}
             onChange={(e) => setConfirmText(e.target.value)}
-            className="card w-full p-2.5"
+            className={`card w-full p-2.5 transition-colors ${canConfirm ? "border-primary ring-1 ring-primary/40" : ""}`}
             autoFocus
           />
+          {confirmText.length > 0 && !canConfirm && (
+            <p className="text-xs text-text-mute mt-1" aria-live="polite">
+              Escribí exactamente "nueva temporada".
+            </p>
+          )}
         </div>
 
         {error && (
-          <div className="p-3 bg-danger/10 border border-danger/30 rounded text-danger text-sm">
+          <div role="alert" className="p-3 bg-danger/10 border border-danger/30 rounded text-danger text-sm">
             {error}
           </div>
         )}
