@@ -172,6 +172,24 @@ describe('createTournamentSchema', () => {
     expect(createTournamentSchema.safeParse(input).success).toBe(false);
   });
 
+  // ── rated ──────────────────────────────────────────────────
+  it('rated default true cuando no se pasa', () => {
+    const parsed = createTournamentSchema.safeParse(VALID_BASE);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.rated).toBe(true);
+  });
+
+  it('acepta rated=false (torneo amistoso)', () => {
+    const parsed = createTournamentSchema.safeParse({ ...VALID_BASE, rated: false });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.rated).toBe(false);
+  });
+
+  it('rechaza rated no-boolean', () => {
+    expect(createTournamentSchema.safeParse({ ...VALID_BASE, rated: 'yes' }).success).toBe(false);
+    expect(createTournamentSchema.safeParse({ ...VALID_BASE, rated: 1 }).success).toBe(false);
+  });
+
   // ── input completo válido ──────────────────────────────────
   it('valida un input completo realista', () => {
     const full = {

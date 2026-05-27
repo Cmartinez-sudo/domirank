@@ -42,9 +42,10 @@ type SummaryRow = {
 
 export function Step9Form({ userId }: { userId: string }) {
   const router = useRouter();
-  const { draft, clearDraft } = useTournamentDraft(userId);
+  const { draft, setField, clearDraft } = useTournamentDraft(userId);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const rated = draft.rated ?? true;
 
   const totalPlayers =
     (draft.pre_formed_pairs?.length ?? 0) * 2 +
@@ -117,6 +118,7 @@ export function Step9Form({ userId }: { userId: string }) {
         custom_capicua: draft.custom_capicua,
         participant_ids: draft.participant_ids ?? [],
         pre_formed_pairs: draft.pre_formed_pairs ?? [],
+        rated,
       };
 
       const result = await createTournament(input);
@@ -178,6 +180,23 @@ export function Step9Form({ userId }: { userId: string }) {
             </Link>
           ))}
         </div>
+
+        <label className="card mt-4 flex items-start gap-3 cursor-pointer hover:border-border-strong transition-colors">
+          <input
+            type="checkbox"
+            checked={rated}
+            onChange={(e) => setField({ rated: e.target.checked })}
+            className="accent-primary mt-1"
+          />
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold">Cuenta para el ranking global</div>
+            <div className="text-text-mute text-sm mt-1">
+              {rated
+                ? "Las partidas de este torneo afectan el Elo de los participantes."
+                : "Torneo amistoso: las partidas no modifican el ranking de nadie."}
+            </div>
+          </div>
+        </label>
 
         {error && (
           <div

@@ -107,6 +107,9 @@ export function NewMatchForm({
 
   const teamSize = format === "singles" ? 1 : 2;
 
+  // Toggle "amistosa" — la partida no afecta el Elo global
+  const [friendly, setFriendly] = useState(false);
+
   // Submit
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -185,6 +188,10 @@ export function NewMatchForm({
         team_a_players: teamA.map((p) => p.id),
         team_b_players: teamB.map((p) => p.id),
         tournament_id: presetTournamentId ?? null,
+        // Quick match: si el toggle "amistosa" está ON, no afecta el Elo.
+        // Si la partida viene de un torneo, el toggle se ignora — el server
+        // hereda tournaments.rated y este flag no llega.
+        rated: presetTournamentId ? undefined : !friendly,
       });
       if (!res.ok) {
         setError(res.error);
@@ -402,6 +409,23 @@ export function NewMatchForm({
         <div className="p-3 bg-danger/10 border border-danger/30 rounded-md text-danger text-sm">
           {error}
         </div>
+      )}
+
+      {!presetTournamentId && (
+        <label className="flex items-start gap-2.5 p-3 rounded-md border border-border bg-surface-2 cursor-pointer hover:border-border-strong transition-colors">
+          <input
+            type="checkbox"
+            checked={friendly}
+            onChange={(e) => setFriendly(e.target.checked)}
+            className="accent-primary mt-0.5"
+          />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium">Partida amistosa</div>
+            <div className="text-xs text-text-mute mt-0.5">
+              No afecta tu ranking ni el de tus oponentes.
+            </div>
+          </div>
+        </label>
       )}
 
       <div className="flex gap-3">
