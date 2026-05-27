@@ -223,24 +223,65 @@ export function AppShell({
                   href={it.href}
                   aria-current={active ? "page" : undefined}
                   aria-label={it.isCenter ? "Nueva partida" : undefined}
-                  className={`flex flex-col items-center justify-center gap-1 transition-all ${
+                  className={`group flex flex-col items-center justify-center gap-1 transition-all ${
                     it.isCenter ? "" : active ? "text-primary" : "text-text-mute"
                   }`}
                 >
                   {it.isCenter ? (
                     <span
-                      className="relative grid place-items-center w-[52px] h-[52px] rounded-full text-black -mt-8 transition-transform active:scale-95 overflow-visible"
+                      className="relative flex items-center justify-center -mt-7 transition-all duration-200 ease-out hover:scale-105 active:scale-95 active:[filter:drop-shadow(0_3px_4px_rgba(0,0,0,0.3))] group-focus-visible:[outline:2px_solid_#34d399] group-focus-visible:outline-offset-4 group-focus-visible:rounded-md"
+                      style={{
+                        filter:
+                          "drop-shadow(0 6px 8px rgba(0,0,0,0.35)) drop-shadow(0 2px 4px rgba(0,0,0,0.25))",
+                      }}
                     >
-                      <span
-                        className="absolute inset-0 rounded-full"
-                        style={{
-                          background: active
-                            ? "linear-gradient(135deg,#059669,#047857)"
-                            : "linear-gradient(135deg,#10b981,#059669)",
-                          boxShadow: "0 4px 20px rgba(16,185,129,.5)",
-                        }}
-                      />
-                      {it.icon}
+                      <svg
+                        width="52"
+                        height="34"
+                        viewBox="0 0 36 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        style={{ transform: "rotate(-15deg)" }}
+                        aria-hidden="true"
+                      >
+                        <defs>
+                          <linearGradient id="domino-tile-gradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10b981" />
+                            <stop offset="100%" stopColor="#059669" />
+                          </linearGradient>
+                        </defs>
+                        {/* Cuerpo de la ficha — verde DomiRank (emerald-500 → emerald-600) */}
+                        <rect
+                          x="0.5"
+                          y="0.5"
+                          width="35"
+                          height="23"
+                          rx="3"
+                          fill="url(#domino-tile-gradient)"
+                          stroke="rgba(0,0,0,0.25)"
+                          strokeWidth="0.5"
+                        />
+                        {/* Línea divisora central */}
+                        <line
+                          x1="18"
+                          y1="3"
+                          x2="18"
+                          y2="21"
+                          stroke="#1a1a1a"
+                          strokeWidth="0.6"
+                          strokeLinecap="round"
+                        />
+                        {/* Izquierda: 5 pips (X) */}
+                        <circle cx="5"  cy="6"  r="1.3" fill="#1a1a1a" />
+                        <circle cx="13" cy="6"  r="1.3" fill="#1a1a1a" />
+                        <circle cx="9"  cy="12" r="1.3" fill="#1a1a1a" />
+                        <circle cx="5"  cy="18" r="1.3" fill="#1a1a1a" />
+                        <circle cx="13" cy="18" r="1.3" fill="#1a1a1a" />
+                        {/* Derecha: 3 pips (diagonal) */}
+                        <circle cx="23" cy="6"  r="1.3" fill="#1a1a1a" />
+                        <circle cx="27" cy="12" r="1.3" fill="#1a1a1a" />
+                        <circle cx="31" cy="18" r="1.3" fill="#1a1a1a" />
+                      </svg>
                     </span>
                   ) : (
                     <span className={`relative transition-transform ${active ? "scale-110" : "opacity-50"}`}>
