@@ -56,6 +56,10 @@ html, body {
     @apply btn bg-surface-2 text-text hover:bg-surface-3 border border-border active:scale-[.97]
            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/15;
   }
+  .btn-secondary {
+    @apply btn bg-surface-2 text-text hover:bg-surface-3 border border-border active:scale-[.97]
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/15;
+  }
 
   /* Cards — rounder, more breathing room on mobile */
   .card {
