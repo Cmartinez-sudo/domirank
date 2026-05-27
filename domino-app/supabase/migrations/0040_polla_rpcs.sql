@@ -61,3 +61,112 @@ end;
 $$;
 
 grant execute on function public.calc_streak(uuid, uuid) to authenticated;
+
+-- ============================================================
+create or replace function public.polla_best_partner(
+  p_user_id uuid,
+  p_tournament_id uuid
+)
+returns table (
+  partner_id      uuid,
+  games_together  int,
+  wins_together   int,
+  win_pct         numeric
+)
+language sql
+security definer
+set search_path = public
+as $$
+  with v_season as (
+    select current_season as s from public.tournaments where id = p_tournament_id
+  ),
+  my_matches as (
+    select mp.match_id, mp.team, m.created_at,
+           (select sum(score) from public.match_players
+             where match_id = mp.match_id and team = mp.team) as my_team_score,
+           (select sum(score) from public.match_players
+             where match_id = mp.match_id and team <> mp.team) as opp_team_score
+      from public.match_players mp
+      join public.matches m on m.id = mp.match_id
+      join public.tournament_pairings tp on tp.match_id = mp.match_id
+     where mp.user_id = p_user_id
+       and tp.tournament_id = p_tournament_id
+       and tp.season = (select s from v_season)
+       and m.status = 'confirmed'
+  ),
+  partner_pairs as (
+    select pmp.user_id as partner_id,
+           mm.my_team_score > mm.opp_team_score as won
+      from my_matches mm
+      join public.match_players pmp
+        on pmp.match_id = mm.match_id
+       and pmp.team = mm.team
+       and pmp.user_id <> p_user_id
+  )
+  select partner_id,
+         count(*)::int as games_together,
+         count(*) filter (where won)::int as wins_together,
+         case when count(*) > 0
+              then round(count(*) filter (where won) * 100.0 / count(*), 1)
+              else 0 end as win_pct
+    from partner_pairs
+   group by partner_id
+   order by wins_together desc nulls last, games_together desc nulls last
+   limit 1;
+$$;
+
+grant execute on function public.polla_best_partner(uuid, uuid) to authenticated;
+
+-- ============================================================
+create or replace function public.polla_worst_rival(
+  p_user_id uuid,
+  p_tournament_id uuid
+)
+returns table (
+  rival_id         uuid,
+  games_against    int,
+  wins_for_rival   int,
+  win_pct          numeric
+)
+language sql
+security definer
+set search_path = public
+as $$
+  with v_season as (
+    select current_season as s from public.tournaments where id = p_tournament_id
+  ),
+  my_matches as (
+    select mp.match_id, mp.team,
+           (select sum(score) from public.match_players
+             where match_id = mp.match_id and team = mp.team) as my_team_score,
+           (select sum(score) from public.match_players
+             where match_id = mp.match_id and team <> mp.team) as opp_team_score
+      from public.match_players mp
+      join public.matches m on m.id = mp.match_id
+      join public.tournament_pairings tp on tp.match_id = mp.match_id
+     where mp.user_id = p_user_id
+       and tp.tournament_id = p_tournament_id
+       and tp.season = (select s from v_season)
+       and m.status = 'confirmed'
+  ),
+  rival_pairs as (
+    select rmp.user_id as rival_id,
+           mm.my_team_score < mm.opp_team_score as rival_won
+      from my_matches mm
+      join public.match_players rmp
+        on rmp.match_id = mm.match_id
+       and rmp.team <> mm.team
+  )
+  select rival_id,
+         count(*)::int as games_against,
+         count(*) filter (where rival_won)::int as wins_for_rival,
+         case when count(*) > 0
+              then round(count(*) filter (where rival_won) * 100.0 / count(*), 1)
+              else 0 end as win_pct
+    from rival_pairs
+   group by rival_id
+   order by wins_for_rival desc nulls last, games_against desc nulls last
+   limit 1;
+$$;
+
+grant execute on function public.polla_worst_rival(uuid, uuid) to authenticated;
