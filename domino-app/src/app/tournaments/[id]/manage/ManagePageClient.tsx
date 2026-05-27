@@ -15,6 +15,7 @@ import {
 import { startTournament, setTournamentStatus } from "@/lib/tournaments";
 import { FinalizeTournamentDialog } from "@/components/FinalizeTournamentDialog";
 import type { SearchedUser } from "@/lib/users";
+import type { InscriptionMode } from "@/types/polla";
 
 type MiniUser = {
   id: string;
@@ -43,7 +44,7 @@ type Tournament = {
   name: string;
   status: string;
   created_by: string;
-  inscription_mode: string;
+  inscription_mode: InscriptionMode;
   max_players: number;
   format: string;
   modality: string;
@@ -67,7 +68,9 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
+  const isPolla = tournament.inscription_mode === "polla";
   const isPreFormed = tournament.inscription_mode === "pre_formed";
+  const isManual = tournament.inscription_mode === "individual_manual";
   const isOpen = tournament.status === "open";
 
   const pairedIds = new Set(pairs.flatMap((p) => [p.user_a_id, p.user_b_id]));
@@ -84,7 +87,11 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
 
   // Verificar si se puede iniciar el torneo
   const expectedPairs = Math.floor(players.length / 2);
-  const canStart = isOpen && pairs.length >= expectedPairs && unpairedPlayers.length === 0;
+  const canStart = isOpen && (
+    isPolla
+      ? players.length === tournament.max_players
+      : pairs.length >= expectedPairs && unpairedPlayers.length === 0
+  );
 
   function notify(message: string) {
     setMsg(message);
@@ -185,7 +192,7 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
           <p className="text-text-mute text-sm">Inscritos</p>
           <p className="text-2xl font-bold">{players.length} <span className="text-text-mute text-base font-normal">/ {tournament.max_players}</span></p>
         </div>
-        {isPreFormed && (
+        {isPreFormed && !isPolla && (
           <div className="text-right">
             <p className="text-text-mute text-sm">Parejas</p>
             <p className="text-2xl font-bold">{pairs.length}</p>
@@ -194,7 +201,7 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
       </div>
 
       {/* Parejas formadas */}
-      {isPreFormed && pairs.length > 0 && (
+      {isPreFormed && !isPolla && pairs.length > 0 && (
         <section className="card p-0 overflow-hidden">
           <h2 className="px-4 py-3 border-b border-border font-semibold text-sm">Parejas formadas</h2>
           <div className="divide-y divide-border/50">
@@ -231,7 +238,7 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
       )}
 
       {/* Jugadores sin pareja */}
-      {isPreFormed && unpairedPlayers.length > 0 && (
+      {isPreFormed && !isPolla && unpairedPlayers.length > 0 && (
         <section className="card p-0 overflow-hidden">
           <h2 className="px-4 py-3 border-b border-border font-semibold text-sm">Sin partner</h2>
           <div className="divide-y divide-border/50">
@@ -279,7 +286,7 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
       )}
 
       {/* Modo individual_manual: lista de todos los jugadores */}
-      {!isPreFormed && players.length > 0 && (
+      {isManual && players.length > 0 && (
         <section className="card p-0 overflow-hidden">
           <h2 className="px-4 py-3 border-b border-border font-semibold text-sm">
             Jugadores inscritos ({players.length})
@@ -339,7 +346,7 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
       )}
 
       {/* Acciones para agregar */}
-      {isOpen && !showAddPair && !showAddPlayer && (
+      {isOpen && !isPolla && !showAddPair && !showAddPlayer && (
         <div className="flex gap-2 flex-wrap">
           {isPreFormed && (
             <button
@@ -389,13 +396,52 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
       )}
 
       {/* Asignación de parejas manual (individual_manual) */}
-      {!isPreFormed && isOpen && players.length >= 4 && (
+      {isManual && isOpen && players.length >= 4 && (
         <Link
           href={`/tournaments/${tournament.id}/manage/pair`}
           className="btn-ghost w-full text-center block"
         >
           Asignar parejas manualmente →
         </Link>
+      )}
+
+      {/* Polla: roster de inscritos */}
+      {isPolla && (
+        <section className="card space-y-3">
+          <div className="text-text-mute text-xs uppercase tracking-wide">
+            Inscritos: {players.length} / {tournament.max_players}
+          </div>
+          <div className="divide-y divide-border">
+            {players.map((p) => (
+              <div key={p.id} className="flex items-center justify-between py-2.5">
+                <span className="flex items-center gap-2">
+                  <Avatar player={p} size={28} />
+                  <span className="font-medium">{p.display_name ?? p.username}</span>
+                </span>
+                {isOpen && p.id !== tournament.created_by && (
+                  <button
+                    type="button"
+                    // TODO: handler removeFromTournament — funcionalidad pendiente.
+                    onClick={() => setErr("Quitar jugador: funcionalidad pendiente")}
+                    className="text-text-mute text-sm hover:text-danger"
+                  >
+                    Quitar
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          {players.length < tournament.max_players && isOpen && (
+            <button
+              type="button"
+              // TODO: handler openAddPlayerModal — funcionalidad pendiente.
+              onClick={() => setErr("Agregar jugador: funcionalidad pendiente")}
+              className="btn-secondary w-full"
+            >
+              + Agregar jugador
+            </button>
+          )}
+        </section>
       )}
 
       {/* Botón iniciar torneo */}
@@ -406,6 +452,8 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
             <p className="text-text-mute text-sm mt-0.5">
               {canStart
                 ? "Todo listo. Todos los jugadores tienen pareja."
+                : isPolla
+                ? `Faltan ${tournament.max_players - players.length} jugadores.`
                 : isPreFormed
                 ? `Faltan parejas: ${unpairedPlayers.length} jugadores sin partner.`
                 : `Asigná todas las parejas primero.`}
