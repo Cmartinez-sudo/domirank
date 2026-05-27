@@ -14,7 +14,7 @@ export const createTournamentSchema = z.object({
   custom_goal: z.number().int().min(50).max(500).optional(),
   custom_capicua: z.number().int().min(10).max(100).optional(),
   max_players: z.number().int().min(4).max(64),
-  inscription_mode: z.enum(["pre_formed", "individual_manual"]),
+  inscription_mode: z.enum(["pre_formed", "individual_manual", "polla"]),
   /** IDs de jugadores individuales a pre-inscribir */
   participant_ids: z.array(z.string().uuid()).optional(),
   /** Parejas completas pre-formadas */

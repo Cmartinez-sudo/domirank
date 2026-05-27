@@ -215,6 +215,23 @@ describe('createTournamentSchema', () => {
     }).success).toBe(false);
   });
 
+  // ── Polla inscription_mode ─────────────────────────────────
+  it("acepta inscription_mode='polla' con format='polla'", () => {
+    const parsed = createTournamentSchema.safeParse({
+      ...VALID_BASE,
+      format: "polla",
+      inscription_mode: "polla",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.inscription_mode).toBe("polla");
+  });
+
+  it("acepta los 3 inscription_modes válidos", () => {
+    for (const m of ["pre_formed", "individual_manual", "polla"] as const) {
+      expect(createTournamentSchema.safeParse({ ...VALID_BASE, inscription_mode: m }).success).toBe(true);
+    }
+  });
+
   // ── input completo válido ──────────────────────────────────
   it('valida un input completo realista', () => {
     const full = {
