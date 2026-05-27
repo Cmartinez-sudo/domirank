@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { WizardStepLayout } from "@/components/wizard/WizardStepLayout";
 import { useTournamentDraft } from "@/hooks/useTournamentDraft";
+import { PollaConfigStep } from "@/components/polla/PollaConfigStep";
 
 type InscriptionMode = "pre_formed" | "individual_manual";
 
@@ -53,51 +54,59 @@ export function Step6Form({ userId }: { userId: string }) {
     router.push("/tournaments/new/step-7");
   }
 
+  const isPolla = draft.format === "polla";
+
   return (
     <WizardStepLayout
       currentStep={6}
       primaryAction={{ label: "Continuar", onClick: handleContinue }}
     >
       <div className="max-w-2xl mx-auto w-full px-4 pt-8">
-        <h1 className="text-2xl font-bold mb-2">¿Cómo se inscriben los jugadores?</h1>
-        <p className="text-text-mute mb-8">
-          Define si los jugadores se organizan en parejas antes de empezar o si lo haces tú después.
-        </p>
+        {isPolla ? (
+          <PollaConfigStep userId={userId} />
+        ) : (
+          <>
+            <h1 className="text-2xl font-bold mb-2">¿Cómo se inscriben los jugadores?</h1>
+            <p className="text-text-mute mb-8">
+              Define si los jugadores se organizan en parejas antes de empezar o si lo haces tú después.
+            </p>
 
-        <div className="space-y-3">
-          {OPTIONS.map((opt) => {
-            const selected = mode === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setMode(opt.value)}
-                className={`w-full flex items-start gap-4 p-4 rounded-2xl border text-left transition-all ${
-                  selected
-                    ? "bg-primary/10 border-primary/50 shadow-sm"
-                    : "bg-surface-2 border-border hover:border-border-strong hover:bg-surface-3"
-                }`}
-              >
-                <span className={`mt-0.5 shrink-0 ${selected ? "text-primary" : "text-text-mute"}`}>
-                  {opt.icon}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className={`font-semibold ${selected ? "text-primary" : "text-text"}`}>
-                    {opt.label}
-                  </div>
-                  <div className="text-text-mute text-sm mt-0.5">{opt.desc}</div>
-                </div>
-                {selected && (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-                    strokeLinejoin="round" className="text-primary shrink-0 mt-0.5">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
-              </button>
-            );
-          })}
-        </div>
+            <div className="space-y-3">
+              {OPTIONS.map((opt) => {
+                const selected = mode === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setMode(opt.value)}
+                    className={`w-full flex items-start gap-4 p-4 rounded-2xl border text-left transition-all ${
+                      selected
+                        ? "bg-primary/10 border-primary/50 shadow-sm"
+                        : "bg-surface-2 border-border hover:border-border-strong hover:bg-surface-3"
+                    }`}
+                  >
+                    <span className={`mt-0.5 shrink-0 ${selected ? "text-primary" : "text-text-mute"}`}>
+                      {opt.icon}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className={`font-semibold ${selected ? "text-primary" : "text-text"}`}>
+                        {opt.label}
+                      </div>
+                      <div className="text-text-mute text-sm mt-0.5">{opt.desc}</div>
+                    </div>
+                    {selected && (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                        strokeLinejoin="round" className="text-primary shrink-0 mt-0.5">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
     </WizardStepLayout>
   );
