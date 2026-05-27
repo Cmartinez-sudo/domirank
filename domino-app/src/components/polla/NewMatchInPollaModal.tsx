@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createNewMatchInPolla } from "@/lib/polla-actions";
+import { useModalA11y } from "@/hooks/useModalA11y";
 
 type Props = {
   tournamentId: string;
@@ -18,6 +19,7 @@ export function NewMatchInPollaModal({
   tournamentId, rosterUserIds, userNames, currentUserId, onClose,
 }: Props) {
   const router = useRouter();
+  const dialogRef = useModalA11y({ onClose });
   const [slots, setSlots] = useState<Record<Slot, string | null>>({
     a1: currentUserId, a2: null, b1: null, b2: null,
   });
@@ -53,16 +55,18 @@ export function NewMatchInPollaModal({
 
   return (
     <div
-      role="dialog"
-      aria-modal="true"
       className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={onClose}
     >
       <div
-        className="bg-bg w-full sm:max-w-md sm:rounded-2xl border-t sm:border border-border p-5 space-y-4"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-match-title"
+        className="bg-bg w-full sm:max-w-md sm:rounded-2xl border-t sm:border border-border p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] space-y-4 animate-slide-up-fade"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold">Nueva partida en la polla</h2>
+        <h2 id="new-match-title" className="text-lg font-semibold">Nueva partida en la polla</h2>
 
         <TeamPicker
           label="Pareja A"
@@ -87,7 +91,7 @@ export function NewMatchInPollaModal({
         <p className="text-text-mute text-xs">Cualquier combinación está permitida.</p>
 
         {error && (
-          <div className="p-3 bg-danger/10 border border-danger/30 rounded text-danger text-sm">
+          <div role="alert" className="p-3 bg-danger/10 border border-danger/30 rounded text-danger text-sm">
             {error}
           </div>
         )}
@@ -107,7 +111,12 @@ export function NewMatchInPollaModal({
             className="btn-primary flex-1"
             disabled={!ready || pending}
           >
-            {pending ? "Creando…" : "Empezar partida →"}
+            {pending ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin-fast" aria-hidden />
+                Creando…
+              </span>
+            ) : "Empezar partida →"}
           </button>
         </div>
       </div>
@@ -135,7 +144,7 @@ function TeamPicker({
             key={slot}
             value={slotValues[slot] ?? ""}
             onChange={(e) => onSet(slot, e.target.value || null)}
-            className="card p-2.5 text-sm w-full"
+            className="card p-2.5 text-sm w-full min-h-[44px]"
             aria-label={`${label} jugador ${slot.endsWith("1") ? "1" : "2"}`}
           >
             <option value="">— Elegir —</option>
