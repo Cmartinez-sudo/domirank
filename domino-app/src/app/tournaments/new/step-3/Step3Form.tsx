@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { WizardStepLayout } from "@/components/wizard/WizardStepLayout";
 import { useTournamentDraft } from "@/hooks/useTournamentDraft";
 
-type Format = "single_elim" | "round_robin" | "swiss";
+type Format = "single_elim" | "round_robin" | "swiss" | "polla";
 
 const OPTIONS: Array<{
   value: Format;
@@ -60,13 +60,28 @@ const OPTIONS: Array<{
     desc: "Cada ronda enfrenta a equipos con score similar. Sin eliminación.",
     detail: "8-64+ jugadores · Ideal para grupos grandes",
   },
+  {
+    value: "polla",
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
+    label: "Polla",
+    desc: "Liga continua entre amigos. Pairings manuales, sin fecha de fin.",
+    detail: "4-64 jugadores · Ideal para grupos de amigos",
+  },
 ];
 
 export function Step3Form({ userId }: { userId: string }) {
   const router = useRouter();
   const { draft, setField } = useTournamentDraft(userId);
   const [format, setFormat] = useState<Format>(
-    (draft.format as Format) ?? "swiss",
+    (draft.format as Format | undefined) ?? "swiss",
   );
 
   function handleContinue() {
@@ -112,8 +127,11 @@ export function Step3Form({ userId }: { userId: string }) {
                   {opt.icon}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className={`font-semibold ${selected ? "text-primary" : "text-text"}`}>
+                  <div className={`font-semibold ${selected ? "text-primary" : "text-text"} flex items-center gap-1 flex-wrap`}>
                     {opt.label}
+                    {opt.value === "polla" && (
+                      <span className="badge bg-primary/15 text-primary text-[10px] ml-2">🇻🇪 Popular en Venezuela</span>
+                    )}
                   </div>
                   <div className="text-text-mute text-sm mt-0.5">{opt.desc}</div>
                   <div className="text-text-mute text-xs mt-1 font-medium">{opt.detail}</div>
