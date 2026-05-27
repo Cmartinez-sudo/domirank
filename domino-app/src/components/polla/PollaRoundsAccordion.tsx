@@ -1,23 +1,10 @@
 "use client";
 
 import { useState } from "react";
-
-type MatchPreview = {
-  match_id: string;
-  team_a_user_ids: string[];
-  team_b_user_ids: string[];
-  team_a_score: number;
-  team_b_score: number;
-  status: "pending" | "confirmed" | "in_progress";
-};
-
-type RoundGroup = {
-  round_number: number;
-  matches: MatchPreview[];
-};
+import type { PollaMatchPreview, PollaRoundGroup } from "@/types/polla";
 
 type Props = {
-  rounds: RoundGroup[];
+  rounds: PollaRoundGroup[];
   /** ID de la ronda actual para mantenerla expandida por default */
   currentRoundNumber: number;
   /** Map de user_id → display_name, usado para renderizar pairings */
@@ -28,7 +15,7 @@ function pairingLabel(userIds: string[], userNames: Record<string, string>): str
   return userIds.map((id) => userNames[id] ?? "?").join(" & ");
 }
 
-function statusIcon(status: MatchPreview["status"]): string {
+function statusIcon(status: PollaMatchPreview["status"]): string {
   switch (status) {
     case "confirmed":   return "✅";
     case "in_progress": return "⏳";
@@ -61,6 +48,7 @@ export function PollaRoundsAccordion({ rounds, currentRoundNumber, userNames }: 
           <div key={r.round_number} className="border-b border-border/30 last:border-0">
             <button
               type="button"
+              aria-expanded={isOpen}
               onClick={() => toggle(r.round_number)}
               className="w-full px-3 py-3 flex items-center justify-between text-left hover:bg-surface-2 transition-colors"
             >
@@ -68,15 +56,19 @@ export function PollaRoundsAccordion({ rounds, currentRoundNumber, userNames }: 
                 Ronda {r.round_number}
                 {isCurrent && <span className="text-text-mute text-xs ml-2 font-normal">(actual)</span>}
               </div>
-              <div className="text-text-mute text-sm">{isOpen ? "▾" : "▸"}</div>
+              <div className="text-text-mute text-sm" aria-hidden="true">{isOpen ? "▾" : "▸"}</div>
             </button>
             {isOpen && (
               <div className="px-3 pb-3 space-y-1.5">
                 {r.matches.map((m) => (
                   <div key={m.match_id} className="flex items-center gap-2 text-sm">
-                    <span className="text-base">{statusIcon(m.status)}</span>
+                    <span className="text-base" aria-hidden="true">{statusIcon(m.status)}</span>
                     <span className="flex-1 truncate">
-                      {pairingLabel(m.team_a_user_ids, userNames)} {m.status === "confirmed" && `${m.team_a_score} — ${m.team_b_score}`} {pairingLabel(m.team_b_user_ids, userNames)}
+                      {pairingLabel(m.team_a_user_ids, userNames)}
+                      {m.status === "confirmed"
+                        ? ` ${m.team_a_score} — ${m.team_b_score} `
+                        : " vs "}
+                      {pairingLabel(m.team_b_user_ids, userNames)}
                     </span>
                   </div>
                 ))}

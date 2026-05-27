@@ -1,5 +1,3 @@
-"use client";
-
 import type { PollaStandingsRow } from "@/types/polla";
 
 type Props = {

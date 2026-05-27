@@ -1,5 +1,3 @@
-"use client";
-
 type Props = {
   bestPartnerName: string | null;
   bestPartnerWins: number;
