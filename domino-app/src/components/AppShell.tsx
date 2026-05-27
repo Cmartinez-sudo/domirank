@@ -232,7 +232,7 @@ export function AppShell({
                       className="relative flex items-center justify-center -mt-7 transition-all duration-200 ease-out hover:scale-105 active:scale-95 active:[filter:drop-shadow(0_3px_4px_rgba(0,0,0,0.3))] group-focus-visible:[outline:2px_solid_#34d399] group-focus-visible:outline-offset-4 group-focus-visible:rounded-md"
                       style={{
                         filter:
-                          "drop-shadow(0 6px 8px rgba(0,0,0,0.35)) drop-shadow(0 2px 4px rgba(0,0,0,0.25)) drop-shadow(0 4px 12px rgba(16,185,129,0.25))",
+                          "drop-shadow(0 6px 8px rgba(0,0,0,0.35)) drop-shadow(0 2px 4px rgba(0,0,0,0.25))",
                       }}
                     >
                       <svg
@@ -246,11 +246,11 @@ export function AppShell({
                       >
                         <defs>
                           <linearGradient id="domino-tile-gradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#f8fafc" />
-                            <stop offset="100%" stopColor="#e2e8f0" />
+                            <stop offset="0%" stopColor="#10b981" />
+                            <stop offset="100%" stopColor="#059669" />
                           </linearGradient>
                         </defs>
-                        {/* Cuerpo de la ficha — marfil con gradient sutil */}
+                        {/* Cuerpo de la ficha — verde DomiRank (emerald-500 → emerald-600) */}
                         <rect
                           x="0.5"
                           y="0.5"
@@ -258,7 +258,7 @@ export function AppShell({
                           height="23"
                           rx="3"
                           fill="url(#domino-tile-gradient)"
-                          stroke="rgba(0,0,0,0.15)"
+                          stroke="rgba(0,0,0,0.25)"
                           strokeWidth="0.5"
                         />
                         {/* Línea divisora central */}
