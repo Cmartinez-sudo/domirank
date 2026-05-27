@@ -13,6 +13,9 @@ export function PollaConfigStep({ userId }: Props) {
       <div>
         <h2 className="text-lg font-semibold mb-1">Configuración de la polla</h2>
         <p className="text-text-mute text-sm">¿Tiene fecha de fin?</p>
+        <p className="text-text-mute text-sm mt-1">
+          Las parejas se forman al armar cada partida.
+        </p>
       </div>
 
       <div className="space-y-2">

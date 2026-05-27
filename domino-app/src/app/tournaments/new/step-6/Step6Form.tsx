@@ -6,7 +6,7 @@ import { WizardStepLayout } from "@/components/wizard/WizardStepLayout";
 import { useTournamentDraft } from "@/hooks/useTournamentDraft";
 import { PollaConfigStep } from "@/components/polla/PollaConfigStep";
 
-type InscriptionMode = "pre_formed" | "individual_manual";
+type InscriptionMode = "pre_formed" | "individual_manual" | "polla";
 
 const OPTIONS: Array<{
   value: InscriptionMode;
@@ -50,7 +50,8 @@ export function Step6Form({ userId }: { userId: string }) {
   );
 
   function handleContinue() {
-    setField({ inscription_mode: mode, currentStep: 7 });
+    const inscription_mode = draft.format === "polla" ? "polla" : mode;
+    setField({ inscription_mode, currentStep: 7 });
     router.push("/tournaments/new/step-7");
   }
 

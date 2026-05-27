@@ -4,7 +4,8 @@ export type TournamentFormat =
   | "swiss"
   | "single_elim"
   | "double_elim"
-  | "points_league";
+  | "points_league"
+  | "polla";
 
 export type TournamentFormatInfo = {
   code: TournamentFormat;
@@ -151,6 +152,28 @@ export const TOURNAMENT_FORMATS: Record<TournamentFormat, TournamentFormatInfo> 
     maxPlayers: 50,
     durationHint: "1-8 semanas",
     fairness: 4,
+    autopairing: false,
+  },
+  polla: {
+    code: "polla",
+    name: "Polla",
+    icon: "🎯",
+    short: "Partidas libres — parejas se arman en cada match",
+    description:
+      "Formato libre donde las parejas se forman al crear cada partida. Sin bracket ni rondas fijas. Los standings reflejan el desempeño acumulado de cada jugador.",
+    pros: [
+      "Máxima flexibilidad en la formación de parejas",
+      "Ideal para grupos que juegan de forma continua",
+      "Sin restricciones de rondas ni brackets",
+    ],
+    cons: [
+      "No define un ganador único por eliminación",
+      "Requiere organización manual de cada partida",
+    ],
+    minPlayers: 4,
+    maxPlayers: 64,
+    durationHint: "Indefinido",
+    fairness: 3,
     autopairing: false,
   },
 };
