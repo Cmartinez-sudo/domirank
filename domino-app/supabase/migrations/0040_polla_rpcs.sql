@@ -170,3 +170,89 @@ as $$
 $$;
 
 grant execute on function public.polla_worst_rival(uuid, uuid) to authenticated;
+
+-- ============================================================
+create or replace function public.polla_standings(p_tournament_id uuid)
+returns table (
+  user_id              uuid,
+  username             text,
+  display_name         text,
+  avatar_url           text,
+  total_points         int,
+  wins                 int,
+  losses               int,
+  win_pct              int,
+  games_played         int,
+  current_streak       text,
+  best_partner_id      uuid,
+  best_partner_name    text,
+  worst_rival_id       uuid,
+  worst_rival_name     text
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  return query
+  with v_season as (
+    select current_season as s from public.tournaments where id = p_tournament_id
+  ),
+  player_matches as (
+    select mp.user_id, mp.team, mp.score, mp.match_id,
+           (select sum(score) from public.match_players
+             where match_id = mp.match_id and team = mp.team) as my_team_score,
+           (select sum(score) from public.match_players
+             where match_id = mp.match_id and team <> mp.team) as opp_team_score
+      from public.match_players mp
+      join public.matches m on m.id = mp.match_id
+      join public.tournament_pairings tp on tp.match_id = mp.match_id
+     where tp.tournament_id = p_tournament_id
+       and tp.season = (select s from v_season)
+       and m.status = 'confirmed'
+  ),
+  aggregated as (
+    select pm.user_id,
+           sum(pm.score)::int as total_points,
+           count(*) filter (where pm.my_team_score > pm.opp_team_score)::int as wins,
+           count(*) filter (where pm.my_team_score < pm.opp_team_score)::int as losses,
+           count(*)::int as games_played,
+           case when count(*) > 0
+                then round(count(*) filter (where pm.my_team_score > pm.opp_team_score) * 100.0 / count(*))::int
+                else 0 end as win_pct
+      from player_matches pm
+     group by pm.user_id
+  )
+  select tp.user_id,
+         p.username,
+         p.display_name,
+         p.avatar_url,
+         coalesce(a.total_points, 0)  as total_points,
+         coalesce(a.wins, 0)          as wins,
+         coalesce(a.losses, 0)        as losses,
+         coalesce(a.win_pct, 0)       as win_pct,
+         coalesce(a.games_played, 0)  as games_played,
+         public.calc_streak(tp.user_id, p_tournament_id) as current_streak,
+         (select bp.partner_id  from public.polla_best_partner(tp.user_id, p_tournament_id) bp) as best_partner_id,
+         (select p2.display_name from public.profiles p2
+           where p2.id = (select bp.partner_id from public.polla_best_partner(tp.user_id, p_tournament_id) bp)
+         ) as best_partner_name,
+         (select wr.rival_id    from public.polla_worst_rival(tp.user_id, p_tournament_id) wr) as worst_rival_id,
+         (select p3.display_name from public.profiles p3
+           where p3.id = (select wr.rival_id from public.polla_worst_rival(tp.user_id, p_tournament_id) wr)
+         ) as worst_rival_name
+    from public.tournament_players tp
+    join public.profiles p on p.id = tp.user_id
+    left join aggregated a on a.user_id = tp.user_id
+   where tp.tournament_id = p_tournament_id
+   order by total_points desc, wins desc;
+end;
+$$;
+
+grant execute on function public.polla_standings(uuid) to authenticated;
+
+-- ============================================================
+-- VERIFICACIÓN POST-MIGRACIÓN
+--   select * from public.polla_standings('<tournament_id>'::uuid);
+--   select public.calc_streak('<user_id>', '<tournament_id>');
+-- ============================================================
