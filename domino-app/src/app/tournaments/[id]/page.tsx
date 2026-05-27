@@ -112,6 +112,7 @@ export default async function TournamentDetail({
         }}
         currentUserId={user!.id}
         standings={(standings ?? []) as PollaStandingsRow[]}
+        rosterUserIds={(players ?? []).map((p) => p.user_id)}
         rounds={rounds}
         totalMatches={(pairings ?? []).length}
         playerCount={playerCount}

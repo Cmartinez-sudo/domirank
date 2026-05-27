@@ -20,6 +20,9 @@ type Props = {
   };
   currentUserId: string;
   standings: PollaStandingsRow[];
+  /** Roster real desde tournament_players. NO derivar de standings — éste
+   *  puede venir vacío si la polla recién inició y nadie jugó todavía. */
+  rosterUserIds: string[];
   rounds: PollaRoundGroup[];
   totalMatches: number;
   playerCount: number;
@@ -27,7 +30,7 @@ type Props = {
 };
 
 export function PollaHomePage({
-  tournament, currentUserId, standings, rounds, totalMatches, playerCount, userNames,
+  tournament, currentUserId, standings, rosterUserIds, rounds, totalMatches, playerCount, userNames,
 }: Props) {
   const [showNewMatchModal, setShowNewMatchModal] = useState(false);
   const [showNewSeasonDialog, setShowNewSeasonDialog] = useState(false);
@@ -126,7 +129,7 @@ export function PollaHomePage({
       {showNewMatchModal && (
         <NewMatchInPollaModal
           tournamentId={tournament.id}
-          rosterUserIds={standings.map((s) => s.user_id)}
+          rosterUserIds={rosterUserIds}
           userNames={userNames}
           currentUserId={currentUserId}
           onClose={() => setShowNewMatchModal(false)}
