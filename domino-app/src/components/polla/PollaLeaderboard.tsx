@@ -15,39 +15,46 @@ export function PollaLeaderboard({ rows, currentUserId }: Props) {
   }
 
   return (
-    <div className="card p-0 overflow-hidden">
-      <div className="grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto] gap-2 px-3 py-2 text-text-mute text-xs font-medium uppercase border-b border-border">
-        <div>#</div>
-        <div>Jugador</div>
-        <div className="text-right">Pts</div>
-        <div className="text-right">W</div>
-        <div className="text-right">L</div>
-        <div className="text-right">%</div>
-        <div className="text-right">Racha</div>
+    <div className="card p-0 overflow-hidden" role="table" aria-label="Leaderboard de la polla">
+      <div role="rowgroup">
+        <div
+          role="row"
+          className="grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto] gap-2 px-3 py-2 text-text-mute text-xs font-medium uppercase border-b border-border"
+        >
+          <div role="columnheader" aria-label="Posición">#</div>
+          <div role="columnheader">Jugador</div>
+          <div role="columnheader" aria-label="Puntos" className="text-right">Pts</div>
+          <div role="columnheader" aria-label="Victorias" className="text-right">W</div>
+          <div role="columnheader" aria-label="Derrotas" className="text-right">L</div>
+          <div role="columnheader" aria-label="Porcentaje de victorias" className="text-right">%</div>
+          <div role="columnheader" aria-label="Racha actual" className="text-right">Racha</div>
+        </div>
       </div>
-
-      {rows.map((row, i) => {
-        const isCurrent = row.user_id === currentUserId;
-        return (
-          <div
-            key={row.user_id}
-            data-user-id={row.user_id}
-            className={`grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto] gap-2 px-3 py-2.5 text-sm border-b border-border/30 last:border-0 ${
-              isCurrent ? "bg-primary/10" : ""
-            }`}
-          >
-            <div className="font-semibold text-text-mute">{i + 1}</div>
-            <div data-testid="player-name" className="font-medium truncate">
-              {row.display_name ?? row.username}
+      <div role="rowgroup">
+        {rows.map((row, i) => {
+          const isCurrent = row.user_id === currentUserId;
+          return (
+            <div
+              key={row.user_id}
+              role="row"
+              data-user-id={row.user_id}
+              className={`grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto] gap-2 px-3 py-3 text-sm border-b border-border/30 last:border-0 ${
+                isCurrent ? "bg-primary/10" : ""
+              }`}
+            >
+              <div role="cell" className="font-semibold text-text-mute">{i + 1}</div>
+              <div role="cell" data-testid="player-name" className="font-medium truncate">
+                {row.display_name ?? row.username}
+              </div>
+              <div role="cell" className="text-right [font-variant-numeric:tabular-nums]">{row.total_points}</div>
+              <div role="cell" className="text-right [font-variant-numeric:tabular-nums]">{row.wins}</div>
+              <div role="cell" className="text-right [font-variant-numeric:tabular-nums]">{row.losses}</div>
+              <div role="cell" className="text-right [font-variant-numeric:tabular-nums]">{row.win_pct}%</div>
+              <div role="cell" className="text-right [font-variant-numeric:tabular-nums] text-xs">{row.current_streak}</div>
             </div>
-            <div className="text-right font-mono">{row.total_points}</div>
-            <div className="text-right">{row.wins}</div>
-            <div className="text-right">{row.losses}</div>
-            <div className="text-right">{row.win_pct}%</div>
-            <div className="text-right font-mono text-xs">{row.current_streak}</div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
