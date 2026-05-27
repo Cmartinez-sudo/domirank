@@ -15,11 +15,36 @@ function pairingLabel(userIds: string[], userNames: Record<string, string>): str
   return userIds.map((id) => userNames[id] ?? "?").join(" & ");
 }
 
-function statusIcon(status: PollaMatchPreview["status"]): string {
+function statusBadge(status: PollaMatchPreview["status"]): JSX.Element {
   switch (status) {
-    case "confirmed":   return "✅";
-    case "in_progress": return "⏳";
-    default:            return "⌛";
+    case "confirmed":
+      return (
+        <>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary flex-shrink-0" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span className="sr-only">Confirmada</span>
+        </>
+      );
+    case "in_progress":
+      return (
+        <>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-warning flex-shrink-0" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <span className="sr-only">En curso</span>
+        </>
+      );
+    default:
+      return (
+        <>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-text-mute flex-shrink-0" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+          </svg>
+          <span className="sr-only">Pendiente</span>
+        </>
+      );
   }
 }
 
@@ -49,8 +74,9 @@ export function PollaRoundsAccordion({ rounds, currentRoundNumber, userNames }: 
             <button
               type="button"
               aria-expanded={isOpen}
+              aria-controls={`polla-round-${r.round_number}`}
               onClick={() => toggle(r.round_number)}
-              className="w-full px-3 py-3 flex items-center justify-between text-left hover:bg-surface-2 transition-colors"
+              className="w-full px-3 py-3 flex items-center justify-between text-left hover:bg-surface-2 active:bg-surface-3 transition-colors"
             >
               <div className="font-semibold">
                 Ronda {r.round_number}
@@ -59,10 +85,10 @@ export function PollaRoundsAccordion({ rounds, currentRoundNumber, userNames }: 
               <div className="text-text-mute text-sm" aria-hidden="true">{isOpen ? "▾" : "▸"}</div>
             </button>
             {isOpen && (
-              <div className="px-3 pb-3 space-y-1.5">
+              <div id={`polla-round-${r.round_number}`} role="region" aria-label={`Ronda ${r.round_number}`} className="px-3 pb-3 space-y-1.5">
                 {r.matches.map((m) => (
                   <div key={m.match_id} className="flex items-center gap-2 text-sm">
-                    <span className="text-base" aria-hidden="true">{statusIcon(m.status)}</span>
+                    <span className="flex items-center">{statusBadge(m.status)}</span>
                     <span className="flex-1 truncate">
                       {pairingLabel(m.team_a_user_ids, userNames)}
                       {m.status === "confirmed"
