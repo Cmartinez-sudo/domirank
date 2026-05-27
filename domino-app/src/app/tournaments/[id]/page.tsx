@@ -8,6 +8,8 @@ import { formatInfo } from "@/lib/tournament-formats";
 import { SecondaryPageShell } from "@/components/SecondaryPageShell";
 import { BACK_FALLBACKS } from "@/lib/back-fallbacks";
 import { Bracket } from "@/components/Bracket";
+import { PollaHomePage } from "@/components/polla/PollaHomePage";
+import type { PollaStandingsRow, PollaRoundGroup } from "@/types/polla";
 // BracketPairing + BracketProfile match the private types inside Bracket.tsx
 type BracketPairing = {
   id: number;
@@ -48,6 +50,75 @@ export default async function TournamentDetail({
     .eq("id", id)
     .single();
   if (!tournament) return notFound();
+
+  // ─── Polla format: branch to PollaHomePage ─────────────────
+  if ((tournament as { format?: string }).format === "polla") {
+    // Fetch standings via RPC
+    const { data: standings } = await supabase
+      .rpc("polla_standings", { p_tournament_id: tournament.id });
+
+    // Fetch pairings + matches del current_season para armar rounds
+    const { data: pairings } = await supabase
+      .from("polla_current_season_pairings")
+      .select("*, matches(id, status, match_players(team, score))")
+      .eq("tournament_id", tournament.id)
+      .order("created_at", { ascending: true });
+
+    // Fetch user names para el accordion
+    const { data: players } = await supabase
+      .from("tournament_players")
+      .select("user_id, profiles(username, display_name)")
+      .eq("tournament_id", tournament.id);
+
+    const userNames: Record<string, string> = {};
+    for (const p of players ?? []) {
+      const prof = p.profiles as unknown as { username: string; display_name: string | null } | null;
+      userNames[p.user_id] = prof?.display_name ?? prof?.username ?? "?";
+    }
+
+    // Agrupar pairings en rondas (cada N partidas, N = playerCount / 2)
+    const playerCount = (players ?? []).length;
+    const matchesPerRound = Math.max(1, Math.floor(playerCount / 2));
+    const rounds: PollaRoundGroup[] = [];
+
+    (pairings ?? []).forEach((p, idx) => {
+      const roundIdx = Math.floor(idx / matchesPerRound);
+      if (!rounds[roundIdx]) {
+        rounds[roundIdx] = { round_number: roundIdx + 1, matches: [] };
+      }
+      const m = (p as { matches?: { id: string; status: string; match_players: Array<{ team: number; score: number }> } | null }).matches ?? null;
+      const teamAScore = m?.match_players?.filter((mp) => mp.team === 1).reduce((s, mp) => s + mp.score, 0) ?? 0;
+      const teamBScore = m?.match_players?.filter((mp) => mp.team === 2).reduce((s, mp) => s + mp.score, 0) ?? 0;
+
+      rounds[roundIdx].matches.push({
+        match_id: m?.id ?? (p as { id: string }).id,
+        team_a_user_ids: (p as { team_a_user_ids: string[] }).team_a_user_ids,
+        team_b_user_ids: (p as { team_b_user_ids: string[] }).team_b_user_ids,
+        team_a_score: teamAScore,
+        team_b_score: teamBScore,
+        status: (m?.status ?? "pending") as "pending" | "confirmed" | "in_progress",
+      });
+    });
+
+    return (
+      <PollaHomePage
+        tournament={{
+          id: tournament.id,
+          name: (tournament as { name: string }).name,
+          is_open_ended: (tournament as { is_open_ended?: boolean }).is_open_ended ?? false,
+          current_season: (tournament as { current_season?: number }).current_season ?? 1,
+          created_by: (tournament as { created_by: string }).created_by,
+          status: (tournament as { status: string }).status as "open" | "in_progress" | "finished" | "cancelled",
+        }}
+        currentUserId={user!.id}
+        standings={(standings ?? []) as PollaStandingsRow[]}
+        rounds={rounds}
+        totalMatches={(pairings ?? []).length}
+        playerCount={playerCount}
+        userNames={userNames}
+      />
+    );
+  }
 
   // ─── Standings ─────────────────────────────────────────────
   const { data: standingsRaw } = await supabase
