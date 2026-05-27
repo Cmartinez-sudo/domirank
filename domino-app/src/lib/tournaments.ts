@@ -92,6 +92,7 @@ export async function createTournament(input: CreateTournamentInput) {
       max_players: f.max_players,
       num_boards: f.num_boards ?? 1,
       rated: f.rated ?? true,
+      is_open_ended: f.is_open_ended ?? false,
     })
     .select("id")
     .single();
