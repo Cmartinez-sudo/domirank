@@ -56,8 +56,9 @@ export function Step7Form({ userId, currentUser }: Props) {
 
   function handleContinue() {
     // Persistir en el draft
+    const nextStep = draft.format === "polla" ? 9 : 8;
     const updates: Parameters<typeof setField>[0] = {
-      currentStep: 8,
+      currentStep: nextStep,
       participants_data: individuals,
       participant_ids: individuals.map((u) => u.id),
       pre_formed_pairs_data: pairs,
@@ -67,7 +68,7 @@ export function Step7Form({ userId, currentUser }: Props) {
       })),
     };
     setField(updates);
-    router.push("/tournaments/new/step-8");
+    router.push(`/tournaments/new/step-${nextStep}`);
   }
 
   return (
