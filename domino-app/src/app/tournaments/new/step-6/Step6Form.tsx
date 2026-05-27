@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { WizardStepLayout } from "@/components/wizard/WizardStepLayout";
 import { useTournamentDraft } from "@/hooks/useTournamentDraft";
 import { PollaConfigStep } from "@/components/polla/PollaConfigStep";
-
-type InscriptionMode = "pre_formed" | "individual_manual" | "polla";
+import type { InscriptionMode } from "@/types/polla";
 
 const OPTIONS: Array<{
   value: InscriptionMode;
