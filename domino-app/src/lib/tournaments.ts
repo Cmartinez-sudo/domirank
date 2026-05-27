@@ -229,23 +229,33 @@ export async function startTournament(tournamentId: string) {
   if (t.created_by !== user.id) return { ok: false as const, error: "Solo el organizador puede iniciar el torneo" };
   if (t.status !== "open") return { ok: false as const, error: "El torneo no está en estado 'open'" };
 
-  // Verificar que todos los jugadores están en parejas
   const { count: playerCount } = await supabase
     .from("tournament_players")
     .select("*", { count: "exact", head: true })
     .eq("tournament_id", tournamentId);
 
-  const { count: pairCount } = await supabase
-    .from("tournament_pairs")
-    .select("*", { count: "exact", head: true })
-    .eq("tournament_id", tournamentId);
+  // Polla: roster lleno, no requiere parejas (se forman per partida).
+  // Otros formatos: requiere parejas pre-formadas.
+  if (t.inscription_mode === "polla") {
+    if ((playerCount ?? 0) !== t.max_players) {
+      return {
+        ok: false as const,
+        error: `Faltan ${t.max_players - (playerCount ?? 0)} jugadores`,
+      };
+    }
+  } else {
+    const { count: pairCount } = await supabase
+      .from("tournament_pairs")
+      .select("*", { count: "exact", head: true })
+      .eq("tournament_id", tournamentId);
 
-  const expectedPairs = Math.floor((playerCount ?? 0) / 2);
-  if ((pairCount ?? 0) < expectedPairs) {
-    return {
-      ok: false as const,
-      error: `Faltan parejas: hay ${pairCount} de ${expectedPairs} requeridas`,
-    };
+    const expectedPairs = Math.floor((playerCount ?? 0) / 2);
+    if ((pairCount ?? 0) < expectedPairs) {
+      return {
+        ok: false as const,
+        error: `Faltan parejas: hay ${pairCount} de ${expectedPairs} requeridas`,
+      };
+    }
   }
 
   const { error } = await supabase
