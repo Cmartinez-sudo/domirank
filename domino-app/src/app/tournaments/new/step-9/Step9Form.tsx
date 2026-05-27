@@ -91,19 +91,25 @@ export function Step9Form({ userId }: { userId: string }) {
       value: `${totalPlayers} jugadores${(draft.pre_formed_pairs?.length ?? 0) > 0 ? ` · ${draft.pre_formed_pairs?.length} parejas` : ""}`,
       step: 7,
     },
-    {
-      label: "Duración de partida",
-      value:
-        draft.time_limit_minutes != null
-          ? `${draft.time_limit_minutes} minutos por partida`
-          : "Hasta la meta de puntos",
-      step: 8,
-    },
-    {
-      label: "Mesas",
-      value: `${draft.num_boards ?? 1} mesa${(draft.num_boards ?? 1) !== 1 ? "s" : ""}`,
-      step: 8,
-    },
+    // Step 8 fields (Duración + Mesas) son irrelevantes para polla — las
+    // partidas siempre van "hasta la meta" y no hay configuración de mesas.
+    ...(draft.format !== "polla"
+      ? [
+          {
+            label: "Duración de partida",
+            value:
+              draft.time_limit_minutes != null
+                ? `${draft.time_limit_minutes} minutos por partida`
+                : "Hasta la meta de puntos",
+            step: 8,
+          },
+          {
+            label: "Mesas",
+            value: `${draft.num_boards ?? 1} mesa${(draft.num_boards ?? 1) !== 1 ? "s" : ""}`,
+            step: 8,
+          },
+        ]
+      : []),
   ];
 
   async function handleCreate() {
@@ -151,6 +157,13 @@ export function Step9Form({ userId }: { userId: string }) {
     }
   }
 
+  // Polla saltó step 8 desde step 7 — el back nav default iría a step 8
+  // que el user nunca vio. Override para volver a step 7.
+  const backToPrev = () => {
+    const prevStep = draft.format === "polla" ? 7 : 8;
+    router.push(`/tournaments/new/step-${prevStep}`);
+  };
+
   return (
     <WizardStepLayout
       currentStep={9}
@@ -161,6 +174,7 @@ export function Step9Form({ userId }: { userId: string }) {
         pending,
       }}
       forceSticky
+      onBack={backToPrev}
     >
       <div className="max-w-2xl mx-auto w-full px-4 pt-8">
         <h1 className="text-2xl font-bold mb-2">Todo listo. Revisa antes de crear.</h1>

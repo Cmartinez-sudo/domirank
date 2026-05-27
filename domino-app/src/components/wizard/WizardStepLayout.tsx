@@ -21,6 +21,9 @@ type Props = {
   hint?: string;
   /** Si true, el botón se renderiza siempre sticky (override del adaptive sizing) */
   forceSticky?: boolean;
+  /** Override del back nav (default: step-{currentStep - 1}). Útil cuando
+   *  un step skipea otro (e.g., polla salta step 8). */
+  onBack?: () => void;
 };
 
 const HEADER_FOOTER_SPACE = 120;
@@ -89,6 +92,7 @@ export function WizardStepLayout({
   primaryAction,
   hint,
   forceSticky = false,
+  onBack,
 }: Props) {
   const mainRef = useRef<HTMLElement>(null);
   const size = useContentSize(mainRef, forceSticky);
@@ -103,7 +107,7 @@ export function WizardStepLayout({
 
   return (
     <div className="min-h-dvh flex flex-col">
-      <StepHeader currentStep={currentStep} title={title} />
+      <StepHeader currentStep={currentStep} title={title} onBack={onBack} />
 
       <main ref={mainRef} className={MAIN_CLASS[size]}>
         {children}

@@ -12,7 +12,7 @@ export function PollaConfigStep({ userId }: Props) {
     <section className="card space-y-4">
       <div>
         <h2 className="text-lg font-semibold mb-1">Configuración de la polla</h2>
-        <p className="text-text-mute text-sm">¿Cuántas rondas van a jugar?</p>
+        <p className="text-text-mute text-sm">¿Tiene fecha de fin?</p>
       </div>
 
       <div className="space-y-2">
