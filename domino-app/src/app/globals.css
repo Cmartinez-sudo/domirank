@@ -30,15 +30,18 @@ html, body {
     radial-gradient(900px 700px at 110% 10%, rgba(59,130,246,.08), transparent 60%),
     radial-gradient(800px 600px at 50% 120%, rgba(245,158,11,.05), transparent 60%);
   background-attachment: fixed;
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
-/* Keyboard focus ring */
-*:focus { outline: none; }
+/* Keyboard focus ring — focus-visible only (no global outline removal) */
 *:focus-visible {
   outline: 2px solid rgba(16, 185, 129, 0.6);
   outline-offset: 2px;
   border-radius: 6px;
+}
+/* Hide outline only when focused via pointer (not keyboard) */
+*:focus:not(:focus-visible) {
+  outline: none;
 }
 
 @layer components {
