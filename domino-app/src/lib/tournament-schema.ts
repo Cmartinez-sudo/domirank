@@ -31,6 +31,8 @@ export const createTournamentSchema = z.object({
   num_boards: z.number().int().min(1).max(16).default(1),
   description: z.string().max(500).optional(),
   join_code: z.string().length(6).optional(),
+  /** Si las partidas de este torneo afectan al rating global (Elo). Default true. */
+  rated: z.boolean().default(true),
 });
 
 export type CreateTournamentInput = z.infer<typeof createTournamentSchema>;

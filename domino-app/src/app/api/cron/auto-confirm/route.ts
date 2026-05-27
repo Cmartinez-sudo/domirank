@@ -74,11 +74,14 @@ export async function GET(request: Request) {
   );
 
   // Aplica rating a TODOS los matches confirmed sin rated_at
-  // (los recién auto-confirmados + cualquier orphan previo)
+  // (los recién auto-confirmados + cualquier orphan previo).
+  // Filtramos rated=true: las "amistosas" no se ratean, y dejarlas en
+  // este query las haría aparecer eternamente como pendientes.
   const { data: pending, error: pendingErr } = await supabase
     .from("matches")
-    .select("id, format, set_size")
+    .select("id, format, set_size, rated")
     .eq("status", "confirmed")
+    .eq("rated", true)
     .is("rated_at", null)
     .order("confirmed_at", { ascending: true })
     .limit(100);

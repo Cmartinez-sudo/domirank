@@ -122,12 +122,23 @@ export async function applyMatchRating(matchId: string): Promise<{ ok: true } | 
 
   const { data: match } = await supabase
     .from("matches")
-    .select("id, status, format, set_size, rated_at")
+    .select("id, status, format, set_size, rated_at, rated")
     .eq("id", matchId)
     .single();
   if (!match) return { ok: false, error: "match_not_found" };
   if (match.status !== "confirmed") return { ok: false, error: "not_confirmed" };
   if (match.rated_at) return { ok: true }; // ya aplicado
+  // Toggle "amistosa": si la partida se creó con rated=false (quick match
+  // amistoso o torneo con rated=false), no afecta el Elo. Marca rated_at
+  // para que el flow de attestation no quede pendiente, pero sin ejecutar
+  // la lógica de rating.
+  if (match.rated === false) {
+    await supabase
+      .from("matches")
+      .update({ rated_at: new Date().toISOString() })
+      .eq("id", matchId);
+    return { ok: true };
+  }
 
   const { data: mps } = await supabase
     .from("match_players")

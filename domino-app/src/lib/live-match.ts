@@ -24,6 +24,9 @@ const StartSchema = z.object({
   tournament_id: z.string().uuid().nullable().optional(),
   /** Límite de tiempo en minutos (R6). null = sin límite. */
   time_limit_minutes: z.number().int().min(5).max(180).nullable().optional(),
+  /** Si la partida afecta al Elo global. Si tournament_id está y rated no se
+   *  pasa, se hereda de tournaments.rated. Default para quick match: true. */
+  rated: z.boolean().optional(),
 });
 export type StartLiveMatchInput = z.infer<typeof StartSchema>;
 
@@ -57,6 +60,20 @@ export async function startLiveMatch(input: StartLiveMatchInput): Promise<{ ok: 
   const now = new Date().toISOString();
   const timeLimitMinutes = i.time_limit_minutes ?? null;
 
+  // Resolución de `rated`:
+  //   1. Si el caller lo pasa explícito, ese gana (UI quick match toggle).
+  //   2. Si la partida pertenece a un torneo, hereda tournaments.rated.
+  //   3. Default true (quick match estándar, afecta el Elo).
+  let rated = i.rated ?? true;
+  if (i.rated === undefined && i.tournament_id) {
+    const { data: t } = await supabase
+      .from("tournaments")
+      .select("rated")
+      .eq("id", i.tournament_id)
+      .single();
+    if (t && typeof t.rated === "boolean") rated = t.rated;
+  }
+
   const { data: match, error: mErr } = await supabase
     .from("matches")
     .insert({
@@ -66,7 +83,7 @@ export async function startLiveMatch(input: StartLiveMatchInput): Promise<{ ok: 
       target_points: i.target_points,
       capicua_bonus: i.capicua_bonus,
       status: "in_progress",
-      rated: true,
+      rated,
       created_by: user.id,
       tournament_id: i.tournament_id ?? null,
       // R6: timer. Si hay time_limit_minutes, timer arranca ya.
