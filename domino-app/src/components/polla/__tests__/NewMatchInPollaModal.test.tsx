@@ -1,108 +1,135 @@
 /** @vitest-environment jsdom */
-import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { afterEach } from 'vitest';
 import { NewMatchInPollaModal } from '../NewMatchInPollaModal';
 
+const pushMock = vi.fn();
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ push: pushMock, refresh: vi.fn() }),
 }));
 
+const createMatchMock = vi.fn((_input: unknown) => Promise.resolve({ ok: true, match_id: 'm1' }));
 vi.mock('@/lib/polla-actions', () => ({
-  createNewMatchInPolla: vi.fn(() => Promise.resolve({ ok: true, match_id: 'm1' })),
+  createNewMatchInPolla: (input: unknown) => createMatchMock(input),
 }));
 
 const ROSTER = ['carlos', 'erik', 'gibbon', 'gusi'];
 const NAMES = { carlos: 'Carlos', erik: 'Erik', gibbon: 'Gibbon', gusi: 'Gusi' };
 
-describe('NewMatchInPollaModal', () => {
-  it('renderiza los 4 players del roster', () => {
-    const { getAllByText } = render(
-      <NewMatchInPollaModal
-        tournamentId="t1" rosterUserIds={ROSTER} userNames={NAMES}
-        currentUserId="carlos" onClose={() => {}}
-      />,
-    );
-    // Cada nombre aparece en cada select dropdown — verificamos que al menos
-    // un Carlos/Erik/Gibbon/Gusi sea visible.
-    expect(getAllByText(/Carlos/).length).toBeGreaterThan(0);
-    expect(getAllByText(/Erik/).length).toBeGreaterThan(0);
-    expect(getAllByText(/Gibbon/).length).toBeGreaterThan(0);
-    expect(getAllByText(/Gusi/).length).toBeGreaterThan(0);
-  });
+function defaultProps(overrides: Partial<React.ComponentProps<typeof NewMatchInPollaModal>> = {}) {
+  return {
+    tournamentId: 't1',
+    rosterUserIds: ROSTER,
+    userNames: NAMES,
+    currentUserId: 'carlos',
+    onClose: vi.fn(),
+    ...overrides,
+  };
+}
 
-  it('botón empezar deshabilitado hasta tener 2 players por team', () => {
-    const { getAllByRole } = render(
-      <NewMatchInPollaModal
-        tournamentId="t1" rosterUserIds={ROSTER} userNames={NAMES}
-        currentUserId="carlos" onClose={() => {}}
-      />,
-    );
-    const btns = getAllByRole('button', { name: /empezar/i });
-    expect(btns.length).toBeGreaterThan(0);
-    expect(btns[0].hasAttribute('disabled')).toBe(true);
-  });
+beforeEach(() => {
+  pushMock.mockClear();
+  createMatchMock.mockClear();
+});
 
-  // ─── Regression: bug del happy path (polla nueva sin partidas) ──────
-  // El roster venía de polla_standings RPC que filtra por
-  // status='confirmed'. En una polla recién iniciada (sin partidas),
-  // standings = [] y los dropdowns quedaban vacíos. Fix: pasar rosterUserIds
-  // explícito desde tournament_players. Estos tests garantizan que no recurra.
+afterEach(() => {
+  cleanup();
+});
 
-  it('renderiza los 4 user IDs como <option> en cada <select>', () => {
-    const { container } = render(
-      <NewMatchInPollaModal
-        tournamentId="t1" rosterUserIds={ROSTER} userNames={NAMES}
-        currentUserId="carlos" onClose={() => {}}
-      />,
-    );
-    const selects = container.querySelectorAll('select');
-    expect(selects.length).toBe(4); // a1, a2, b1, b2
-
-    for (const select of Array.from(selects)) {
-      // Cada select tiene: 1 placeholder "— Elegir —" + 4 jugadores del roster
-      const options = select.querySelectorAll('option');
-      expect(options.length).toBe(5);
-      // Verificar que los 4 user IDs aparecen como value en las options
-      const values = Array.from(options).map((o) => (o as HTMLOptionElement).value);
-      for (const uid of ROSTER) {
-        expect(values).toContain(uid);
-      }
-    }
-  });
-
-  it('muestra el display_name en lugar del user_id en las opciones', () => {
-    const { container } = render(
-      <NewMatchInPollaModal
-        tournamentId="t1" rosterUserIds={ROSTER} userNames={NAMES}
-        currentUserId="carlos" onClose={() => {}}
-      />,
-    );
-    const firstSelect = container.querySelector('select');
-    expect(firstSelect).toBeTruthy();
-    const optionTexts = Array.from(firstSelect!.querySelectorAll('option'))
-      .map((o) => o.textContent ?? '');
-    // Los nombres del map NAMES deben aparecer
+describe('NewMatchInPollaModal · Step 1 selección', () => {
+  it('renderiza los 4 nombres del roster como botones tappable', () => {
+    const { container } = render(<NewMatchInPollaModal {...defaultProps()} />);
+    const buttons = Array.from(container.querySelectorAll('button[aria-pressed]'));
+    expect(buttons.length).toBe(4);
+    const labels = buttons.map((b) => b.textContent ?? '');
     for (const name of Object.values(NAMES)) {
-      const matched = optionTexts.some((t) => t.includes(name));
-      expect(matched).toBe(true);
+      expect(labels.some((l) => l.includes(name))).toBe(true);
     }
   });
 
-  it('rosterUserIds vacío (caso degradado): selects solo tienen "— Elegir —"', () => {
-    // Sanity check: si por algún motivo roster viene vacío, los selects
-    // muestran solo el placeholder, sin crashear.
+  it('currentUserId aparece pre-seleccionado al abrir', () => {
+    const { container } = render(<NewMatchInPollaModal {...defaultProps()} />);
+    const carlosBtn = Array.from(container.querySelectorAll('button[aria-pressed]'))
+      .find((b) => (b.textContent ?? '').includes('Carlos'));
+    expect(carlosBtn?.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('contador X/4 refleja la selección', () => {
+    const { container } = render(<NewMatchInPollaModal {...defaultProps()} />);
+    expect(container.textContent).toContain('1/4');
+  });
+
+  it('rosterUserIds vacío no crashea', () => {
     const { container } = render(
-      <NewMatchInPollaModal
-        tournamentId="t1" rosterUserIds={[]} userNames={{}}
-        currentUserId="carlos" onClose={() => {}}
-      />,
+      <NewMatchInPollaModal {...defaultProps({ rosterUserIds: [], userNames: {}, currentUserId: 'x' })} />,
     );
-    const selects = container.querySelectorAll('select');
-    for (const select of Array.from(selects)) {
-      const options = select.querySelectorAll('option');
-      // Solo el placeholder
-      expect(options.length).toBe(1);
-      expect(options[0].textContent).toContain('Elegir');
-    }
+    // Sin botones de jugador pero sin error
+    const playerBtns = container.querySelectorAll('button[aria-pressed]');
+    expect(playerBtns.length).toBe(0);
+    expect(container.textContent).toContain('Paso 1');
+  });
+});
+
+describe('NewMatchInPollaModal · Step 2 parejas', () => {
+  it('Step 2 NO aparece hasta tener 4 jugadores seleccionados', () => {
+    const { container } = render(<NewMatchInPollaModal {...defaultProps()} />);
+    expect(container.textContent).not.toContain('Paso 2');
+  });
+
+  it('al seleccionar 4 → Step 2 aparece y armó parejas en modo aleatorio', () => {
+    const { container } = render(<NewMatchInPollaModal {...defaultProps()} />);
+    // Tap los 3 restantes (carlos ya está)
+    const playerBtns = Array.from(container.querySelectorAll('button[aria-pressed]'));
+    const others = playerBtns.filter((b) => !(b.textContent ?? '').includes('Carlos'));
+    for (const b of others) fireEvent.click(b);
+
+    expect(container.textContent).toContain('Paso 2');
+    expect(container.textContent).toContain('Aleatorio');
+    expect(container.textContent).toContain('Pareja A');
+    expect(container.textContent).toContain('Pareja B');
+    // En modo random las 2/2 deben estar pobladas
+    expect(container.textContent).toContain('2/2');
+  });
+
+  it('botón "Comenzar" deshabilitado mientras no haya 2v2', () => {
+    const { container } = render(<NewMatchInPollaModal {...defaultProps()} />);
+    const startBtn = container.querySelector('button.btn-primary') as HTMLButtonElement;
+    expect(startBtn.disabled).toBe(true);
+
+    // Seleccionar los otros 3 → modo random arma teams → botón habilitado
+    const playerBtns = Array.from(container.querySelectorAll('button[aria-pressed]'));
+    const others = playerBtns.filter((b) => !(b.textContent ?? '').includes('Carlos'));
+    for (const b of others) fireEvent.click(b);
+
+    expect(startBtn.disabled).toBe(false);
+  });
+
+  it('modo Manual aparece como opción del segment', () => {
+    const { container } = render(<NewMatchInPollaModal {...defaultProps()} />);
+    // Llegar a 4
+    const playerBtns = Array.from(container.querySelectorAll('button[aria-pressed]'));
+    const others = playerBtns.filter((b) => !(b.textContent ?? '').includes('Carlos'));
+    for (const b of others) fireEvent.click(b);
+
+    expect(container.textContent).toContain('Aleatorio');
+    expect(container.textContent).toContain('Manual');
+  });
+});
+
+describe('NewMatchInPollaModal · submit', () => {
+  it('Comenzar llama createNewMatchInPolla y redirige al /live', async () => {
+    const { container } = render(<NewMatchInPollaModal {...defaultProps()} />);
+    const playerBtns = Array.from(container.querySelectorAll('button[aria-pressed]'));
+    const others = playerBtns.filter((b) => !(b.textContent ?? '').includes('Carlos'));
+    for (const b of others) fireEvent.click(b);
+
+    const startBtn = container.querySelector('button.btn-primary') as HTMLButtonElement;
+    fireEvent.click(startBtn);
+
+    await waitFor(() => {
+      expect(createMatchMock).toHaveBeenCalledTimes(1);
+      expect(pushMock).toHaveBeenCalledWith('/matches/m1/live');
+    });
   });
 });
