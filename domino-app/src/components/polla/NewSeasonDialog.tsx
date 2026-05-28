@@ -69,7 +69,7 @@ export function NewSeasonDialog({ tournamentId, currentSeason, onClose }: Props)
 
         <div className="space-y-1.5">
           <label htmlFor="confirm-input" className="text-sm">
-            Escribí <code className="font-mono bg-surface-2 px-1.5 rounded text-xs">nueva temporada</code> para confirmar:
+            Escribe <code className="font-mono bg-surface-2 px-1.5 rounded text-xs">nueva temporada</code> para confirmar:
           </label>
           <input
             id="confirm-input"
@@ -83,7 +83,7 @@ export function NewSeasonDialog({ tournamentId, currentSeason, onClose }: Props)
           />
           {confirmText.length > 0 && !canConfirm && (
             <p className="text-xs text-text-mute mt-1" aria-live="polite">
-              Escribí exactamente "nueva temporada".
+              Escribe exactamente "nueva temporada".
             </p>
           )}
         </div>
