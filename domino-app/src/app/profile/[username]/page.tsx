@@ -50,20 +50,71 @@ export default async function PublicProfile({
   }
 
   let history: any[] = [];
+  let favoritePartner: { name: string; games: number; wins: number; losses: number } | null = null;
+  let toughestRival:   { name: string; games: number; my_wins: number; my_losses: number } | null = null;
+
   try {
+    // Fetch history con los OTHER match_players (team, user_id, profiles) para
+    // poder armar el matchup completo y computar pareja favorita + rival principal.
     const { data: historyRaw } = await supabase
       .from("match_players")
-      .select("match_id, team, rank, elo_before, elo_after, created_at, matches(format, target_points, status)")
+      .select(`
+        match_id, team, rank, elo_before, elo_after, created_at,
+        matches(
+          id, format, target_points, status,
+          match_players(team, user_id, score, profiles(username, display_name))
+        )
+      `)
       .eq("user_id", p.id)
       .order("created_at", { ascending: false })
-      .limit(40);
-    history = ((historyRaw ?? []) as any[])
-      .filter((r) => {
-        const st = r.matches?.status;
-        if (isOwnProfile) return ["confirmed","pending_attestation","disputed","void"].includes(st);
-        return st === "confirmed";
-      })
-      .slice(0, 20);
+      .limit(50);
+
+    const allRows = ((historyRaw ?? []) as any[]).filter((r) => {
+      const st = r.matches?.status;
+      if (isOwnProfile) return ["confirmed","pending_attestation","disputed","void"].includes(st);
+      return st === "confirmed";
+    });
+
+    // Render: 20 más recientes
+    history = allRows.slice(0, 20);
+
+    // Aggregate pareja favorita + rival principal (solo matches confirmed)
+    const partnerStats = new Map<string, { name: string; games: number; wins: number; losses: number }>();
+    const rivalStats   = new Map<string, { name: string; games: number; my_wins: number; my_losses: number }>();
+    for (const r of allRows) {
+      if (r.matches?.status !== "confirmed") continue;
+      const myTeam = r.team as number;
+      const won = r.rank === 1;
+      const players = (r.matches?.match_players ?? []) as Array<{ team: number; user_id: string; profiles: { username: string; display_name: string | null } | null }>;
+
+      for (const mp of players) {
+        if (mp.user_id === p.id) continue;
+        const name = mp.profiles?.display_name?.split(" ")[0] ?? mp.profiles?.username ?? "?";
+        if (mp.team === myTeam) {
+          // Partner
+          const cur = partnerStats.get(mp.user_id) ?? { name, games: 0, wins: 0, losses: 0 };
+          cur.games += 1;
+          if (won) cur.wins += 1; else cur.losses += 1;
+          partnerStats.set(mp.user_id, cur);
+        } else {
+          // Rival
+          const cur = rivalStats.get(mp.user_id) ?? { name, games: 0, my_wins: 0, my_losses: 0 };
+          cur.games += 1;
+          if (won) cur.my_wins += 1; else cur.my_losses += 1;
+          rivalStats.set(mp.user_id, cur);
+        }
+      }
+    }
+
+    // Pareja favorita: más juegos juntos (con tie-break por wins). Mínimo 2 juegos.
+    favoritePartner = [...partnerStats.values()]
+      .filter((s) => s.games >= 2)
+      .sort((a, b) => b.games - a.games || b.wins - a.wins)[0] ?? null;
+
+    // Rival principal: el que más me ganó. Mínimo 2 juegos.
+    toughestRival = [...rivalStats.values()]
+      .filter((s) => s.games >= 2)
+      .sort((a, b) => b.my_losses - a.my_losses || b.games - a.games)[0] ?? null;
   } catch (e) {
     console.error("[profile] history failed:", e);
   }
@@ -184,6 +235,30 @@ export default async function PublicProfile({
         </div>
       )}
 
+      {/* Pareja favorita + Rival principal — solo si hay datos */}
+      {(favoritePartner || toughestRival) && (
+        <div className="grid sm:grid-cols-2 gap-3">
+          {favoritePartner && (
+            <div className="card">
+              <div className="text-text-mute text-[10px] uppercase tracking-[0.12em] font-semibold mb-1">Pareja favorita</div>
+              <div className="font-bold text-base truncate">{favoritePartner.name}</div>
+              <div className="text-text-dim text-xs mt-1 tabular-nums">
+                {favoritePartner.games} {favoritePartner.games === 1 ? "partida" : "partidas"} juntos · {favoritePartner.wins}V-{favoritePartner.losses}D
+              </div>
+            </div>
+          )}
+          {toughestRival && (
+            <div className="card">
+              <div className="text-text-mute text-[10px] uppercase tracking-[0.12em] font-semibold mb-1">Rival más fuerte</div>
+              <div className="font-bold text-base truncate">{toughestRival.name}</div>
+              <div className="text-text-dim text-xs mt-1 tabular-nums">
+                {toughestRival.games} {toughestRival.games === 1 ? "partida" : "partidas"} en contra · {toughestRival.my_wins}V-{toughestRival.my_losses}D
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="card">
         <h2 className="text-xl font-semibold mb-3">Historial reciente</h2>
         {history && history.length > 0 ? (
@@ -197,29 +272,61 @@ export default async function PublicProfile({
               const won = r.rank === 1;
               const hasRating = r.elo_before != null && r.elo_after != null;
               const delta = hasRating ? Number(r.elo_after) - Number(r.elo_before) : null;
+
+              // Armar matchup: nombres de team A y team B (primer nombre solo)
+              const mps = (r.matches?.match_players ?? []) as Array<{
+                team: number; user_id: string; score: number;
+                profiles: { username: string; display_name: string | null } | null;
+              }>;
+              const firstNameOf = (mp: typeof mps[0]) =>
+                (mp.profiles?.display_name?.split(" ")[0]) ?? mp.profiles?.username ?? "?";
+              const teamAPlayers = mps.filter((mp) => mp.team === 1);
+              const teamBPlayers = mps.filter((mp) => mp.team === 2);
+              const nameA = teamAPlayers.map(firstNameOf).join(" & ");
+              const nameB = teamBPlayers.map(firstNameOf).join(" & ");
+              // Score: usa la suma denormalizada de match_players.score (puede estar 0 si no
+              // se sincronizó). Para el viewer es informativo, no autoritativo.
+              const scoreA = teamAPlayers.reduce((s, mp) => s + (mp.score ?? 0), 0);
+              const scoreB = teamBPlayers.reduce((s, mp) => s + (mp.score ?? 0), 0);
+              const hasScore = scoreA > 0 || scoreB > 0;
+              const myTeamWon = r.team === 1 ? scoreA > scoreB : scoreB > scoreA;
+              const winnerSide: "A" | "B" | null = !hasScore ? null : scoreA > scoreB ? "A" : scoreB > scoreA ? "B" : null;
+
               return (
-                <li key={`${r.match_id}-${r.team}`} className="py-3 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <Link href={`/matches/${r.match_id}`} className="hover:text-primary font-medium truncate block">
-                      {r.matches?.format === "singles" ? "Singles" : "Parejas"} · {r.matches?.target_points} pts
-                    </Link>
-                    <div className="text-text-mute text-xs">
-                      {new Date(r.created_at).toLocaleDateString("es")}
+                <li key={`${r.match_id}-${r.team}`} className="py-3">
+                  <Link href={`/matches/${r.match_id}`} className="block hover:bg-surface-2 -mx-2 px-2 py-1 rounded transition-colors">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className={`flex-1 truncate ${winnerSide === "A" ? "font-bold text-primary" : "text-text"}`}>{nameA || "?"}</span>
+                      {hasScore ? (
+                        <span className="font-mono tabular-nums shrink-0">
+                          <span className={winnerSide === "A" ? "text-primary font-bold" : ""}>{scoreA}</span>
+                          <span className="opacity-30 mx-1">—</span>
+                          <span className={winnerSide === "B" ? "text-primary font-bold" : ""}>{scoreB}</span>
+                        </span>
+                      ) : (
+                        <span className="text-text-mute text-xs shrink-0">vs</span>
+                      )}
+                      <span className={`flex-1 truncate text-right ${winnerSide === "B" ? "font-bold text-primary" : "text-text"}`}>{nameB || "?"}</span>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm flex-shrink-0">
-                    {isPending && <span className="badge bg-yellow-400/15 text-yellow-400">Pendiente</span>}
-                    {isDisputed && <span className="badge bg-danger/15 text-danger">Disputa</span>}
-                    {isVoid && <span className="badge bg-surface-3 text-text-mute">Anulada</span>}
-                    {isConfirmed && hasRating && <>
-                    <span className={`badge ${won ? "bg-primary/15 text-primary" : "bg-danger/15 text-danger"}`}>
-                      {won ? "Ganó" : "Perdió"}
-                    </span>
-                    <span className={`font-mono ${delta! >= 0 ? "text-primary" : "text-danger"}`}>
-                      {delta! >= 0 ? "+" : ""}{delta!} Elo
-                    </span>
-                    </>}
-                  </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-text-mute">
+                      <span>{new Date(r.created_at).toLocaleDateString("es", { day: "numeric", month: "short" })}</span>
+                      <span className="opacity-50">·</span>
+                      <span>{r.matches?.format === "singles" ? "Singles" : "Parejas"} · {r.matches?.target_points} pts</span>
+                      {isPending && <span className="badge bg-yellow-400/15 text-yellow-400 ml-auto">Pendiente</span>}
+                      {isDisputed && <span className="badge bg-danger/15 text-danger ml-auto">Disputa</span>}
+                      {isVoid && <span className="badge bg-surface-3 text-text-mute ml-auto">Anulada</span>}
+                      {isConfirmed && hasRating && (
+                        <>
+                          <span className={`badge ml-auto ${myTeamWon ? "bg-primary/15 text-primary" : "bg-danger/15 text-danger"}`}>
+                            {won ? "Ganó" : "Perdió"}
+                          </span>
+                          <span className={`font-mono ${delta! >= 0 ? "text-primary" : "text-danger"}`}>
+                            {delta! >= 0 ? "+" : ""}{delta!}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </Link>
                 </li>
               );
             })}

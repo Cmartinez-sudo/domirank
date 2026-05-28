@@ -48,10 +48,14 @@ export function FriendsPanel({
   friends,
   incoming,
   outgoing,
+  viewerMatchesCount,
+  viewerActivePollasCount,
 }: {
   friends: FriendUser[];
   incoming: IncomingReq[];
   outgoing: OutgoingReq[];
+  viewerMatchesCount: number;
+  viewerActivePollasCount: number;
 }) {
   const [tab, setTab] = useState<"friends" | "incoming" | "outgoing">("friends");
   const [busy, setBusy] = useState(false);
@@ -86,6 +90,13 @@ export function FriendsPanel({
       <div className="space-y-5">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h1 className="text-3xl font-bold">Amigos</h1>
+        </div>
+
+        {/* Stat cards: tu actividad de un vistazo */}
+        <div className="grid grid-cols-3 gap-2.5">
+          <StatTile label="Amigos" value={friends.length} />
+          <StatTile label={viewerMatchesCount === 1 ? "Partida" : "Partidas"} value={viewerMatchesCount} />
+          <StatTile label={viewerActivePollasCount === 1 ? "Polla activa" : "Pollas activas"} value={viewerActivePollasCount} />
         </div>
 
         {/* Buscar usuarios — navega al perfil al click */}
@@ -284,6 +295,15 @@ function RequestRow({
           {secondary.label}
         </button>
       </div>
+    </div>
+  );
+}
+
+function StatTile({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="bg-surface border border-border rounded-md p-3 text-center">
+      <div className="text-2xl font-extrabold tabular-nums leading-tight">{value}</div>
+      <div className="text-text-mute text-[11px] mt-0.5 uppercase tracking-wider">{label}</div>
     </div>
   );
 }
