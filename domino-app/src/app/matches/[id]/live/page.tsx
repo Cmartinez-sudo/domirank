@@ -74,16 +74,18 @@ export default async function LivePage({
   // TODO: eliminar los casts una vez regenerados los tipos con `supabase gen types typescript`.
   const matchAny = match as Record<string, unknown>;
 
-  // Fetch tournament name if match belongs to a tournament (Feature 3)
+  // Fetch tournament name + format (para detectar polla mode)
   let tournamentName: string | null = null;
+  let isPolla = false;
   const tournamentId = matchAny.tournament_id as string | null;
   if (tournamentId) {
     const { data: tourney } = await supabase
       .from("tournaments")
-      .select("name")
+      .select("name, format")
       .eq("id", tournamentId)
       .maybeSingle();
     tournamentName = tourney?.name ?? null;
+    isPolla = (tourney as { format?: string } | null)?.format === "polla";
   }
 
   return (
@@ -103,6 +105,7 @@ export default async function LivePage({
       isSpectator={isSpectator}
       tournamentId={tournamentId}
       tournamentName={tournamentName}
+      isPolla={isPolla}
     />
   );
 }
