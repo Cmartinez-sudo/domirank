@@ -36,20 +36,15 @@ export type PollaRivalRow = {
 /** Modo de inscripción de un torneo. */
 export type InscriptionMode = "pre_formed" | "individual_manual" | "polla";
 
-/** Una partida tal como la muestra el accordion de la polla. */
-export type PollaMatchPreview = {
+/** Fila de partida en la lista plana de la polla home. Reemplaza al viejo
+ *  PollaMatchPreview / PollaRoundGroup del accordion. */
+export type PollaMatchRow = {
   match_id:        string;
+  status:          "in_progress" | "completed" | "confirmed" | "pending_attestation";
   team_a_user_ids: string[];
   team_b_user_ids: string[];
-  team_a_score:    number;
-  team_b_score:    number;
-  status:          "pending" | "confirmed" | "in_progress";
-};
-
-/** Grupo de partidas agrupado como "ronda" (cada N partidas en orden
- *  cronológico, N = players/2). El número de ronda es visual, no impone
- *  constraint sobre los pairings. */
-export type PollaRoundGroup = {
-  round_number: number;
-  matches:      PollaMatchPreview[];
+  score_a:         number;
+  score_b:         number;
+  winner_team:     1 | 2 | null;
+  created_at:      string;
 };
