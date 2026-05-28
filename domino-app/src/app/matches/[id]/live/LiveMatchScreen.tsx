@@ -11,6 +11,7 @@ import { addRound, undoLastRound, cancelLiveMatch, finalizeMatch } from "@/lib/l
 import { validateMatchClosure } from "@/lib/match-validation";
 import { useMatchTimer } from "@/hooks/useMatchTimer";
 import { analytics } from "@/lib/analytics";
+import { PollaFinishedState } from "@/components/polla/PollaFinishedState";
 
 type PublicUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; country: string | null };
 type Round = { id: number; round_number: number; team: number; points: number; kind: string; created_at: string };
@@ -23,6 +24,8 @@ export function LiveMatchScreen({
   tournamentId = null,
   tournamentName = null,
   isPolla = false,
+  matchStatus = "in_progress",
+  isCreator = false,
 }: {
   matchId: string;
   modality: ModalityCode;
@@ -48,6 +51,11 @@ export function LiveMatchScreen({
    *  "Cancelar", cancel/finalize redirigen a /tournaments/[id], saltea
    *  attestation (server-side detect). */
   isPolla?: boolean;
+  /** Status del match. Cuando es 'confirmed' (polla finalizada) renderizamos
+   *  el trophy state inline en lugar del round panel. */
+  matchStatus?: "in_progress" | "confirmed" | "pending_attestation";
+  /** True si el current user creó esta partida (puede Editar/Eliminar). */
+  isCreator?: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -145,9 +153,10 @@ export function LiveMatchScreen({
             ? validation.winnerTeam === 1 ? nameA : nameB
             : "unknown";
         analytics.track("match_finalized", { match_id: matchId, winner_team: winnerTeam });
-        // En polla volvemos al home de la polla; en quick match al detalle del match.
+        // En polla: refresh para que el page re-renderice con status='confirmed'
+        // y aparezca el inline trophy state. En quick match: redirect a detalle.
         if (isPolla && tournamentId) {
-          router.push(`/tournaments/${tournamentId}`);
+          router.refresh();
         } else {
           router.push(`/matches/${matchId}`);
         }
@@ -245,7 +254,7 @@ export function LiveMatchScreen({
         </div>
         <div className="text-right">
           <div className="text-text-mute text-xs uppercase tracking-wider">
-            {isFinishable ? "Listo" : "En curso"}
+            {matchStatus === "confirmed" ? "Finalizada" : isFinishable ? "Listo" : "En curso"}
           </div>
           <div className="font-bold mt-0.5">{todayLabel}</div>
         </div>
@@ -253,7 +262,20 @@ export function LiveMatchScreen({
 
       {err && !isSpectator && <div className="p-3 bg-danger/10 border border-danger/30 rounded-md text-danger text-sm mb-3">{err}</div>}
 
-      {!isSpectator && (isFinishable ? (
+      {/* === Inline trophy state para pollas finalizadas === */}
+      {isPolla && matchStatus === "confirmed" && tournamentId && (
+        <PollaFinishedState
+          matchId={matchId}
+          tournamentId={tournamentId}
+          winnerName={scoreA > scoreB ? nameA : nameB}
+          scoreA={scoreA}
+          scoreB={scoreB}
+          isCreator={isCreator}
+        />
+      )}
+
+      {/* === Resto del flow: solo cuando NO es polla finalizada === */}
+      {!(isPolla && matchStatus === "confirmed") && !isSpectator && (isFinishable ? (
         <div className="space-y-3">
           <div className="p-4 bg-primary/10 border border-primary/30 rounded-md text-primary text-center font-medium">
             {validation.status === 'time_expired_finishable'

@@ -178,6 +178,162 @@ export async function startNewSeason(
 }
 
 // ============================================================
+// reopenPollaMatch — revierte confirmed → in_progress (para editar rondas)
+// ============================================================
+//
+// Solo el creator de la partida puede reabrirla. La idea: si hubo error en
+// el score, se puede reabrir, borrar/agregar manos, y volver a finalizar.
+//
+// NOTA: el rating ya aplicado (mu_after/elo_after) NO se revierte. La próxima
+// finalización lo sobreescribirá. Esto es deuda técnica menor — si el rating
+// queda inconsistente, se puede arreglar con un script offline.
+
+export async function reopenPollaMatch(
+  match_id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!z.string().uuid().safeParse(match_id).success) {
+    return { ok: false, error: "ID inválido." };
+  }
+
+  const supabase = await supabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "No autenticado." };
+
+  const { data: m, error: mErr } = await supabase
+    .from("matches")
+    .select("id, created_by, status, tournament_id")
+    .eq("id", match_id)
+    .single();
+  if (mErr || !m) return { ok: false, error: "Partida no encontrada." };
+  if (m.created_by !== user.id) return { ok: false, error: "Solo el creador puede editar la partida." };
+  if (m.status !== "confirmed") return { ok: false, error: "Solo se pueden editar partidas confirmadas." };
+
+  // Validar que es de polla
+  if (!m.tournament_id) return { ok: false, error: "Esta partida no pertenece a una polla." };
+  const { data: t } = await supabase
+    .from("tournaments")
+    .select("format")
+    .eq("id", m.tournament_id)
+    .single();
+  if ((t as { format?: string } | null)?.format !== "polla") {
+    return { ok: false, error: "Esta partida no es de una polla." };
+  }
+
+  // Otra partida in_progress del mismo user bloquea (constraint
+  // matches_one_inprogress_per_user). Reportarlo claro.
+  const { data: existing } = await supabase
+    .from("matches")
+    .select("id")
+    .eq("created_by", user.id)
+    .eq("status", "in_progress")
+    .neq("id", match_id)
+    .maybeSingle();
+  if (existing) {
+    return { ok: false, error: "Ya tienes otra partida en curso. Termínala primero." };
+  }
+
+  const { error: uErr } = await supabase
+    .from("matches")
+    .update({ status: "in_progress", finished_at: null })
+    .eq("id", match_id);
+  if (uErr) return { ok: false, error: uErr.message };
+
+  revalidatePath(`/matches/${match_id}/live`);
+  revalidatePath(`/tournaments/${m.tournament_id}`);
+  return { ok: true };
+}
+
+// ============================================================
+// deletePollaMatch — marca status='cancelled' (soft delete)
+// ============================================================
+//
+// La matches list de PollaHomePage filtra por status visible, así que
+// 'cancelled' desaparece. No borramos hard porque puede romper FK desde
+// tournament_pairings y referencias de rating.
+
+export async function deletePollaMatch(
+  match_id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!z.string().uuid().safeParse(match_id).success) {
+    return { ok: false, error: "ID inválido." };
+  }
+
+  const supabase = await supabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "No autenticado." };
+
+  const { data: m, error: mErr } = await supabase
+    .from("matches")
+    .select("id, created_by, status, tournament_id")
+    .eq("id", match_id)
+    .single();
+  if (mErr || !m) return { ok: false, error: "Partida no encontrada." };
+  if (m.created_by !== user.id) return { ok: false, error: "Solo el creador puede eliminar la partida." };
+  if (!m.tournament_id) return { ok: false, error: "Esta partida no pertenece a una polla." };
+
+  const { data: t } = await supabase
+    .from("tournaments")
+    .select("format")
+    .eq("id", m.tournament_id)
+    .single();
+  if ((t as { format?: string } | null)?.format !== "polla") {
+    return { ok: false, error: "Esta partida no es de una polla." };
+  }
+
+  const { error: uErr } = await supabase
+    .from("matches")
+    .update({ status: "cancelled" })
+    .eq("id", match_id);
+  if (uErr) return { ok: false, error: uErr.message };
+
+  revalidatePath(`/tournaments/${m.tournament_id}`);
+  return { ok: true };
+}
+
+// ============================================================
+// rematchPollaMatch — crea nueva partida con los mismos teams
+// ============================================================
+//
+// Reusa los teams del match anterior. Útil para revancha inmediata.
+
+export async function rematchPollaMatch(
+  prev_match_id: string,
+): Promise<{ ok: true; match_id: string } | { ok: false; error: string }> {
+  if (!z.string().uuid().safeParse(prev_match_id).success) {
+    return { ok: false, error: "ID inválido." };
+  }
+
+  const supabase = await supabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "No autenticado." };
+
+  // Cargar match anterior
+  const { data: prev, error: pErr } = await supabase
+    .from("matches")
+    .select("id, tournament_id, status, match_players(user_id, team)")
+    .eq("id", prev_match_id)
+    .single();
+  if (pErr || !prev) return { ok: false, error: "Partida anterior no encontrada." };
+  if (!prev.tournament_id) return { ok: false, error: "Esta partida no pertenece a una polla." };
+
+  type MP = { user_id: string; team: number };
+  const mps = (prev.match_players ?? []) as MP[];
+  const teamA = mps.filter((mp) => mp.team === 1).map((mp) => mp.user_id);
+  const teamB = mps.filter((mp) => mp.team === 2).map((mp) => mp.user_id);
+
+  if (teamA.length !== 2 || teamB.length !== 2) {
+    return { ok: false, error: "La partida anterior no tiene 2v2 (no se puede repetir)." };
+  }
+
+  // Delegamos a createNewMatchInPolla (incluye validación de roster + rate limit)
+  return createNewMatchInPolla({
+    tournament_id: prev.tournament_id,
+    team_a:        teamA as [string, string],
+    team_b:        teamB as [string, string],
+  });
+}
+
+// ============================================================
 // closePolla — marca status='finished'
 // ============================================================
 

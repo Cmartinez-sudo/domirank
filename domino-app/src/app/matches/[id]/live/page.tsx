@@ -21,7 +21,16 @@ export default async function LivePage({
     .single();
   if (!match) return notFound();
   if (match.status === "cancelled") redirect(`/dashboard`);
-  if (match.status !== "in_progress") redirect(`/matches/${id}`);
+  // Para partidas de polla: permitimos status='confirmed' (trophy state inline).
+  // Para quick match: solo in_progress entra al /live, lo demás va al detalle.
+  const matchAnyEarly = match as Record<string, unknown>;
+  const tIdEarly = matchAnyEarly.tournament_id as string | null;
+  let earlyIsPolla = false;
+  if (tIdEarly && match.status === "confirmed") {
+    const { data: t } = await supabase.from("tournaments").select("format").eq("id", tIdEarly).maybeSingle();
+    earlyIsPolla = (t as { format?: string } | null)?.format === "polla";
+  }
+  if (match.status !== "in_progress" && !earlyIsPolla) redirect(`/matches/${id}`);
 
   // Determinar si el usuario es jugador de esta partida
   const { data: myMatchPlayer } = await supabase
@@ -106,6 +115,8 @@ export default async function LivePage({
       tournamentId={tournamentId}
       tournamentName={tournamentName}
       isPolla={isPolla}
+      matchStatus={match.status as "in_progress" | "confirmed" | "pending_attestation"}
+      isCreator={match.created_by === user.id}
     />
   );
 }
