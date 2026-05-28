@@ -159,9 +159,14 @@ export async function startTimer(match_id: string): Promise<{ ok: true } | { ok:
 const AddRoundSchema = z.object({
   match_id: z.string().uuid(),
   team: z.number().int().min(1).max(2),
-  points: z.number().int().min(1).max(999),
+  points: z.number().int().min(0).max(999),
   kind: z.enum(["points","capicua","tranque"]).default("points"),
-});
+}).refine(
+  // Tranque puede ser 0 puntos (solo marca la mano sin sumar). points >= 1
+  // requerido para points/capicua.
+  (v) => v.kind === "tranque" || v.points >= 1,
+  { message: "points debe ser >= 1 (excepto tranque)" }
+);
 
 export async function addRound(input: z.infer<typeof AddRoundSchema>) {
   const parsed = AddRoundSchema.safeParse(input);
@@ -213,14 +218,14 @@ export async function undoLastRound(match_id: string) {
   return { ok: true as const };
 }
 
-export async function cancelLiveMatch(match_id: string) {
+export async function cancelLiveMatch(match_id: string, redirect_to: string = "/dashboard") {
   const supabase = await supabaseServer();
   const { error } = await supabase
     .from("matches")
     .update({ status: "cancelled" })
     .eq("id", match_id);
   if (error) return { ok: false as const, error: error.message };
-  redirect("/dashboard");
+  redirect(redirect_to);
 }
 
 /* ============================================================
@@ -266,7 +271,7 @@ export async function finalizeMatch(match_id: string): Promise<{ ok: true } | { 
 
   const { data: matchRow } = await supabase
     .from("matches")
-    .select("target_points, time_limit_minutes, timer_started_at")
+    .select("target_points, time_limit_minutes, timer_started_at, tournament_id, rated, created_by")
     .eq("id", match_id)
     .single();
   if (!matchRow) return { ok: false, error: "Partida no encontrada." };
@@ -298,7 +303,63 @@ export async function finalizeMatch(match_id: string): Promise<{ ok: true } | { 
     return { ok: false, error: "Tiempo agotado con empate — deben jugar una mano adicional para desempatar." };
   }
 
-  // Llamar SQL RPC: mueve a pending_attestation + auto-attest scorekeeper
+  // ============================================================
+  // POLLA BYPASS — saltea attestation 3-of-4
+  // ============================================================
+  // Si la partida pertenece a una polla, finaliza directo a 'confirmed'
+  // sin pasar por pending_attestation. Carlos lo decidió porque las pollas
+  // se juegan IRL, el scorekeeper presencial es confianza suficiente.
+  // El rating se aplica al instante si rated=true.
+  const tournamentId = (matchRow as { tournament_id?: string | null }).tournament_id ?? null;
+  let isPolla = false;
+  if (tournamentId) {
+    const { data: t } = await supabase
+      .from("tournaments")
+      .select("format")
+      .eq("id", tournamentId)
+      .single();
+    isPolla = (t as { format?: string } | null)?.format === "polla";
+  }
+
+  if (isPolla) {
+    // Solo el scorekeeper (creator) puede finalizar
+    const createdBy = (matchRow as { created_by?: string }).created_by;
+    if (createdBy !== user.id) {
+      return { ok: false, error: "Solo el creador puede finalizar la partida." };
+    }
+    const { error: updErr } = await supabase
+      .from("matches")
+      .update({ status: "confirmed", finished_at: new Date().toISOString(), scorekeeper_id: user.id })
+      .eq("id", match_id);
+    if (updErr) {
+      console.error("[finalizeMatch polla bypass] update failed:", updErr);
+      return { ok: false, error: "No se pudo finalizar la partida." };
+    }
+
+    // Aplicar rating si la polla está rateada. Best-effort: si falla logueamos
+    // pero NO bloqueamos — el match queda confirmed igualmente.
+    const rated = (matchRow as { rated?: boolean }).rated ?? true;
+    if (rated) {
+      try {
+        const { applyMatchRating } = await import("@/lib/match-attest-actions");
+        const ratingResult = await applyMatchRating(match_id);
+        if (!ratingResult.ok) {
+          console.error("[finalizeMatch polla bypass] applyMatchRating failed:", ratingResult.error);
+        }
+      } catch (e) {
+        console.error("[finalizeMatch polla bypass] rating import/apply error:", e);
+      }
+    }
+
+    revalidatePath("/dashboard");
+    revalidatePath(`/matches/${match_id}`);
+    revalidatePath(`/tournaments/${tournamentId}`);
+    return { ok: true };
+  }
+
+  // ============================================================
+  // FLOW NORMAL (no-polla) — pending_attestation + email dispatch
+  // ============================================================
   const { error: rpcErr } = await supabase.rpc("finalize_match", { p_match_id: match_id });
   if (rpcErr) {
     const m = rpcErr.message ?? "";

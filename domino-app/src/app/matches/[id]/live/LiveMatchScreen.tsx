@@ -22,6 +22,7 @@ export function LiveMatchScreen({
   isSpectator = false,
   tournamentId = null,
   tournamentName = null,
+  isPolla = false,
 }: {
   matchId: string;
   modality: ModalityCode;
@@ -43,6 +44,10 @@ export function LiveMatchScreen({
   tournamentId?: string | null;
   /** Nombre del torneo para mostrar en el breadcrumb. */
   tournamentName?: string | null;
+  /** Si true: comportamiento polla — Tranque visible, "Abandonar" en lugar de
+   *  "Cancelar", cancel/finalize redirigen a /tournaments/[id], saltea
+   *  attestation (server-side detect). */
+  isPolla?: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -99,6 +104,14 @@ export function LiveMatchScreen({
       () => { setInput(0); setErr(null); },
     );
   }
+  function doTranque() {
+    // Tranque: marca la mano (kind='tranque') sin sumar puntos al score.
+    // Útil para registrar que hubo tranque en el historial.
+    run(
+      () => addRound({ match_id: matchId, team: activeTeam, points: 0, kind: "tranque" }),
+      () => { setInput(0); setErr(null); },
+    );
+  }
   function doUndo() {
     run(() => undoLastRound(matchId), () => setErr(null));
   }
@@ -112,7 +125,13 @@ export function LiveMatchScreen({
   async function cancelImmediate() {
     setConfirmCancel(false);
     setPending(true);
-    try { await cancelLiveMatch(matchId); } finally { setPending(false); }
+    try {
+      // En polla redirige al home de la polla, en quick match al dashboard.
+      const redirectTo = isPolla && tournamentId ? `/tournaments/${tournamentId}` : "/dashboard";
+      await cancelLiveMatch(matchId, redirectTo);
+    } finally {
+      setPending(false);
+    }
   }
   async function doFinalize() {
     setErr(null);
@@ -126,7 +145,12 @@ export function LiveMatchScreen({
             ? validation.winnerTeam === 1 ? nameA : nameB
             : "unknown";
         analytics.track("match_finalized", { match_id: matchId, winner_team: winnerTeam });
-        router.push(`/matches/${matchId}`);
+        // En polla volvemos al home de la polla; en quick match al detalle del match.
+        if (isPolla && tournamentId) {
+          router.push(`/tournaments/${tournamentId}`);
+        } else {
+          router.push(`/matches/${matchId}`);
+        }
       } else {
         setErr(r.error);
       }
@@ -297,6 +321,28 @@ export function LiveMatchScreen({
               Sumar
             </button>
           </div>
+          {/* Tranque: sólo en modo polla. Registra la mano sin sumar puntos. */}
+          {isPolla && (
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                className="flex-1 py-2 rounded-md font-medium border border-border text-text-mute hover:bg-surface-2 transition text-sm"
+                disabled={pending}
+                onClick={doTranque}
+                title="Registra la mano como tranque (sin sumar puntos)"
+              >
+                ⏹ Tranque
+              </button>
+              <button
+                type="button"
+                className="flex-1 py-2 rounded-md font-medium border border-danger/30 text-danger hover:bg-danger/10 transition text-sm"
+                disabled={pending}
+                onClick={doCancel}
+              >
+                Abandonar partida
+              </button>
+            </div>
+          )}
         </div>
       ))}
 
