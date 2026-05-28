@@ -37,11 +37,14 @@ export const dynamic = "force-dynamic";
 
 export default async function TournamentDetail({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ season?: string }>;
 }) {
   const user = await getCurrentUser();
   const { id } = await params;
+  const sp = await searchParams;
   const supabase = await supabaseServer();
 
   const { data: tournament } = await supabase
@@ -53,16 +56,36 @@ export default async function TournamentDetail({
 
   // ─── Polla format: branch to PollaHomePage ─────────────────
   if ((tournament as { format?: string }).format === "polla") {
-    // Fetch standings via RPC
-    const { data: standings } = await supabase
-      .rpc("polla_standings", { p_tournament_id: tournament.id });
+    const currentSeason = (tournament as { current_season?: number }).current_season ?? 1;
+    // Validar ?season — solo aceptamos enteros entre 1 y current_season
+    const requestedSeason = sp.season ? parseInt(sp.season, 10) : NaN;
+    const viewingSeason = Number.isInteger(requestedSeason) && requestedSeason >= 1 && requestedSeason <= currentSeason
+      ? requestedSeason
+      : currentSeason;
 
-    // Fetch pairings + matches del current_season para armar rounds
-    const { data: pairings } = await supabase
-      .from("polla_current_season_pairings")
-      .select("*, matches(id, status, match_players(team, score))")
-      .eq("tournament_id", tournament.id)
-      .order("created_at", { ascending: true });
+    // Fetch standings via RPC — pasa p_season solo si es histórico, así
+    // el comportamiento default sigue siendo current_season.
+    const { data: standings } = await supabase
+      .rpc("polla_standings", {
+        p_tournament_id: tournament.id,
+        p_season:        viewingSeason === currentSeason ? null : viewingSeason,
+      });
+
+    // Fetch pairings + matches de la temporada que estamos viendo.
+    // Si es current_season → usar la view; si es histórica → query directa
+    // a tournament_pairings filtrado por season.
+    const { data: pairings } = viewingSeason === currentSeason
+      ? await supabase
+          .from("polla_current_season_pairings")
+          .select("*, matches(id, status, match_players(team, score))")
+          .eq("tournament_id", tournament.id)
+          .order("created_at", { ascending: true })
+      : await supabase
+          .from("tournament_pairings")
+          .select("*, matches(id, status, match_players(team, score))")
+          .eq("tournament_id", tournament.id)
+          .eq("season", viewingSeason)
+          .order("created_at", { ascending: true });
 
     // Fetch user names para el accordion
     const { data: players } = await supabase
@@ -106,7 +129,7 @@ export default async function TournamentDetail({
           id: tournament.id,
           name: (tournament as { name: string }).name,
           is_open_ended: (tournament as { is_open_ended?: boolean }).is_open_ended ?? false,
-          current_season: (tournament as { current_season?: number }).current_season ?? 1,
+          current_season: currentSeason,
           created_by: (tournament as { created_by: string }).created_by,
           status: (tournament as { status: string }).status as "open" | "in_progress" | "finished" | "cancelled",
         }}
@@ -117,6 +140,7 @@ export default async function TournamentDetail({
         totalMatches={(pairings ?? []).length}
         playerCount={playerCount}
         userNames={userNames}
+        viewingSeason={viewingSeason}
       />
     );
   }

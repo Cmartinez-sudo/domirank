@@ -29,7 +29,8 @@ vi.mock('next/link', () => ({
 
 vi.mock('@/lib/polla-actions', () => ({
   createNewMatchInPolla: vi.fn(() => Promise.resolve({ ok: true, match_id: 'm1' })),
-  startNewSeason: vi.fn(() => Promise.resolve({ ok: true, new_season: 2 })),
+  startNewSeason:        vi.fn(() => Promise.resolve({ ok: true, new_season: 2 })),
+  closePolla:            vi.fn(() => Promise.resolve({ ok: true })),
 }));
 
 const TOURNAMENT = {
@@ -62,33 +63,27 @@ describe('PollaHomePage', () => {
         totalMatches={0}
         playerCount={4}
         userNames={USER_NAMES}
+        viewingSeason={1}
       />,
     );
-    // Sin crashear, debe renderizar el header con el nombre del torneo
     expect(container.textContent).toContain('Polla del barrio');
-    // Debe mostrar el botón "Nueva partida" (no closed)
     expect(container.textContent).toContain('Nueva partida');
   });
 
   it('pasa rosterUserIds — no derivado de standings — al modal (regresión bug happy path)', () => {
-    // Verificación clave: PollaHomePage acepta rosterUserIds como prop
-    // separado de standings, por lo que NEVER puede recurrir el bug donde
-    // standings vacío rompe el modal. Esta firma del componente es el
-    // contrato. La integración real con el modal está cubierta por
-    // NewMatchInPollaModal.test.tsx ("renderiza los 4 user IDs como <option>").
     const { container } = render(
       <PollaHomePage
         tournament={TOURNAMENT}
         currentUserId="carlos"
-        standings={[]} // ← STANDINGS VACÍO — caso clave
+        standings={[]}
         rosterUserIds={ROSTER}
         rounds={[]}
         totalMatches={0}
         playerCount={4}
         userNames={USER_NAMES}
+        viewingSeason={1}
       />,
     );
-    // Sin crashear y muestra el botón para abrir el modal
     expect(container.textContent).toContain('+ Nueva partida');
   });
 
@@ -99,10 +94,12 @@ describe('PollaHomePage', () => {
         avatar_url: null, total_points: 200, wins: 2, losses: 0, win_pct: 100, games_played: 2,
         current_streak: '2W',
         best_partner_id: 'erik', best_partner_name: 'Erik',
+        best_partner_wins: 2, best_partner_losses: 0,
         worst_rival_id: 'gusi', worst_rival_name: 'Gusi',
+        worst_rival_wins: 0, worst_rival_losses: 2,
       },
     ];
-    const { getByTestId } = render(
+    const { getByTestId, container } = render(
       <PollaHomePage
         tournament={TOURNAMENT}
         currentUserId="carlos"
@@ -112,9 +109,13 @@ describe('PollaHomePage', () => {
         totalMatches={2}
         playerCount={4}
         userNames={USER_NAMES}
+        viewingSeason={1}
       />,
     );
     expect(getByTestId('player-name').textContent).toBe('Carlos');
+    // Partner stats reales (no 0W-0L hardcoded)
+    expect(container.textContent).toContain('2W-0L');
+    expect(container.textContent).toContain('0W-2L');
   });
 
   it('botón "+ Nueva partida" oculto cuando el torneo está finished', () => {
@@ -129,10 +130,9 @@ describe('PollaHomePage', () => {
         totalMatches={0}
         playerCount={4}
         userNames={USER_NAMES}
+        viewingSeason={1}
       />,
     );
-    // Buscamos el button como elemento, no como texto (el empty state del
-    // leaderboard sí menciona la frase, pero como texto literal — no como botón).
     const buttons = container.querySelectorAll('button');
     const hasNuevaPartidaButton = Array.from(buttons).some(
       (b) => (b.textContent ?? '').trim() === '+ Nueva partida',
@@ -151,6 +151,7 @@ describe('PollaHomePage', () => {
         totalMatches={0}
         playerCount={4}
         userNames={USER_NAMES}
+        viewingSeason={1}
       />,
     );
     expect(container.textContent).toContain('Cerrada');
@@ -184,8 +185,109 @@ describe('PollaHomePage', () => {
         totalMatches={1}
         playerCount={4}
         userNames={USER_NAMES}
+        viewingSeason={1}
       />,
     );
     expect(container.textContent).toContain('Ronda 1');
+  });
+
+  // ─── Nuevos tests para Temporada selector + Cerrar polla ─────────
+  it('muestra badge "Histórico" y oculta acciones cuando viewingSeason != current_season', () => {
+    const t2 = { ...TOURNAMENT, current_season: 2 };
+    const { container } = render(
+      <PollaHomePage
+        tournament={t2}
+        currentUserId="carlos"
+        standings={[]}
+        rosterUserIds={ROSTER}
+        rounds={[]}
+        totalMatches={0}
+        playerCount={4}
+        userNames={USER_NAMES}
+        viewingSeason={1}  // ← histórica
+      />,
+    );
+    expect(container.textContent).toContain('Histórico');
+    // Sin "Nueva partida" en modo histórico
+    const buttons = container.querySelectorAll('button');
+    const hasNew = Array.from(buttons).some(
+      (b) => (b.textContent ?? '').trim() === '+ Nueva partida',
+    );
+    expect(hasNew).toBe(false);
+    // Sin acciones del organizador en modo histórico
+    expect(container.textContent).not.toContain('Acciones del organizador');
+  });
+
+  it('PollaSeasonSelector aparece solo si current_season > 1', () => {
+    // Caso 1: temporada 1 sola → selector NO debe aparecer
+    const { container: c1 } = render(
+      <PollaHomePage
+        tournament={TOURNAMENT}
+        currentUserId="carlos"
+        standings={[]}
+        rosterUserIds={ROSTER}
+        rounds={[]}
+        totalMatches={0}
+        playerCount={4}
+        userNames={USER_NAMES}
+        viewingSeason={1}
+      />,
+    );
+    // Sin selector — el componente retorna null si current_season <= 1
+    expect(c1.querySelector('nav[aria-label="Temporadas"]')).toBeNull();
+
+    // Caso 2: temporada 2 → selector SÍ debe aparecer
+    const { container: c2 } = render(
+      <PollaHomePage
+        tournament={{ ...TOURNAMENT, current_season: 2 }}
+        currentUserId="carlos"
+        standings={[]}
+        rosterUserIds={ROSTER}
+        rounds={[]}
+        totalMatches={0}
+        playerCount={4}
+        userNames={USER_NAMES}
+        viewingSeason={2}
+      />,
+    );
+    expect(c2.querySelector('nav[aria-label="Temporadas"]')).not.toBeNull();
+  });
+
+  it('botón "Cerrar polla" visible al organizer cuando la polla no está cerrada', () => {
+    const { container } = render(
+      <PollaHomePage
+        tournament={TOURNAMENT}
+        currentUserId="carlos"  // ← created_by === carlos
+        standings={[]}
+        rosterUserIds={ROSTER}
+        rounds={[]}
+        totalMatches={0}
+        playerCount={4}
+        userNames={USER_NAMES}
+        viewingSeason={1}
+      />,
+    );
+    const buttons = container.querySelectorAll('button');
+    const hasClose = Array.from(buttons).some(
+      (b) => (b.textContent ?? '').trim() === 'Cerrar polla',
+    );
+    expect(hasClose).toBe(true);
+  });
+
+  it('botón "Cerrar polla" oculto si NO sos el organizer', () => {
+    const { container } = render(
+      <PollaHomePage
+        tournament={TOURNAMENT}
+        currentUserId="erik"  // ← created_by es carlos, no erik
+        standings={[]}
+        rosterUserIds={ROSTER}
+        rounds={[]}
+        totalMatches={0}
+        playerCount={4}
+        userNames={USER_NAMES}
+        viewingSeason={1}
+      />,
+    );
+    expect(container.textContent).not.toContain('Cerrar polla');
   });
 });

@@ -11,7 +11,9 @@ const ROWS: PollaStandingsRow[] = [
     total_points: 510, wins: 3, losses: 2, win_pct: 60, games_played: 5,
     current_streak: '2W',
     best_partner_id: 'b', best_partner_name: 'Erik',
+    best_partner_wins: 2, best_partner_losses: 1,
     worst_rival_id: 'd', worst_rival_name: 'Gusi',
+    worst_rival_wins: 2, worst_rival_losses: 3,
   },
   {
     user_id: 'b', username: 'erik', display_name: 'Erik',
@@ -19,7 +21,9 @@ const ROWS: PollaStandingsRow[] = [
     total_points: 480, wins: 3, losses: 2, win_pct: 60, games_played: 5,
     current_streak: '1L',
     best_partner_id: 'a', best_partner_name: 'Carlos',
+    best_partner_wins: 2, best_partner_losses: 1,
     worst_rival_id: 'd', worst_rival_name: 'Gusi',
+    worst_rival_wins: 2, worst_rival_losses: 3,
   },
 ];
 

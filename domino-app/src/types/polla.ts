@@ -1,18 +1,22 @@
 export type PollaStandingsRow = {
-  user_id:           string;
-  username:          string;
-  display_name:      string | null;
-  avatar_url:        string | null;
-  total_points:      number;
-  wins:              number;
-  losses:            number;
-  win_pct:           number;
-  games_played:      number;
-  current_streak:    string;
-  best_partner_id:   string | null;
-  best_partner_name: string | null;
-  worst_rival_id:    string | null;
-  worst_rival_name:  string | null;
+  user_id:              string;
+  username:             string;
+  display_name:         string | null;
+  avatar_url:           string | null;
+  total_points:         number;
+  wins:                 number;
+  losses:               number;
+  win_pct:              number;
+  games_played:         number;
+  current_streak:       string;
+  best_partner_id:      string | null;
+  best_partner_name:    string | null;
+  best_partner_wins:    number;
+  best_partner_losses:  number;
+  worst_rival_id:       string | null;
+  worst_rival_name:     string | null;
+  worst_rival_wins:     number;
+  worst_rival_losses:   number;
 };
 
 export type PollaPartnerRow = {

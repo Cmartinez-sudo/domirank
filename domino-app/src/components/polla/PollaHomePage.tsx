@@ -7,6 +7,8 @@ import { PartnerStatsCard } from "./PartnerStatsCard";
 import { PollaRoundsAccordion } from "./PollaRoundsAccordion";
 import { NewMatchInPollaModal } from "./NewMatchInPollaModal";
 import { NewSeasonDialog } from "./NewSeasonDialog";
+import { ClosePollaDialog } from "./ClosePollaDialog";
+import { PollaSeasonSelector } from "./PollaSeasonSelector";
 import type { PollaStandingsRow, PollaRoundGroup } from "@/types/polla";
 
 type Props = {
@@ -27,16 +29,21 @@ type Props = {
   totalMatches: number;
   playerCount: number;
   userNames: Record<string, string>;
+  /** Temporada que el usuario está viendo. Si !== current_season, estamos en
+   *  modo histórico (read-only: sin "Nueva partida", sin acciones organizador). */
+  viewingSeason: number;
 };
 
 export function PollaHomePage({
-  tournament, currentUserId, standings, rosterUserIds, rounds, totalMatches, playerCount, userNames,
+  tournament, currentUserId, standings, rosterUserIds, rounds, totalMatches, playerCount, userNames, viewingSeason,
 }: Props) {
   const [showNewMatchModal, setShowNewMatchModal] = useState(false);
   const [showNewSeasonDialog, setShowNewSeasonDialog] = useState(false);
+  const [showClosePollaDialog, setShowClosePollaDialog] = useState(false);
 
   const isOrganizer = tournament.created_by === currentUserId;
   const isClosed = tournament.status === "finished" || tournament.status === "cancelled";
+  const isHistorical = viewingSeason !== tournament.current_season;
 
   const meRow = standings.find((r) => r.user_id === currentUserId);
 
@@ -58,16 +65,19 @@ export function PollaHomePage({
               🇻🇪 {tournament.name}
             </h1>
             <div className="text-text-mute text-sm mt-1">
-              {playerCount} jugadores · Temporada {tournament.current_season} · {totalMatches} partidas
+              {playerCount} jugadores · Temporada {viewingSeason} · {totalMatches} partidas
             </div>
-            <div className="flex gap-1.5 mt-2">
+            <div className="flex gap-1.5 mt-2 flex-wrap">
               <span className="badge bg-primary/15 text-primary">Polla</span>
               <span className="badge bg-info/15 text-info">
                 {tournament.is_open_ended ? "Indefinida" : "Cerrada"}
               </span>
+              {isHistorical && (
+                <span className="badge bg-surface-2 text-text-mute">Histórico</span>
+              )}
             </div>
           </div>
-          {!isClosed && (
+          {!isClosed && !isHistorical && (
             <button
               type="button"
               onClick={() => setShowNewMatchModal(true)}
@@ -79,20 +89,25 @@ export function PollaHomePage({
         </div>
       </div>
 
+      {/* Season selector — solo aparece si hay temporadas históricas */}
+      <PollaSeasonSelector
+        tournamentId={tournament.id}
+        currentSeason={tournament.current_season}
+        viewingSeason={viewingSeason}
+      />
+
       {/* Leaderboard */}
       <PollaLeaderboard rows={standings} currentUserId={currentUserId} />
 
-      {/* Partner stats — solo si el current user es participante.
-          NOTE: best_partner_wins/losses no vienen en PollaStandingsRow;
-          mostramos solo el nombre (PartnerStatsCard maneja 0W-0L o "—"). */}
+      {/* Partner stats — solo si el current user es participante */}
       {meRow && (
         <PartnerStatsCard
           bestPartnerName={meRow.best_partner_name}
-          bestPartnerWins={0}
-          bestPartnerLosses={0}
+          bestPartnerWins={meRow.best_partner_wins}
+          bestPartnerLosses={meRow.best_partner_losses}
           worstRivalName={meRow.worst_rival_name}
-          worstRivalWins={0}
-          worstRivalLosses={0}
+          worstRivalWins={meRow.worst_rival_wins}
+          worstRivalLosses={meRow.worst_rival_losses}
         />
       )}
 
@@ -103,8 +118,8 @@ export function PollaHomePage({
         userNames={userNames}
       />
 
-      {/* Acciones organizer */}
-      {isOrganizer && (
+      {/* Acciones organizer — solo en vista actual (no histórico) */}
+      {isOrganizer && !isHistorical && (
         <div className="card space-y-2">
           <div className="text-text-mute text-xs uppercase tracking-wide mb-2">Acciones del organizador</div>
           <Link
@@ -114,13 +129,22 @@ export function PollaHomePage({
             Editar nombre
           </Link>
           {!isClosed && (
-            <button
-              type="button"
-              onClick={() => setShowNewSeasonDialog(true)}
-              className="btn w-full border border-danger/40 text-danger hover:bg-danger/10 active:scale-[.97]"
-            >
-              Nueva temporada
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setShowNewSeasonDialog(true)}
+                className="btn w-full border border-danger/40 text-danger hover:bg-danger/10 active:scale-[.97]"
+              >
+                Nueva temporada
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowClosePollaDialog(true)}
+                className="btn w-full border border-danger/40 text-danger hover:bg-danger/10 active:scale-[.97]"
+              >
+                Cerrar polla
+              </button>
+            </>
           )}
         </div>
       )}
@@ -140,6 +164,12 @@ export function PollaHomePage({
           tournamentId={tournament.id}
           currentSeason={tournament.current_season}
           onClose={() => setShowNewSeasonDialog(false)}
+        />
+      )}
+      {showClosePollaDialog && (
+        <ClosePollaDialog
+          tournamentId={tournament.id}
+          onClose={() => setShowClosePollaDialog(false)}
         />
       )}
     </div>
