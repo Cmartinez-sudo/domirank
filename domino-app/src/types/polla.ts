@@ -4,11 +4,15 @@ export type PollaStandingsRow = {
   display_name:         string | null;
   avatar_url:           string | null;
   total_points:         number;
+  points_for:           number;
+  points_against:       number;
+  diff:                 number;
   wins:                 number;
   losses:               number;
   win_pct:              number;
   games_played:         number;
-  current_streak:       string;
+  current_streak:       number;
+  streak_type:          "W" | "L" | null;
   best_partner_id:      string | null;
   best_partner_name:    string | null;
   best_partner_wins:    number;
@@ -18,6 +22,9 @@ export type PollaStandingsRow = {
   worst_rival_wins:     number;
   worst_rival_losses:   number;
 };
+
+/** Tab del leaderboard de polla continua. */
+export type PollaDayFilter = "today" | "all";
 
 export type PollaPartnerRow = {
   partner_id:     string;

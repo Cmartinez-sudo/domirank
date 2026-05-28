@@ -40,7 +40,7 @@ export default async function TournamentDetail({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ season?: string }>;
+  searchParams: Promise<{ season?: string; day?: string }>;
 }) {
   const user = await getCurrentUser();
   const { id } = await params;
@@ -63,12 +63,17 @@ export default async function TournamentDetail({
       ? requestedSeason
       : currentSeason;
 
-    // Fetch standings via RPC — pasa p_season solo si es histórico, así
-    // el comportamiento default sigue siendo current_season.
+    // Day filter: solo válido en polla continua (is_open_ended)
+    const isOpenEnded  = (tournament as { is_open_ended?: boolean }).is_open_ended ?? false;
+    const dayFilter    = isOpenEnded && sp.day === "today" ? "today" : "all";
+
+    // Fetch standings via RPC — pasa p_season para histórico + p_day_filter
+    // para tab "Hoy"
     const { data: standings } = await supabase
       .rpc("polla_standings", {
         p_tournament_id: tournament.id,
         p_season:        viewingSeason === currentSeason ? null : viewingSeason,
+        p_day_filter:    dayFilter === "today" ? "today" : null,
       });
 
     // Fetch pairings + matches con rondas para armar la matches list.
@@ -149,16 +154,28 @@ export default async function TournamentDetail({
 
     const activeMatch = matchRows.find((m) => m.status === "in_progress") ?? null;
 
+    // Tab counts: cuántas partidas finalizadas hoy vs total
+    const startOfTodayCaracas = (() => {
+      const d = new Date();
+      // Caracas = UTC-4 (no DST). Server `now()` es UTC.
+      const utcMidnight = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 4, 0, 0));
+      return utcMidnight;
+    })();
+    const finishedMatches = matchRows.filter((m) => m.status !== "in_progress");
+    const allCount   = finishedMatches.length;
+    const todayCount = finishedMatches.filter((m) => new Date(m.created_at) >= startOfTodayCaracas).length;
+
     return (
       <PollaHomePage
         tournament={{
           id:             tournament.id,
           name:           (tournament as { name: string }).name,
-          is_open_ended:  (tournament as { is_open_ended?: boolean }).is_open_ended ?? false,
+          is_open_ended:  isOpenEnded,
           current_season: currentSeason,
           created_by:     (tournament as { created_by: string }).created_by,
           status:         (tournament as { status: string }).status as "open" | "in_progress" | "finished" | "cancelled",
           total_rounds:   (tournament as { total_rounds?: number | null }).total_rounds ?? null,
+          created_at:     (tournament as { created_at: string }).created_at,
         }}
         currentUserId={user!.id}
         standings={(standings ?? []) as PollaStandingsRow[]}
@@ -168,6 +185,9 @@ export default async function TournamentDetail({
         playerCount={playerCount}
         userNames={userNames}
         viewingSeason={viewingSeason}
+        dayFilter={dayFilter}
+        todayCount={todayCount}
+        allCount={allCount}
       />
     );
   }

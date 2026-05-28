@@ -29,6 +29,13 @@ const TOURNAMENT = {
   created_by:     'carlos',
   status:         'in_progress' as const,
   total_rounds:   null,
+  created_at:     '2026-05-20T10:00:00Z',
+};
+
+const DEFAULT_LEADERBOARD_PROPS = {
+  dayFilter:  'all' as const,
+  todayCount: 0,
+  allCount:   0,
 };
 
 const ROSTER = ['carlos', 'erik', 'gibbon', 'gusi'];
@@ -42,8 +49,10 @@ const USER_NAMES = {
 function row(uid: string, name: string, overrides: Partial<PollaStandingsRow> = {}): PollaStandingsRow {
   return {
     user_id: uid, username: uid, display_name: name,
-    avatar_url: null, total_points: 0, wins: 0, losses: 0, win_pct: 0, games_played: 0,
-    current_streak: '—',
+    avatar_url: null, total_points: 0,
+    points_for: 0, points_against: 0, diff: 0,
+    wins: 0, losses: 0, win_pct: 0, games_played: 0,
+    current_streak: 0, streak_type: null,
     best_partner_id: null, best_partner_name: null, best_partner_wins: 0, best_partner_losses: 0,
     worst_rival_id: null, worst_rival_name: null, worst_rival_wins: 0, worst_rival_losses: 0,
     ...overrides,
@@ -63,6 +72,7 @@ describe('PollaHomePage', () => {
         playerCount={4}
         userNames={USER_NAMES}
         viewingSeason={1}
+        dayFilter="all" todayCount={0} allCount={0}
       />,
     );
     expect(container.textContent).toContain('Polla del barrio');
@@ -92,6 +102,7 @@ describe('PollaHomePage', () => {
         playerCount={4}
         userNames={USER_NAMES}
         viewingSeason={1}
+        dayFilter="all" todayCount={0} allCount={0}
       />,
     );
     expect(container.textContent).toContain('Continuar partida en curso');
@@ -104,13 +115,15 @@ describe('PollaHomePage', () => {
   it('badge "Continua" / "Cerrada" según is_open_ended', () => {
     const { container: c1 } = render(
       <PollaHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
-        matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1} />,
+        matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
+        dayFilter="all" todayCount={0} allCount={0} />,
     );
     expect(c1.textContent).toContain('Continua');
 
     const { container: c2 } = render(
       <PollaHomePage tournament={{ ...TOURNAMENT, is_open_ended: false }} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
-        matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1} />,
+        matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
+        dayFilter="all" todayCount={0} allCount={0} />,
     );
     expect(c2.textContent).toContain('Cerrada');
   });
@@ -126,7 +139,8 @@ describe('PollaHomePage', () => {
     ];
     const { container } = render(
       <PollaHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
-        matches={matches} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1} />,
+        matches={matches} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
+        dayFilter="all" todayCount={0} allCount={0} />,
     );
     expect(container.textContent).toContain('Partidas (1)');
     expect(container.textContent).toContain('100');
@@ -138,7 +152,8 @@ describe('PollaHomePage', () => {
     const finished = { ...TOURNAMENT, status: 'finished' as const };
     const { container } = render(
       <PollaHomePage tournament={finished} currentUserId="carlos" standings={standings} rosterUserIds={ROSTER}
-        matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1} />,
+        matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
+        dayFilter="all" todayCount={0} allCount={0} />,
     );
     expect(container.textContent).toContain('Campeón');
     expect(container.textContent).toContain('Carlos');
@@ -157,7 +172,8 @@ describe('PollaHomePage', () => {
     const t2 = { ...TOURNAMENT, current_season: 2 };
     const { container } = render(
       <PollaHomePage tournament={t2} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
-        matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1} />,
+        matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
+        dayFilter="all" todayCount={0} allCount={0} />,
     );
     expect(container.textContent).toContain('Histórico');
     // Sin big button en modo histórico (el texto "Jugar nueva partida" puede aparecer
@@ -174,7 +190,8 @@ describe('PollaHomePage', () => {
   it('botón "Cerrar polla" visible al organizer en polla continua', () => {
     const { container } = render(
       <PollaHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
-        matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1} />,
+        matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
+        dayFilter="all" todayCount={0} allCount={0} />,
     );
     const buttons = container.querySelectorAll('button');
     const hasClose = Array.from(buttons).some((b) => (b.textContent ?? '').includes('Cerrar polla'));
@@ -185,7 +202,8 @@ describe('PollaHomePage', () => {
     const closed = { ...TOURNAMENT, is_open_ended: false };
     const { container } = render(
       <PollaHomePage tournament={closed} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
-        matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1} />,
+        matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
+        dayFilter="all" todayCount={0} allCount={0} />,
     );
     const buttons = container.querySelectorAll('button');
     const hasFinalize = Array.from(buttons).some((b) => (b.textContent ?? '').includes('Finalizar polla'));
@@ -195,7 +213,8 @@ describe('PollaHomePage', () => {
   it('acciones del organizador ocultas para no-organizers', () => {
     const { container } = render(
       <PollaHomePage tournament={TOURNAMENT} currentUserId="erik" standings={[]} rosterUserIds={ROSTER}
-        matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1} />,
+        matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
+        dayFilter="all" todayCount={0} allCount={0} />,
     );
     expect(container.textContent).not.toContain('Cerrar polla');
     expect(container.textContent).not.toContain('Nueva temporada');
@@ -204,13 +223,15 @@ describe('PollaHomePage', () => {
   it('PollaSeasonSelector aparece solo si current_season > 1', () => {
     const { container: c1 } = render(
       <PollaHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
-        matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1} />,
+        matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
+        dayFilter="all" todayCount={0} allCount={0} />,
     );
     expect(c1.querySelector('nav[aria-label="Temporadas"]')).toBeNull();
 
     const { container: c2 } = render(
       <PollaHomePage tournament={{ ...TOURNAMENT, current_season: 2 }} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
-        matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={2} />,
+        matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={2}
+        dayFilter="all" todayCount={0} allCount={0} />,
     );
     expect(c2.querySelector('nav[aria-label="Temporadas"]')).not.toBeNull();
   });
