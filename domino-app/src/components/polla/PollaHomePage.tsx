@@ -13,7 +13,7 @@ import { NewMatchInPollaModal } from "./NewMatchInPollaModal";
 import { NewSeasonDialog } from "./NewSeasonDialog";
 import { ClosePollaDialog } from "./ClosePollaDialog";
 import { PollaSeasonSelector } from "./PollaSeasonSelector";
-import type { PollaStandingsRow, PollaMatchRow } from "@/types/polla";
+import type { PollaStandingsRow, PollaMatchRow, PollaDayFilter } from "@/types/polla";
 
 type Props = {
   tournament: {
@@ -24,21 +24,27 @@ type Props = {
     created_by:     string;
     status:         "open" | "in_progress" | "finished" | "cancelled";
     total_rounds:   number | null;
+    created_at:     string;
   };
   currentUserId:  string;
   standings:      PollaStandingsRow[];
   rosterUserIds:  string[];
-  matches:        PollaMatchRow[];      // todas las partidas de la polla (no solo current season)
-  activeMatch:    PollaMatchRow | null; // match con status='in_progress' de esta polla
+  matches:        PollaMatchRow[];
+  activeMatch:    PollaMatchRow | null;
   playerCount:    number;
   userNames:      Record<string, string>;
-  /** Temporada que el usuario está viendo. Si !== current_season → modo histórico (read-only). */
   viewingSeason:  number;
+  /** Tab activo del leaderboard. "all" si la polla no es continua. */
+  dayFilter:      PollaDayFilter;
+  /** Cantidad de partidas finalizadas hoy (TZ Caracas). */
+  todayCount:     number;
+  /** Cantidad de partidas finalizadas totales (current_season). */
+  allCount:       number;
 };
 
 export function PollaHomePage({
   tournament, currentUserId, standings, rosterUserIds, matches, activeMatch,
-  playerCount, userNames, viewingSeason,
+  playerCount, userNames, viewingSeason, dayFilter, todayCount, allCount,
 }: Props) {
   const router = useRouter();
   const [showNewMatchModal, setShowNewMatchModal] = useState(false);
@@ -117,7 +123,17 @@ export function PollaHomePage({
       )}
 
       {/* Leaderboard */}
-      <PollaLeaderboard rows={standings} currentUserId={currentUserId} />
+      <PollaLeaderboard
+        rows={standings}
+        currentUserId={currentUserId}
+        showTabs={tournament.is_open_ended}
+        activeTab={dayFilter}
+        tournamentId={tournament.id}
+        createdAt={tournament.created_at}
+        todayCount={todayCount}
+        allCount={allCount}
+        seasonParam={viewingSeason === tournament.current_season ? null : viewingSeason}
+      />
 
       {/* Partner stats — solo si el current user es del roster */}
       {meRow && (

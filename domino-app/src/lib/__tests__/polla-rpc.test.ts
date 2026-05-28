@@ -18,8 +18,9 @@ const STANDINGS_FIXTURE: PollaStandingsRow[] = [
   {
     user_id: 'carlos', username: 'carlos', display_name: 'Carlos',
     avatar_url: null,
-    total_points: 510, wins: 3, losses: 2, win_pct: 60, games_played: 5,
-    current_streak: '1L',
+    total_points: 510, points_for: 510, points_against: 420, diff: 90,
+    wins: 3, losses: 2, win_pct: 60, games_played: 5,
+    current_streak: 1, streak_type: 'L',
     best_partner_id: 'erik', best_partner_name: 'Erik',
     best_partner_wins: 2, best_partner_losses: 1,
     worst_rival_id: 'gusi', worst_rival_name: 'Gusi',
@@ -28,8 +29,9 @@ const STANDINGS_FIXTURE: PollaStandingsRow[] = [
   {
     user_id: 'erik', username: 'erik', display_name: 'Erik',
     avatar_url: null,
-    total_points: 480, wins: 3, losses: 2, win_pct: 60, games_played: 5,
-    current_streak: '2W',
+    total_points: 480, points_for: 480, points_against: 450, diff: 30,
+    wins: 3, losses: 2, win_pct: 60, games_played: 5,
+    current_streak: 2, streak_type: 'W',
     best_partner_id: 'carlos', best_partner_name: 'Carlos',
     best_partner_wins: 2, best_partner_losses: 1,
     worst_rival_id: 'gusi', worst_rival_name: 'Gusi',
@@ -65,9 +67,13 @@ describe('polla RPCs — shape + ordering', () => {
     }
   });
 
-  it('current_streak tiene formato NUM+W|L o "—"', () => {
+  it('current_streak es int >= 0 y streak_type es "W"|"L"|null', () => {
     for (const row of STANDINGS_FIXTURE) {
-      expect(row.current_streak).toMatch(/^(\d+[WL]|—)$/);
+      expect(Number.isInteger(row.current_streak)).toBe(true);
+      expect(row.current_streak).toBeGreaterThanOrEqual(0);
+      if (row.streak_type !== null) {
+        expect(['W', 'L']).toContain(row.streak_type);
+      }
     }
   });
 
@@ -116,28 +122,16 @@ describe('PollaRivalRow', () => {
   });
 });
 
-describe('current_streak format invariants', () => {
-  it('puede parsearse a (cantidad, tipo) o ser "—"', () => {
-    function parseStreak(s: string): { count: number; kind: 'W' | 'L' } | null {
-      if (s === '—') return null;
-      const m = s.match(/^(\d+)([WL])$/);
-      if (!m) throw new Error(`malformed streak: ${s}`);
-      return { count: parseInt(m[1], 10), kind: m[2] as 'W' | 'L' };
-    }
-    expect(parseStreak('3W')).toEqual({ count: 3, kind: 'W' });
-    expect(parseStreak('1L')).toEqual({ count: 1, kind: 'L' });
-    expect(parseStreak('15W')).toEqual({ count: 15, kind: 'W' });
-    expect(parseStreak('—')).toBeNull();
-    expect(() => parseStreak('abc')).toThrow();
+describe('current_streak / streak_type invariants', () => {
+  it('streak_type null implica count = 0 (sin racha)', () => {
+    const noStreak: PollaStandingsRow = { ...STANDINGS_FIXTURE[0], current_streak: 0, streak_type: null };
+    expect(noStreak.streak_type).toBeNull();
+    expect(noStreak.current_streak).toBe(0);
   });
 
-  it('count siempre es >= 1 cuando hay racha', () => {
-    const examples = ['1W', '5L', '23W', '99L'];
-    for (const s of examples) {
-      const m = s.match(/^(\d+)([WL])$/);
-      expect(m).toBeTruthy();
-      const count = parseInt(m![1], 10);
-      expect(count).toBeGreaterThanOrEqual(1);
-    }
+  it('streak_type W/L con count >= 1 representa racha activa', () => {
+    const winStreak: PollaStandingsRow = { ...STANDINGS_FIXTURE[0], current_streak: 3, streak_type: 'W' };
+    expect(winStreak.current_streak).toBeGreaterThanOrEqual(1);
+    expect(winStreak.streak_type).toBe('W');
   });
 });
