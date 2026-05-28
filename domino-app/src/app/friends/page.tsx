@@ -97,11 +97,35 @@ export default async function FriendsPage() {
     last_match_at:  lastMatchById.get(u.id)               ?? null,
   });
 
+  // Stats del viewer para los 3 stat cards (#amigos · #partidas · #pollas)
+  let viewerMatchesCount = 0;
+  let viewerActivePollasCount = 0;
+  try {
+    const { count: mc } = await supabase
+      .from("match_players")
+      .select("match_id, matches!inner(status)", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("matches.status", "confirmed");
+    viewerMatchesCount = mc ?? 0;
+
+    const { count: pc } = await supabase
+      .from("tournaments")
+      .select("id, tournament_players!inner(user_id)", { count: "exact", head: true })
+      .eq("format", "polla")
+      .in("status", ["open", "in_progress"])
+      .eq("tournament_players.user_id", user.id);
+    viewerActivePollasCount = pc ?? 0;
+  } catch (e) {
+    console.error("[friends] viewer stats failed:", e);
+  }
+
   return (
     <FriendsPanel
       friends={friends.map(enrich)}
       incoming={incomingList.map((r) => ({ ...r, from: enrich(r.from) })) as any}
       outgoing={outgoingList.map((r) => ({ ...r, to:   enrich(r.to)   })) as any}
+      viewerMatchesCount={viewerMatchesCount}
+      viewerActivePollasCount={viewerActivePollasCount}
     />
   );
 }
