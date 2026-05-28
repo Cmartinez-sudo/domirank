@@ -65,7 +65,7 @@ export function ClosePollaDialog({ tournamentId, onClose }: Props) {
 
         <div className="space-y-1.5">
           <label htmlFor="close-confirm-input" className="text-sm">
-            Escribí <code className="font-mono bg-surface-2 px-1.5 rounded text-xs">cerrar polla</code> para confirmar:
+            Escribe <code className="font-mono bg-surface-2 px-1.5 rounded text-xs">cerrar polla</code> para confirmar:
           </label>
           <input
             id="close-confirm-input"
@@ -79,7 +79,7 @@ export function ClosePollaDialog({ tournamentId, onClose }: Props) {
           />
           {confirmText.length > 0 && !canConfirm && (
             <p className="text-xs text-text-mute mt-1" aria-live="polite">
-              Escribí exactamente "cerrar polla".
+              Escribe exactamente "cerrar polla".
             </p>
           )}
         </div>
