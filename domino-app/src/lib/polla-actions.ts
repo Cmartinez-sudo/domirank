@@ -67,6 +67,45 @@ export async function createNewMatchInPolla(
     return { ok: false, error: "No sos parte de esta polla." };
   }
 
+  // 3.5. Resolver orphan in_progress matches del caller
+  //
+  // Constraint matches_one_inprogress_per_user: 1 sola partida in_progress
+  // por created_by. Si hay un orphan, el insert siguiente falla con
+  // "duplicate key violates unique constraint" — bug reportado en sesión
+  // 2026-05-29.
+  //
+  // Estrategia:
+  //   - Mismo polla: avisar al usuario que ya hay una activa (la matches
+  //     list ya debería ofrecerle "Continuar partida en curso" via bigbtn)
+  //   - Quick match orphan (sin tournament_id): auto-cancel — mismo
+  //     comportamiento que startLiveMatch (live-match.ts:56)
+  //   - Orphan de OTRO torneo: error claro con el nombre
+  const { data: orphan } = await supabase
+    .from("matches")
+    .select("id, tournament_id, tournaments(name)")
+    .eq("created_by", user.id)
+    .eq("status", "in_progress")
+    .maybeSingle();
+  if (orphan) {
+    if (orphan.tournament_id === tournament_id) {
+      return {
+        ok: false,
+        error: "Ya tienes una partida en curso en esta polla. Continúala primero.",
+      };
+    }
+    if (!orphan.tournament_id) {
+      // Quick match abandonado — cancelar
+      await supabase.from("matches").update({ status: "cancelled" }).eq("id", orphan.id);
+    } else {
+      const tName = (orphan as { tournaments?: { name?: string } | { name?: string }[] | null }).tournaments;
+      const name = Array.isArray(tName) ? tName[0]?.name : tName?.name;
+      return {
+        ok: false,
+        error: `Tienes una partida en curso en "${name ?? "otro torneo"}". Termínala o abandónala primero.`,
+      };
+    }
+  }
+
   // 4. Insertar match (format='doubles', NO 'polla')
   const { data: match, error: mErr } = await supabase
     .from("matches")
