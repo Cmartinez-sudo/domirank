@@ -9,7 +9,7 @@ type Props = {
   onBack?: () => void;
 };
 
-const TOTAL = 9;
+const TOTAL = 3;
 
 export function StepHeader({ currentStep, totalSteps = TOTAL, title = "Nuevo torneo", onBack }: Props) {
   const router = useRouter();

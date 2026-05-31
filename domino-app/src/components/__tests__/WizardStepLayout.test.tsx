@@ -89,7 +89,7 @@ describe("WizardStepLayout — content size detection", () => {
     // 1200 > 768-120=648
     vi.stubGlobal("ResizeObserver", makeResizeObserver(1200));
     const { container } = render(
-      <WizardStepLayout currentStep={7} primaryAction={BASE_ACTION} forceSticky>
+      <WizardStepLayout currentStep={3} primaryAction={BASE_ACTION} forceSticky>
         <p>Contenido largo</p>
       </WizardStepLayout>,
     );
@@ -159,7 +159,7 @@ describe("WizardStepLayout — forceSticky", () => {
     // Even with tiny contentHeight, forceSticky forces large mode
     vi.stubGlobal("ResizeObserver", makeResizeObserver(50));
     const { container } = render(
-      <WizardStepLayout currentStep={9} primaryAction={BASE_ACTION} forceSticky>
+      <WizardStepLayout currentStep={3} primaryAction={BASE_ACTION} forceSticky>
         <p>Contenido</p>
       </WizardStepLayout>,
     );

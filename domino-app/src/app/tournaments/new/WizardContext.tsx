@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { useTournamentDraft, TournamentDraftUI } from "@/hooks/useTournamentDraft";
+import type { TournamentDraftUI } from "@/hooks/useTournamentDraft";
 
 type WizardContextValue = {
   draft: TournamentDraftUI;
