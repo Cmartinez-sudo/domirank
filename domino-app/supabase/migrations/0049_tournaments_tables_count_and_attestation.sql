@@ -1,0 +1,74 @@
+-- ============================================================
+-- 0049 — Agregar tournaments.tables_count y tournaments.requires_attestation
+-- ============================================================
+-- F1.3 del refactor TOURNAMENT_WIZARD_REFACTOR.md.
+--
+-- Agrega dos columnas nuevas a public.tournaments para soportar el
+-- nuevo wizard de creación de torneos (F1.4) y el flujo de
+-- atestación de matches (F1.7):
+--
+--   - tables_count: cuántas mesas físicas tiene el organizador.
+--                   Min 1, max 10. Default 1.
+--                   Usado por initial pairings (F1.6) para limitar
+--                   cuántos partidos simultáneos genera.
+--
+--   - requires_attestation: si los matches requieren consenso 3-de-4
+--                           antes de afectar el leaderboard. Default true.
+--                           Usado por finalizeMatch (F1.7) para decidir
+--                           cuándo confirmar un match.
+--
+-- Dependencias:
+--   - mig 0047 (F1.1): renombra enum polla → continuous_league.
+--   - mig 0048 (F1.2): renombra RPCs polla_* → continuous_league_*.
+--
+-- Esta migración NO toca código TS — eso es F1.4 (wizard usa columnas)
+-- + F1.6 (pairings respeta tables_count) + F1.7 (finalize respeta
+-- requires_attestation).
+--
+-- Default-friendly: filas existentes reciben tables_count=1 y
+-- requires_attestation=true automáticamente (los NOT NULL DEFAULT
+-- se aplican retroactivamente en el ADD COLUMN).
+--
+-- Idempotente: ADD COLUMN IF NOT EXISTS en ambas columnas. El CHECK
+-- viaja con la columna (no necesita drop/recreate si ya existe, porque
+-- IF NOT EXISTS protege el ADD entero).
+-- ============================================================
+
+alter table public.tournaments
+  add column if not exists tables_count int not null default 1 check (tables_count between 1 and 10),
+  add column if not exists requires_attestation boolean not null default true;
+
+-- ============================================================
+-- VERIFICACIÓN POST-MIGRACIÓN
+-- ============================================================
+-- 1. Columnas existen con defaults y NOT NULL correctos:
+--      select column_name, data_type, is_nullable, column_default
+--        from information_schema.columns
+--       where table_schema = 'public'
+--         and table_name = 'tournaments'
+--         and column_name in ('tables_count', 'requires_attestation')
+--       order by column_name;
+--    Esperado:
+--      requires_attestation | boolean | NO | true
+--      tables_count         | integer | NO | 1
+--
+-- 2. CHECK constraint sobre tables_count (1..10):
+--      select conname, pg_get_constraintdef(oid) as def
+--        from pg_constraint
+--       where conrelid = 'public.tournaments'::regclass
+--         and contype = 'c'
+--         and pg_get_constraintdef(oid) ilike '%tables_count%';
+--    Esperado: una fila con def = CHECK (tables_count >= 1 AND tables_count <= 10).
+--
+-- 3. Filas existentes recibieron los defaults:
+--      select count(*) as total,
+--             count(*) filter (where tables_count = 1) as default_tables,
+--             count(*) filter (where requires_attestation = true) as default_attest
+--        from public.tournaments;
+--    Esperado: total = default_tables = default_attest.
+--
+-- 4. CHECK rechaza valores fuera de rango (debería fallar):
+--      -- update public.tournaments set tables_count = 0  where id = '<id>'::uuid;
+--      -- update public.tournaments set tables_count = 11 where id = '<id>'::uuid;
+--    Esperado: ambos updates fallan con violación de check constraint.
+-- ============================================================
