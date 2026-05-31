@@ -5,7 +5,7 @@ export type TournamentFormat =
   | "single_elim"
   | "double_elim"
   | "points_league"
-  | "polla";
+  | "continuous_league";
 
 export type TournamentFormatInfo = {
   code: TournamentFormat;
@@ -154,8 +154,8 @@ export const TOURNAMENT_FORMATS: Record<TournamentFormat, TournamentFormatInfo> 
     fairness: 4,
     autopairing: false,
   },
-  polla: {
-    code: "polla",
+  continuous_league: {
+    code: "continuous_league",
     name: "Polla",
     icon: "🎯",
     short: "Partidas libres — parejas se arman en cada match",

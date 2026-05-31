@@ -1,13 +1,13 @@
 import Link from "next/link";
-import type { PollaStandingsRow, PollaDayFilter } from "@/types/polla";
+import type { ContinuousLeagueStandingsRow, ContinuousLeagueDayFilter } from "@/types/continuous-league";
 
 type Props = {
-  rows:           PollaStandingsRow[];
+  rows:           ContinuousLeagueStandingsRow[];
   currentUserId:  string;
   /** Si la polla es continua, mostramos tabs Hoy/Histórico. */
   showTabs:       boolean;
   /** Tab activo (cuando showTabs=true). Vacío si !showTabs. */
-  activeTab?:     PollaDayFilter;
+  activeTab?:     ContinuousLeagueDayFilter;
   /** Tournament id para construir los hrefs de tabs. */
   tournamentId:   string;
   /** Fecha de creación de la polla — para el header histórico. */
@@ -19,7 +19,7 @@ type Props = {
   seasonParam?:   number | null;
 };
 
-function buildHref(tournamentId: string, tab: PollaDayFilter, season: number | null | undefined): string {
+function buildHref(tournamentId: string, tab: ContinuousLeagueDayFilter, season: number | null | undefined): string {
   const params = new URLSearchParams();
   if (tab === "today") params.set("day", "today");
   if (season != null) params.set("season", String(season));
@@ -27,7 +27,7 @@ function buildHref(tournamentId: string, tab: PollaDayFilter, season: number | n
   return `/tournaments/${tournamentId}${qs ? `?${qs}` : ""}`;
 }
 
-export function PollaLeaderboard({
+export function ContinuousLeagueLeaderboard({
   rows, currentUserId, showTabs, activeTab = "all", tournamentId, createdAt,
   todayCount = 0, allCount = 0, seasonParam = null,
 }: Props) {
@@ -100,7 +100,7 @@ export function PollaLeaderboard({
 function DayHeader({
   tab, todayCount, allCount, createdAt,
 }: {
-  tab:        PollaDayFilter;
+  tab:        ContinuousLeagueDayFilter;
   todayCount: number;
   allCount:   number;
   createdAt:  string;
@@ -129,7 +129,7 @@ function DayHeader({
   );
 }
 
-function StandingsTable({ rows, currentUserId }: { rows: PollaStandingsRow[]; currentUserId: string }) {
+function StandingsTable({ rows, currentUserId }: { rows: ContinuousLeagueStandingsRow[]; currentUserId: string }) {
   return (
     <div className="overflow-x-auto -mx-2">
       <table className="w-full text-sm" role="table" aria-label="Leaderboard de la polla">

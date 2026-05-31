@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { reopenPollaMatch, deletePollaMatch, rematchPollaMatch } from "@/lib/polla-actions";
+import { reopenContinuousLeagueMatch, deleteContinuousLeagueMatch, rematchContinuousLeagueMatch } from "@/lib/continuous-league-actions";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 type Props = {
@@ -25,7 +25,7 @@ type Props = {
  * - Editar partida (creator only): re-abre status → in_progress.
  * - Eliminar partida (creator only): soft-delete (status='cancelled').
  */
-export function PollaFinishedState({
+export function ContinuousLeagueFinishedState({
   matchId, tournamentId, winnerName, scoreA, scoreB, isCreator,
 }: Props) {
   const router = useRouter();
@@ -37,7 +37,7 @@ export function PollaFinishedState({
   async function doRematch() {
     setPending(true);
     setError(null);
-    const r = await rematchPollaMatch(matchId);
+    const r = await rematchContinuousLeagueMatch(matchId);
     if (!r.ok) {
       setError(r.error);
       setPending(false);
@@ -50,7 +50,7 @@ export function PollaFinishedState({
     setConfirmReopen(false);
     setPending(true);
     setError(null);
-    const r = await reopenPollaMatch(matchId);
+    const r = await reopenContinuousLeagueMatch(matchId);
     if (!r.ok) {
       setError(r.error);
       setPending(false);
@@ -63,7 +63,7 @@ export function PollaFinishedState({
     setConfirmDelete(false);
     setPending(true);
     setError(null);
-    const r = await deletePollaMatch(matchId);
+    const r = await deleteContinuousLeagueMatch(matchId);
     if (!r.ok) {
       setError(r.error);
       setPending(false);

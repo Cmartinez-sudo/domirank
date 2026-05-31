@@ -49,13 +49,13 @@ export function FriendsPanel({
   incoming,
   outgoing,
   viewerMatchesCount,
-  viewerActivePollasCount,
+  viewerActiveContinuousLeaguesCount,
 }: {
   friends: FriendUser[];
   incoming: IncomingReq[];
   outgoing: OutgoingReq[];
   viewerMatchesCount: number;
-  viewerActivePollasCount: number;
+  viewerActiveContinuousLeaguesCount: number;
 }) {
   const [tab, setTab] = useState<"friends" | "incoming" | "outgoing">("friends");
   const [busy, setBusy] = useState(false);
@@ -96,7 +96,7 @@ export function FriendsPanel({
         <div className="grid grid-cols-3 gap-2.5">
           <StatTile label="Amigos" value={friends.length} />
           <StatTile label={viewerMatchesCount === 1 ? "Partida" : "Partidas"} value={viewerMatchesCount} />
-          <StatTile label={viewerActivePollasCount === 1 ? "Polla activa" : "Pollas activas"} value={viewerActivePollasCount} />
+          <StatTile label={viewerActiveContinuousLeaguesCount === 1 ? "Polla activa" : "Pollas activas"} value={viewerActiveContinuousLeaguesCount} />
         </div>
 
         {/* Buscar usuarios — navega al perfil al click */}

@@ -56,7 +56,7 @@ export function Step7Form({ userId, currentUser }: Props) {
 
   function handleContinue() {
     // Persistir en el draft
-    const nextStep = draft.format === "polla" ? 9 : 8;
+    const nextStep = draft.format === "continuous_league" ? 9 : 8;
     const updates: Parameters<typeof setField>[0] = {
       currentStep: nextStep,
       participants_data: individuals,

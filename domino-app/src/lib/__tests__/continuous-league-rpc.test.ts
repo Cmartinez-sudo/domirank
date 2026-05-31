@@ -1,6 +1,7 @@
 /**
- * Unit tests para las RPCs del polla (polla_standings, polla_best_partner,
- * polla_worst_rival, calc_streak).
+ * Unit tests para las RPCs de la polla (continuous_league_standings,
+ * continuous_league_best_partner, continuous_league_worst_rival,
+ * continuous_league_user_streak).
  *
  * Estos tests NO ejecutan SQL — verifican el shape/contract de los tipos
  * y validan invariantes del data model esperado.
@@ -9,12 +10,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { PollaStandingsRow, PollaPartnerRow, PollaRivalRow } from '@/types/polla';
+import type { ContinuousLeagueStandingsRow, ContinuousLeaguePartnerRow, ContinuousLeagueRivalRow } from '@/types/continuous-league';
 
 // Fixture: 4 players, 5 partidas confirmadas en season 1.
 // Carlos & Erik vs Gibbon & Gusi (×3): C+E win 2, G+Gu win 1
 // Carlos & Gibbon vs Erik & Gusi (×2): C+Gb win 1, E+Gu win 1
-const STANDINGS_FIXTURE: PollaStandingsRow[] = [
+const STANDINGS_FIXTURE: ContinuousLeagueStandingsRow[] = [
   {
     user_id: 'carlos', username: 'carlos', display_name: 'Carlos',
     avatar_url: null,
@@ -39,8 +40,8 @@ const STANDINGS_FIXTURE: PollaStandingsRow[] = [
   },
 ];
 
-describe('polla RPCs — shape + ordering', () => {
-  it('PollaStandingsRow tiene todos los campos requeridos', () => {
+describe('continuous_league RPCs — shape + ordering', () => {
+  it('ContinuousLeagueStandingsRow tiene todos los campos requeridos', () => {
     const row = STANDINGS_FIXTURE[0];
     expect(row).toHaveProperty('user_id');
     expect(row).toHaveProperty('total_points');
@@ -78,7 +79,7 @@ describe('polla RPCs — shape + ordering', () => {
   });
 
   it('best_partner_id es null si el jugador no tuvo partner', () => {
-    const emptyRow: PollaStandingsRow = {
+    const emptyRow: ContinuousLeagueStandingsRow = {
       ...STANDINGS_FIXTURE[0],
       games_played: 0, wins: 0, losses: 0,
       best_partner_id: null, best_partner_name: null,
@@ -96,9 +97,9 @@ describe('polla RPCs — shape + ordering', () => {
   });
 });
 
-describe('PollaPartnerRow', () => {
+describe('ContinuousLeaguePartnerRow', () => {
   it('shape correcto', () => {
-    const partner: PollaPartnerRow = {
+    const partner: ContinuousLeaguePartnerRow = {
       partner_id: 'erik',
       games_together: 3,
       wins_together: 2,
@@ -109,9 +110,9 @@ describe('PollaPartnerRow', () => {
   });
 });
 
-describe('PollaRivalRow', () => {
+describe('ContinuousLeagueRivalRow', () => {
   it('shape correcto', () => {
-    const rival: PollaRivalRow = {
+    const rival: ContinuousLeagueRivalRow = {
       rival_id: 'gusi',
       games_against: 5,
       wins_for_rival: 3,
@@ -124,13 +125,13 @@ describe('PollaRivalRow', () => {
 
 describe('current_streak / streak_type invariants', () => {
   it('streak_type null implica count = 0 (sin racha)', () => {
-    const noStreak: PollaStandingsRow = { ...STANDINGS_FIXTURE[0], current_streak: 0, streak_type: null };
+    const noStreak: ContinuousLeagueStandingsRow = { ...STANDINGS_FIXTURE[0], current_streak: 0, streak_type: null };
     expect(noStreak.streak_type).toBeNull();
     expect(noStreak.current_streak).toBe(0);
   });
 
   it('streak_type W/L con count >= 1 representa racha activa', () => {
-    const winStreak: PollaStandingsRow = { ...STANDINGS_FIXTURE[0], current_streak: 3, streak_type: 'W' };
+    const winStreak: ContinuousLeagueStandingsRow = { ...STANDINGS_FIXTURE[0], current_streak: 3, streak_type: 'W' };
     expect(winStreak.current_streak).toBeGreaterThanOrEqual(1);
     expect(winStreak.streak_type).toBe('W');
   });

@@ -8,7 +8,7 @@ type Props = {
  * Barra de progreso de una polla cerrada (no `is_open_ended`).
  * targetCount = rounds × combos únicos posibles de pairings.
  */
-export function PollaProgressCard({ finishedCount, targetCount, rounds }: Props) {
+export function ContinuousLeagueProgressCard({ finishedCount, targetCount, rounds }: Props) {
   if (!targetCount) return null;
   const pct = Math.min(100, Math.round((finishedCount / targetCount) * 100));
   const reached = finishedCount >= targetCount;

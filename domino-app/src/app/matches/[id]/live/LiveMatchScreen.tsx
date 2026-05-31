@@ -11,7 +11,7 @@ import { addRound, undoLastRound, cancelLiveMatch, finalizeMatch } from "@/lib/l
 import { validateMatchClosure } from "@/lib/match-validation";
 import { useMatchTimer } from "@/hooks/useMatchTimer";
 import { analytics } from "@/lib/analytics";
-import { PollaFinishedState } from "@/components/polla/PollaFinishedState";
+import { ContinuousLeagueFinishedState } from "@/components/continuous-league/ContinuousLeagueFinishedState";
 
 type PublicUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; country: string | null };
 type Round = { id: number; round_number: number; team: number; points: number; kind: string; created_at: string };
@@ -23,7 +23,7 @@ export function LiveMatchScreen({
   isSpectator = false,
   tournamentId = null,
   tournamentName = null,
-  isPolla = false,
+  isContinuousLeague = false,
   matchStatus = "in_progress",
   isCreator = false,
 }: {
@@ -50,7 +50,7 @@ export function LiveMatchScreen({
   /** Si true: comportamiento polla — Tranque visible, "Abandonar" en lugar de
    *  "Cancelar", cancel/finalize redirigen a /tournaments/[id], saltea
    *  attestation (server-side detect). */
-  isPolla?: boolean;
+  isContinuousLeague?: boolean;
   /** Status del match. Cuando es 'confirmed' (polla finalizada) renderizamos
    *  el trophy state inline en lugar del round panel. */
   matchStatus?: "in_progress" | "confirmed" | "pending_attestation";
@@ -135,7 +135,7 @@ export function LiveMatchScreen({
     setPending(true);
     try {
       // En polla redirige al home de la polla, en quick match al dashboard.
-      const redirectTo = isPolla && tournamentId ? `/tournaments/${tournamentId}` : "/dashboard";
+      const redirectTo = isContinuousLeague && tournamentId ? `/tournaments/${tournamentId}` : "/dashboard";
       await cancelLiveMatch(matchId, redirectTo);
     } finally {
       setPending(false);
@@ -155,7 +155,7 @@ export function LiveMatchScreen({
         analytics.track("match_finalized", { match_id: matchId, winner_team: winnerTeam });
         // En polla: refresh para que el page re-renderice con status='confirmed'
         // y aparezca el inline trophy state. En quick match: redirect a detalle.
-        if (isPolla && tournamentId) {
+        if (isContinuousLeague && tournamentId) {
           router.refresh();
         } else {
           router.push(`/matches/${matchId}`);
@@ -263,8 +263,8 @@ export function LiveMatchScreen({
       {err && !isSpectator && <div className="p-3 bg-danger/10 border border-danger/30 rounded-md text-danger text-sm mb-3">{err}</div>}
 
       {/* === Inline trophy state para pollas finalizadas === */}
-      {isPolla && matchStatus === "confirmed" && tournamentId && (
-        <PollaFinishedState
+      {isContinuousLeague && matchStatus === "confirmed" && tournamentId && (
+        <ContinuousLeagueFinishedState
           matchId={matchId}
           tournamentId={tournamentId}
           winnerName={scoreA > scoreB ? nameA : nameB}
@@ -275,7 +275,7 @@ export function LiveMatchScreen({
       )}
 
       {/* === Resto del flow: solo cuando NO es polla finalizada === */}
-      {!(isPolla && matchStatus === "confirmed") && !isSpectator && (isFinishable ? (
+      {!(isContinuousLeague && matchStatus === "confirmed") && !isSpectator && (isFinishable ? (
         <div className="space-y-3">
           <div className="p-4 bg-primary/10 border border-primary/30 rounded-md text-primary text-center font-medium">
             {validation.status === 'time_expired_finishable'
@@ -344,7 +344,7 @@ export function LiveMatchScreen({
             </button>
           </div>
           {/* Tranque: sólo en modo polla. Registra la mano sin sumar puntos. */}
-          {isPolla && (
+          {isContinuousLeague && (
             <div className="mt-2 flex gap-2">
               <button
                 type="button"

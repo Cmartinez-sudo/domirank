@@ -2,8 +2,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
-import { PollaHomePage } from '../PollaHomePage';
-import type { PollaStandingsRow, PollaMatchRow } from '@/types/polla';
+import { ContinuousLeagueHomePage } from '../ContinuousLeagueHomePage';
+import type { ContinuousLeagueStandingsRow, ContinuousLeagueMatchRow } from '@/types/continuous-league';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
@@ -15,10 +15,10 @@ vi.mock('next/link', () => ({
   ),
 }));
 
-vi.mock('@/lib/polla-actions', () => ({
-  createNewMatchInPolla: vi.fn(() => Promise.resolve({ ok: true, match_id: 'm1' })),
+vi.mock('@/lib/continuous-league-actions', () => ({
+  createNewMatchInContinuousLeague: vi.fn(() => Promise.resolve({ ok: true, match_id: 'm1' })),
   startNewSeason:        vi.fn(() => Promise.resolve({ ok: true, new_season: 2 })),
-  closePolla:            vi.fn(() => Promise.resolve({ ok: true })),
+  closeContinuousLeague:            vi.fn(() => Promise.resolve({ ok: true })),
 }));
 
 const TOURNAMENT = {
@@ -46,7 +46,7 @@ const USER_NAMES = {
   gusi:   'Gusi',
 };
 
-function row(uid: string, name: string, overrides: Partial<PollaStandingsRow> = {}): PollaStandingsRow {
+function row(uid: string, name: string, overrides: Partial<ContinuousLeagueStandingsRow> = {}): ContinuousLeagueStandingsRow {
   return {
     user_id: uid, username: uid, display_name: name,
     avatar_url: null, total_points: 0,
@@ -59,10 +59,10 @@ function row(uid: string, name: string, overrides: Partial<PollaStandingsRow> = 
   };
 }
 
-describe('PollaHomePage', () => {
+describe('ContinuousLeagueHomePage', () => {
   it('renderiza con standings vacío (polla recién iniciada)', () => {
     const { container } = render(
-      <PollaHomePage
+      <ContinuousLeagueHomePage
         tournament={TOURNAMENT}
         currentUserId="carlos"
         standings={[]}
@@ -81,7 +81,7 @@ describe('PollaHomePage', () => {
   });
 
   it('big button muestra "Continuar partida en curso" con score live', () => {
-    const activeMatch: PollaMatchRow = {
+    const activeMatch: ContinuousLeagueMatchRow = {
       match_id: 'm-live',
       status: 'in_progress',
       team_a_user_ids: ['carlos', 'erik'],
@@ -92,7 +92,7 @@ describe('PollaHomePage', () => {
       created_at: new Date().toISOString(),
     };
     const { container } = render(
-      <PollaHomePage
+      <ContinuousLeagueHomePage
         tournament={TOURNAMENT}
         currentUserId="carlos"
         standings={[]}
@@ -114,14 +114,14 @@ describe('PollaHomePage', () => {
 
   it('badge "Continua" / "Cerrada" según is_open_ended', () => {
     const { container: c1 } = render(
-      <PollaHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
         matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
         dayFilter="all" todayCount={0} allCount={0} />,
     );
     expect(c1.textContent).toContain('Continua');
 
     const { container: c2 } = render(
-      <PollaHomePage tournament={{ ...TOURNAMENT, is_open_ended: false }} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={{ ...TOURNAMENT, is_open_ended: false }} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
         matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
         dayFilter="all" todayCount={0} allCount={0} />,
     );
@@ -129,7 +129,7 @@ describe('PollaHomePage', () => {
   });
 
   it('matches list muestra todas las partidas con scores', () => {
-    const matches: PollaMatchRow[] = [
+    const matches: ContinuousLeagueMatchRow[] = [
       {
         match_id: 'm1', status: 'confirmed',
         team_a_user_ids: ['carlos', 'erik'], team_b_user_ids: ['gibbon', 'gusi'],
@@ -138,7 +138,7 @@ describe('PollaHomePage', () => {
       },
     ];
     const { container } = render(
-      <PollaHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
         matches={matches} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
         dayFilter="all" todayCount={0} allCount={0} />,
     );
@@ -151,7 +151,7 @@ describe('PollaHomePage', () => {
     const standings = [row('carlos', 'Carlos', { total_points: 510, wins: 7, losses: 3 })];
     const finished = { ...TOURNAMENT, status: 'finished' as const };
     const { container } = render(
-      <PollaHomePage tournament={finished} currentUserId="carlos" standings={standings} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={finished} currentUserId="carlos" standings={standings} rosterUserIds={ROSTER}
         matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
         dayFilter="all" todayCount={0} allCount={0} />,
     );
@@ -171,7 +171,7 @@ describe('PollaHomePage', () => {
   it('modo histórico oculta el big button y las acciones del organizador', () => {
     const t2 = { ...TOURNAMENT, current_season: 2 };
     const { container } = render(
-      <PollaHomePage tournament={t2} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={t2} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
         matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
         dayFilter="all" todayCount={0} allCount={0} />,
     );
@@ -189,7 +189,7 @@ describe('PollaHomePage', () => {
 
   it('botón "Cerrar polla" visible al organizer en polla continua', () => {
     const { container } = render(
-      <PollaHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
         matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
         dayFilter="all" todayCount={0} allCount={0} />,
     );
@@ -201,7 +201,7 @@ describe('PollaHomePage', () => {
   it('botón dice "Finalizar polla" cuando is_open_ended=false', () => {
     const closed = { ...TOURNAMENT, is_open_ended: false };
     const { container } = render(
-      <PollaHomePage tournament={closed} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={closed} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
         matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
         dayFilter="all" todayCount={0} allCount={0} />,
     );
@@ -212,7 +212,7 @@ describe('PollaHomePage', () => {
 
   it('acciones del organizador ocultas para no-organizers', () => {
     const { container } = render(
-      <PollaHomePage tournament={TOURNAMENT} currentUserId="erik" standings={[]} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={TOURNAMENT} currentUserId="erik" standings={[]} rosterUserIds={ROSTER}
         matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
         dayFilter="all" todayCount={0} allCount={0} />,
     );
@@ -220,16 +220,16 @@ describe('PollaHomePage', () => {
     expect(container.textContent).not.toContain('Nueva temporada');
   });
 
-  it('PollaSeasonSelector aparece solo si current_season > 1', () => {
+  it('ContinuousLeagueSeasonSelector aparece solo si current_season > 1', () => {
     const { container: c1 } = render(
-      <PollaHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
         matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
         dayFilter="all" todayCount={0} allCount={0} />,
     );
     expect(c1.querySelector('nav[aria-label="Temporadas"]')).toBeNull();
 
     const { container: c2 } = render(
-      <PollaHomePage tournament={{ ...TOURNAMENT, current_season: 2 }} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={{ ...TOURNAMENT, current_season: 2 }} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
         matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={2}
         dayFilter="all" todayCount={0} allCount={0} />,
     );

@@ -9,12 +9,12 @@ import { z } from "zod";
 export const createTournamentSchema = z.object({
   name: z.string().min(3, "El nombre debe tener al menos 3 caracteres").max(60, "Máximo 60 caracteres"),
   visibility: z.enum(["public", "private", "code"]),
-  format: z.enum(["single_elim", "round_robin", "swiss", "polla"]),
+  format: z.enum(["single_elim", "round_robin", "swiss", "continuous_league"]),
   modality: z.enum(["ven", "dom", "cub", "pri", "custom"]),
   custom_goal: z.number().int().min(50).max(500).optional(),
   custom_capicua: z.number().int().min(10).max(100).optional(),
   max_players: z.number().int().min(4).max(64),
-  inscription_mode: z.enum(["pre_formed", "individual_manual", "polla"]),
+  inscription_mode: z.enum(["pre_formed", "individual_manual", "continuous_league"]),
   /** IDs de jugadores individuales a pre-inscribir */
   participant_ids: z.array(z.string().uuid()).optional(),
   /** Parejas completas pre-formadas */

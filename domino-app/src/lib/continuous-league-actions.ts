@@ -6,7 +6,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { rl, checkLimit } from "@/lib/ratelimit";
 
 // ============================================================
-// createNewMatchInPolla — crea pairing + match en una polla
+// createNewMatchInContinuousLeague — crea pairing + match en una polla
 // ============================================================
 
 const NewMatchSchema = z.object({
@@ -17,7 +17,7 @@ const NewMatchSchema = z.object({
 
 export type NewMatchInput = z.infer<typeof NewMatchSchema>;
 
-export async function createNewMatchInPolla(
+export async function createNewMatchInContinuousLeague(
   input: NewMatchInput,
 ): Promise<{ ok: true; match_id: string } | { ok: false; error: string }> {
   const parsed = NewMatchSchema.safeParse(input);
@@ -35,7 +35,7 @@ export async function createNewMatchInPolla(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado." };
 
-  const limit = await checkLimit(rl.matchStart, `polla-match:${user.id}`);
+  const limit = await checkLimit(rl.matchStart, `continuous-league-match:${user.id}`);
   if (!limit.allowed) return { ok: false, error: limit.error };
 
   // 1. Cargar torneo: validar que es polla open y current_season
@@ -45,7 +45,7 @@ export async function createNewMatchInPolla(
     .eq("id", tournament_id)
     .single();
   if (tErr || !t) return { ok: false, error: "Torneo no encontrado." };
-  if (t.format !== "polla") return { ok: false, error: "Este torneo no es una polla." };
+  if (t.format !== "continuous_league") return { ok: false, error: "Este torneo no es una polla." };
   if (t.status !== "open" && t.status !== "in_progress") {
     return { ok: false, error: "La polla está cerrada." };
   }
@@ -106,7 +106,7 @@ export async function createNewMatchInPolla(
     }
   }
 
-  // 4. Insertar match (format='doubles', NO 'polla')
+  // 4. Insertar match (format='doubles', NO 'continuous_league')
   const { data: match, error: mErr } = await supabase
     .from("matches")
     .insert({
@@ -162,7 +162,7 @@ export async function createNewMatchInPolla(
       season:          t.current_season,
     });
   if (prErr) {
-    console.error("[createNewMatchInPolla] pairing insert failed:", prErr);
+    console.error("[createNewMatchInContinuousLeague] pairing insert failed:", prErr);
     // Match queda creado pero sin pairing. Reportable pero no bloqueante.
   }
 
@@ -202,7 +202,7 @@ export async function startNewSeason(
     .eq("id", tournament_id)
     .single();
   if (tErr || !t) return { ok: false, error: "Torneo no encontrado." };
-  if (t.format !== "polla") return { ok: false, error: "Este torneo no es una polla." };
+  if (t.format !== "continuous_league") return { ok: false, error: "Este torneo no es una polla." };
   if (t.created_by !== user.id) return { ok: false, error: "Solo el organizador puede empezar una temporada." };
 
   const newSeason = t.current_season + 1;
@@ -217,7 +217,7 @@ export async function startNewSeason(
 }
 
 // ============================================================
-// reopenPollaMatch — revierte confirmed → in_progress (para editar rondas)
+// reopenContinuousLeagueMatch — revierte confirmed → in_progress (para editar rondas)
 // ============================================================
 //
 // Solo el creator de la partida puede reabrirla. La idea: si hubo error en
@@ -227,7 +227,7 @@ export async function startNewSeason(
 // finalización lo sobreescribirá. Esto es deuda técnica menor — si el rating
 // queda inconsistente, se puede arreglar con un script offline.
 
-export async function reopenPollaMatch(
+export async function reopenContinuousLeagueMatch(
   match_id: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!z.string().uuid().safeParse(match_id).success) {
@@ -254,7 +254,7 @@ export async function reopenPollaMatch(
     .select("format")
     .eq("id", m.tournament_id)
     .single();
-  if ((t as { format?: string } | null)?.format !== "polla") {
+  if ((t as { format?: string } | null)?.format !== "continuous_league") {
     return { ok: false, error: "Esta partida no es de una polla." };
   }
 
@@ -283,14 +283,14 @@ export async function reopenPollaMatch(
 }
 
 // ============================================================
-// deletePollaMatch — marca status='cancelled' (soft delete)
+// deleteContinuousLeagueMatch — marca status='cancelled' (soft delete)
 // ============================================================
 //
-// La matches list de PollaHomePage filtra por status visible, así que
+// La matches list de ContinuousLeagueHomePage filtra por status visible, así que
 // 'cancelled' desaparece. No borramos hard porque puede romper FK desde
 // tournament_pairings y referencias de rating.
 
-export async function deletePollaMatch(
+export async function deleteContinuousLeagueMatch(
   match_id: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!z.string().uuid().safeParse(match_id).success) {
@@ -315,7 +315,7 @@ export async function deletePollaMatch(
     .select("format")
     .eq("id", m.tournament_id)
     .single();
-  if ((t as { format?: string } | null)?.format !== "polla") {
+  if ((t as { format?: string } | null)?.format !== "continuous_league") {
     return { ok: false, error: "Esta partida no es de una polla." };
   }
 
@@ -330,12 +330,12 @@ export async function deletePollaMatch(
 }
 
 // ============================================================
-// rematchPollaMatch — crea nueva partida con los mismos teams
+// rematchContinuousLeagueMatch — crea nueva partida con los mismos teams
 // ============================================================
 //
 // Reusa los teams del match anterior. Útil para revancha inmediata.
 
-export async function rematchPollaMatch(
+export async function rematchContinuousLeagueMatch(
   prev_match_id: string,
 ): Promise<{ ok: true; match_id: string } | { ok: false; error: string }> {
   if (!z.string().uuid().safeParse(prev_match_id).success) {
@@ -364,8 +364,8 @@ export async function rematchPollaMatch(
     return { ok: false, error: "La partida anterior no tiene 2v2 (no se puede repetir)." };
   }
 
-  // Delegamos a createNewMatchInPolla (incluye validación de roster + rate limit)
-  return createNewMatchInPolla({
+  // Delegamos a createNewMatchInContinuousLeague (incluye validación de roster + rate limit)
+  return createNewMatchInContinuousLeague({
     tournament_id: prev.tournament_id,
     team_a:        teamA as [string, string],
     team_b:        teamB as [string, string],
@@ -373,10 +373,10 @@ export async function rematchPollaMatch(
 }
 
 // ============================================================
-// closePolla — marca status='finished'
+// closeContinuousLeague — marca status='finished'
 // ============================================================
 
-export async function closePolla(
+export async function closeContinuousLeague(
   tournament_id: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!z.string().uuid().safeParse(tournament_id).success) {
@@ -393,7 +393,7 @@ export async function closePolla(
     .eq("id", tournament_id)
     .single();
   if (tErr || !t) return { ok: false, error: "Torneo no encontrado." };
-  if (t.format !== "polla") return { ok: false, error: "Este torneo no es una polla." };
+  if (t.format !== "continuous_league") return { ok: false, error: "Este torneo no es una polla." };
   if (t.created_by !== user.id) return { ok: false, error: "Solo el organizador puede cerrar la polla." };
   if (t.status === "finished") return { ok: true };  // idempotente
 

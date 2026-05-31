@@ -21,7 +21,7 @@ type Props = {
  * con score live (gradient warning→danger).
  * Si no → "Jugar nueva partida" (sombra primary).
  */
-export function PollaContinueOrStartButton({ activeMatch, onStartNew, onContinue }: Props) {
+export function ContinuousLeagueContinueOrStartButton({ activeMatch, onStartNew, onContinue }: Props) {
   if (activeMatch) {
     return (
       <button

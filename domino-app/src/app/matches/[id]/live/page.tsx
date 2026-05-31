@@ -25,12 +25,12 @@ export default async function LivePage({
   // Para quick match: solo in_progress entra al /live, lo demás va al detalle.
   const matchAnyEarly = match as Record<string, unknown>;
   const tIdEarly = matchAnyEarly.tournament_id as string | null;
-  let earlyIsPolla = false;
+  let earlyIsContinuousLeague = false;
   if (tIdEarly && match.status === "confirmed") {
     const { data: t } = await supabase.from("tournaments").select("format").eq("id", tIdEarly).maybeSingle();
-    earlyIsPolla = (t as { format?: string } | null)?.format === "polla";
+    earlyIsContinuousLeague = (t as { format?: string } | null)?.format === "continuous_league";
   }
-  if (match.status !== "in_progress" && !earlyIsPolla) redirect(`/matches/${id}`);
+  if (match.status !== "in_progress" && !earlyIsContinuousLeague) redirect(`/matches/${id}`);
 
   // Determinar si el usuario es jugador de esta partida
   const { data: myMatchPlayer } = await supabase
@@ -85,7 +85,7 @@ export default async function LivePage({
 
   // Fetch tournament name + format (para detectar polla mode)
   let tournamentName: string | null = null;
-  let isPolla = false;
+  let isContinuousLeague = false;
   const tournamentId = matchAny.tournament_id as string | null;
   if (tournamentId) {
     const { data: tourney } = await supabase
@@ -94,7 +94,7 @@ export default async function LivePage({
       .eq("id", tournamentId)
       .maybeSingle();
     tournamentName = tourney?.name ?? null;
-    isPolla = (tourney as { format?: string } | null)?.format === "polla";
+    isContinuousLeague = (tourney as { format?: string } | null)?.format === "continuous_league";
   }
 
   return (
@@ -114,7 +114,7 @@ export default async function LivePage({
       isSpectator={isSpectator}
       tournamentId={tournamentId}
       tournamentName={tournamentName}
-      isPolla={isPolla}
+      isContinuousLeague={isContinuousLeague}
       matchStatus={match.status as "in_progress" | "confirmed" | "pending_attestation"}
       isCreator={match.created_by === user.id}
     />

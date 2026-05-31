@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { WizardStepLayout } from "@/components/wizard/WizardStepLayout";
 import { useTournamentDraft } from "@/hooks/useTournamentDraft";
-import { PollaConfigStep } from "@/components/polla/PollaConfigStep";
-import type { InscriptionMode } from "@/types/polla";
+import { ContinuousLeagueConfigStep } from "@/components/continuous-league/ContinuousLeagueConfigStep";
+import type { InscriptionMode } from "@/types/continuous-league";
 
 const OPTIONS: Array<{
   value: InscriptionMode;
@@ -49,12 +49,12 @@ export function Step6Form({ userId }: { userId: string }) {
   );
 
   function handleContinue() {
-    const inscription_mode = draft.format === "polla" ? "polla" : mode;
+    const inscription_mode = draft.format === "continuous_league" ? "continuous_league" : mode;
     setField({ inscription_mode, currentStep: 7 });
     router.push("/tournaments/new/step-7");
   }
 
-  const isPolla = draft.format === "polla";
+  const isContinuousLeague = draft.format === "continuous_league";
 
   return (
     <WizardStepLayout
@@ -62,8 +62,8 @@ export function Step6Form({ userId }: { userId: string }) {
       primaryAction={{ label: "Continuar", onClick: handleContinue }}
     >
       <div className="max-w-2xl mx-auto w-full px-4 pt-8">
-        {isPolla ? (
-          <PollaConfigStep userId={userId} />
+        {isContinuousLeague ? (
+          <ContinuousLeagueConfigStep userId={userId} />
         ) : (
           <>
             <h1 className="text-2xl font-bold mb-2">¿Cómo se inscriben los jugadores?</h1>

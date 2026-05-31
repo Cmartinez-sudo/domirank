@@ -9,7 +9,7 @@ type Props = {
  * Card del campeón — se muestra arriba de la matches list cuando la polla
  * está en status `finished`. El campeón es el #1 del leaderboard final.
  */
-export function PollaChampionCard({ championName, pointsFor, wins, losses }: Props) {
+export function ContinuousLeagueChampionCard({ championName, pointsFor, wins, losses }: Props) {
   return (
     <div className="card text-center">
       <div className="text-4xl mb-1">🏆</div>

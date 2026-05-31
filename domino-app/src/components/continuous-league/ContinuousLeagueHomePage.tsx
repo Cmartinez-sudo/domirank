@@ -3,17 +3,17 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { PollaLeaderboard } from "./PollaLeaderboard";
+import { ContinuousLeagueLeaderboard } from "./ContinuousLeagueLeaderboard";
 import { PartnerStatsCard } from "./PartnerStatsCard";
-import { PollaMatchesList } from "./PollaMatchesList";
-import { PollaContinueOrStartButton } from "./PollaContinueOrStartButton";
-import { PollaChampionCard } from "./PollaChampionCard";
-import { PollaProgressCard } from "./PollaProgressCard";
-import { NewMatchInPollaModal } from "./NewMatchInPollaModal";
+import { ContinuousLeagueMatchesList } from "./ContinuousLeagueMatchesList";
+import { ContinuousLeagueContinueOrStartButton } from "./ContinuousLeagueContinueOrStartButton";
+import { ContinuousLeagueChampionCard } from "./ContinuousLeagueChampionCard";
+import { ContinuousLeagueProgressCard } from "./ContinuousLeagueProgressCard";
+import { NewMatchInContinuousLeagueModal } from "./NewMatchInContinuousLeagueModal";
 import { NewSeasonDialog } from "./NewSeasonDialog";
-import { ClosePollaDialog } from "./ClosePollaDialog";
-import { PollaSeasonSelector } from "./PollaSeasonSelector";
-import type { PollaStandingsRow, PollaMatchRow, PollaDayFilter } from "@/types/polla";
+import { CloseContinuousLeagueDialog } from "./CloseContinuousLeagueDialog";
+import { ContinuousLeagueSeasonSelector } from "./ContinuousLeagueSeasonSelector";
+import type { ContinuousLeagueStandingsRow, ContinuousLeagueMatchRow, ContinuousLeagueDayFilter } from "@/types/continuous-league";
 
 type Props = {
   tournament: {
@@ -27,29 +27,29 @@ type Props = {
     created_at:     string;
   };
   currentUserId:  string;
-  standings:      PollaStandingsRow[];
+  standings:      ContinuousLeagueStandingsRow[];
   rosterUserIds:  string[];
-  matches:        PollaMatchRow[];
-  activeMatch:    PollaMatchRow | null;
+  matches:        ContinuousLeagueMatchRow[];
+  activeMatch:    ContinuousLeagueMatchRow | null;
   playerCount:    number;
   userNames:      Record<string, string>;
   viewingSeason:  number;
   /** Tab activo del leaderboard. "all" si la polla no es continua. */
-  dayFilter:      PollaDayFilter;
+  dayFilter:      ContinuousLeagueDayFilter;
   /** Cantidad de partidas finalizadas hoy (TZ Caracas). */
   todayCount:     number;
   /** Cantidad de partidas finalizadas totales (current_season). */
   allCount:       number;
 };
 
-export function PollaHomePage({
+export function ContinuousLeagueHomePage({
   tournament, currentUserId, standings, rosterUserIds, matches, activeMatch,
   playerCount, userNames, viewingSeason, dayFilter, todayCount, allCount,
 }: Props) {
   const router = useRouter();
   const [showNewMatchModal, setShowNewMatchModal] = useState(false);
   const [showNewSeasonDialog, setShowNewSeasonDialog] = useState(false);
-  const [showClosePollaDialog, setShowClosePollaDialog] = useState(false);
+  const [showCloseContinuousLeagueDialog, setShowCloseContinuousLeagueDialog] = useState(false);
 
   const isOrganizer = tournament.created_by === currentUserId;
   const isFinished  = tournament.status === "finished";
@@ -107,7 +107,7 @@ export function PollaHomePage({
       </div>
 
       {/* Season selector — solo si hay temporadas históricas */}
-      <PollaSeasonSelector
+      <ContinuousLeagueSeasonSelector
         tournamentId={tournament.id}
         currentSeason={tournament.current_season}
         viewingSeason={viewingSeason}
@@ -115,7 +115,7 @@ export function PollaHomePage({
 
       {/* Progress card — solo en polla cerrada con rondas pactadas */}
       {!tournament.is_open_ended && tournament.total_rounds && !isHistorical && (
-        <PollaProgressCard
+        <ContinuousLeagueProgressCard
           finishedCount={finishedMatchesCount}
           targetCount={tournament.total_rounds}
           rounds={tournament.total_rounds}
@@ -123,7 +123,7 @@ export function PollaHomePage({
       )}
 
       {/* Leaderboard */}
-      <PollaLeaderboard
+      <ContinuousLeagueLeaderboard
         rows={standings}
         currentUserId={currentUserId}
         showTabs={tournament.is_open_ended}
@@ -149,7 +149,7 @@ export function PollaHomePage({
 
       {/* Big button: continuar o nueva partida — solo en vista actual + polla activa */}
       {isActive && !isHistorical && (
-        <PollaContinueOrStartButton
+        <ContinuousLeagueContinueOrStartButton
           activeMatch={activeMatchDisplay}
           onStartNew={() => setShowNewMatchModal(true)}
           onContinue={(matchId) => router.push(`/matches/${matchId}/live`)}
@@ -175,7 +175,7 @@ export function PollaHomePage({
           </button>
           <button
             type="button"
-            onClick={() => setShowClosePollaDialog(true)}
+            onClick={() => setShowCloseContinuousLeagueDialog(true)}
             className="btn-ghost text-sm"
           >
             {tournament.is_open_ended ? "Cerrar polla" : "Finalizar polla"}
@@ -185,7 +185,7 @@ export function PollaHomePage({
 
       {/* Champion card — solo si la polla terminó */}
       {champion && (
-        <PollaChampionCard
+        <ContinuousLeagueChampionCard
           championName={champion.display_name ?? champion.username}
           pointsFor={champion.total_points}
           wins={champion.wins}
@@ -194,11 +194,11 @@ export function PollaHomePage({
       )}
 
       {/* Matches list */}
-      <PollaMatchesList matches={matches} userNames={userNames} />
+      <ContinuousLeagueMatchesList matches={matches} userNames={userNames} />
 
       {/* Modals */}
       {showNewMatchModal && (
-        <NewMatchInPollaModal
+        <NewMatchInContinuousLeagueModal
           tournamentId={tournament.id}
           rosterUserIds={rosterUserIds}
           userNames={userNames}
@@ -213,10 +213,10 @@ export function PollaHomePage({
           onClose={() => setShowNewSeasonDialog(false)}
         />
       )}
-      {showClosePollaDialog && (
-        <ClosePollaDialog
+      {showCloseContinuousLeagueDialog && (
+        <CloseContinuousLeagueDialog
           tournamentId={tournament.id}
-          onClose={() => setShowClosePollaDialog(false)}
+          onClose={() => setShowCloseContinuousLeagueDialog(false)}
         />
       )}
     </div>

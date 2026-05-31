@@ -4,7 +4,7 @@ import { useTournamentDraft } from "@/hooks/useTournamentDraft";
 
 type Props = { userId: string };
 
-export function PollaConfigStep({ userId }: Props) {
+export function ContinuousLeagueConfigStep({ userId }: Props) {
   const { draft, setField } = useTournamentDraft(userId);
   const isOpenEnded = draft.is_open_ended ?? false;
 
@@ -26,7 +26,7 @@ export function PollaConfigStep({ userId }: Props) {
           }`}>
           <input
             type="radio"
-            name="polla_mode"
+            name="continuous_league_mode"
             checked={isOpenEnded === true}
             onChange={() => setField({ is_open_ended: true })}
             className="mt-1 accent-primary"
@@ -44,7 +44,7 @@ export function PollaConfigStep({ userId }: Props) {
           }`}>
           <input
             type="radio"
-            name="polla_mode"
+            name="continuous_league_mode"
             checked={isOpenEnded === false}
             onChange={() => setField({ is_open_ended: false })}
             className="mt-1 accent-primary"

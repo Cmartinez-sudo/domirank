@@ -1,4 +1,4 @@
-export type PollaStandingsRow = {
+export type ContinuousLeagueStandingsRow = {
   user_id:              string;
   username:             string;
   display_name:         string | null;
@@ -24,16 +24,16 @@ export type PollaStandingsRow = {
 };
 
 /** Tab del leaderboard de polla continua. */
-export type PollaDayFilter = "today" | "all";
+export type ContinuousLeagueDayFilter = "today" | "all";
 
-export type PollaPartnerRow = {
+export type ContinuousLeaguePartnerRow = {
   partner_id:     string;
   games_together: number;
   wins_together:  number;
   win_pct:        number; // always an integer (0–100)
 };
 
-export type PollaRivalRow = {
+export type ContinuousLeagueRivalRow = {
   rival_id:        string;
   games_against:   number;
   wins_for_rival:  number;
@@ -41,11 +41,11 @@ export type PollaRivalRow = {
 };
 
 /** Modo de inscripción de un torneo. */
-export type InscriptionMode = "pre_formed" | "individual_manual" | "polla";
+export type InscriptionMode = "pre_formed" | "individual_manual" | "continuous_league";
 
 /** Fila de partida en la lista plana de la polla home. Reemplaza al viejo
  *  PollaMatchPreview / PollaRoundGroup del accordion. */
-export type PollaMatchRow = {
+export type ContinuousLeagueMatchRow = {
   match_id:        string;
   status:          "in_progress" | "completed" | "confirmed" | "pending_attestation";
   team_a_user_ids: string[];

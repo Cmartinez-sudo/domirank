@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { WizardStepLayout } from "@/components/wizard/WizardStepLayout";
 import { useTournamentDraft } from "@/hooks/useTournamentDraft";
 
-type Format = "single_elim" | "round_robin" | "swiss" | "polla";
+type Format = "single_elim" | "round_robin" | "swiss" | "continuous_league";
 
 const OPTIONS: Array<{
   value: Format;
@@ -61,7 +61,7 @@ const OPTIONS: Array<{
     detail: "8-64+ jugadores · Ideal para grupos grandes",
   },
   {
-    value: "polla",
+    value: "continuous_league",
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
         strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -129,7 +129,7 @@ export function Step3Form({ userId }: { userId: string }) {
                 <div className="flex-1 min-w-0">
                   <div className={`font-semibold ${selected ? "text-primary" : "text-text"} flex items-center gap-1 flex-wrap`}>
                     {opt.label}
-                    {opt.value === "polla" && (
+                    {opt.value === "continuous_league" && (
                       <span className="badge bg-primary/15 text-primary text-[10px] ml-2">🇻🇪 Popular en Venezuela</span>
                     )}
                   </div>

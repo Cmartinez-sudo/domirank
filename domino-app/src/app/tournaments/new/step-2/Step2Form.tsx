@@ -67,13 +67,13 @@ export function Step2Form({ userId }: { userId: string }) {
     (draft.visibility as Visibility) ?? "private",
   );
 
-  const isPolla = draft.format === "polla";
+  const isContinuousLeague = draft.format === "continuous_league";
 
   useEffect(() => {
-    if (isPolla && draft.visibility !== "private") {
+    if (isContinuousLeague && draft.visibility !== "private") {
       setField({ visibility: "private" });
     }
-  }, [isPolla, draft.visibility, setField]);
+  }, [isContinuousLeague, draft.visibility, setField]);
 
   function handleContinue() {
     setField({ visibility, currentStep: 3 });
@@ -94,15 +94,15 @@ export function Step2Form({ userId }: { userId: string }) {
         <div className="space-y-3">
           {OPTIONS.map((opt) => {
             const selected = visibility === opt.value;
-            const disabledByPolla = isPolla && opt.value !== "private";
+            const disabledByContinuousLeague = isContinuousLeague && opt.value !== "private";
             return (
               <button
                 key={opt.value}
                 type="button"
-                onClick={() => !disabledByPolla && setVisibility(opt.value)}
-                disabled={disabledByPolla}
+                onClick={() => !disabledByContinuousLeague && setVisibility(opt.value)}
+                disabled={disabledByContinuousLeague}
                 className={`w-full flex items-start gap-4 p-4 rounded-2xl border text-left transition-all ${
-                  disabledByPolla
+                  disabledByContinuousLeague
                     ? "opacity-40 cursor-not-allowed bg-surface-2 border-border"
                     : selected
                     ? "bg-primary/10 border-primary/50 shadow-sm"
@@ -110,17 +110,17 @@ export function Step2Form({ userId }: { userId: string }) {
                 }`}
               >
                 <span
-                  className={`mt-0.5 shrink-0 ${selected && !disabledByPolla ? "text-primary" : "text-text-mute"}`}
+                  className={`mt-0.5 shrink-0 ${selected && !disabledByContinuousLeague ? "text-primary" : "text-text-mute"}`}
                 >
                   {opt.icon}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className={`font-semibold ${selected && !disabledByPolla ? "text-primary" : "text-text"}`}>
+                  <div className={`font-semibold ${selected && !disabledByContinuousLeague ? "text-primary" : "text-text"}`}>
                     {opt.label}
                   </div>
                   <div className="text-text-mute text-sm mt-0.5">{opt.desc}</div>
                 </div>
-                {selected && !disabledByPolla && (
+                {selected && !disabledByContinuousLeague && (
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
                     strokeLinejoin="round" className="text-primary shrink-0 mt-0.5">
@@ -132,7 +132,7 @@ export function Step2Form({ userId }: { userId: string }) {
           })}
         </div>
 
-        {isPolla && (
+        {isContinuousLeague && (
           <p className="text-text-mute text-xs mt-2">
             Las pollas son privadas por default. Solo los participantes la ven.
           </p>

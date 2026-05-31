@@ -10,7 +10,7 @@ type Props = {
  * Selector de temporadas. Solo se renderiza si hay >1 temporada histórica.
  * Usa Links con ?season=N — SSR-friendly, sin estado cliente.
  */
-export function PollaSeasonSelector({ tournamentId, currentSeason, viewingSeason }: Props) {
+export function ContinuousLeagueSeasonSelector({ tournamentId, currentSeason, viewingSeason }: Props) {
   if (currentSeason <= 1) return null;
 
   const seasons = Array.from({ length: currentSeason }, (_, i) => i + 1);

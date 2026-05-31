@@ -8,8 +8,8 @@ import { formatInfo } from "@/lib/tournament-formats";
 import { SecondaryPageShell } from "@/components/SecondaryPageShell";
 import { BACK_FALLBACKS } from "@/lib/back-fallbacks";
 import { Bracket } from "@/components/Bracket";
-import { PollaHomePage } from "@/components/polla/PollaHomePage";
-import type { PollaStandingsRow, PollaMatchRow } from "@/types/polla";
+import { ContinuousLeagueHomePage } from "@/components/continuous-league/ContinuousLeagueHomePage";
+import type { ContinuousLeagueStandingsRow, ContinuousLeagueMatchRow } from "@/types/continuous-league";
 // BracketPairing + BracketProfile match the private types inside Bracket.tsx
 type BracketPairing = {
   id: number;
@@ -54,8 +54,8 @@ export default async function TournamentDetail({
     .single();
   if (!tournament) return notFound();
 
-  // ─── Polla format: branch to PollaHomePage ─────────────────
-  if ((tournament as { format?: string }).format === "polla") {
+  // ─── Polla format: branch to ContinuousLeagueHomePage ─────────────────
+  if ((tournament as { format?: string }).format === "continuous_league") {
     const currentSeason = (tournament as { current_season?: number }).current_season ?? 1;
     // Validar ?season — solo aceptamos enteros entre 1 y current_season
     const requestedSeason = sp.season ? parseInt(sp.season, 10) : NaN;
@@ -70,7 +70,7 @@ export default async function TournamentDetail({
     // Fetch standings via RPC — pasa p_season para histórico + p_day_filter
     // para tab "Hoy"
     const { data: standings } = await supabase
-      .rpc("polla_standings", {
+      .rpc("continuous_league_standings", {
         p_tournament_id: tournament.id,
         p_season:        viewingSeason === currentSeason ? null : viewingSeason,
         p_day_filter:    dayFilter === "today" ? "today" : null,
@@ -81,7 +81,7 @@ export default async function TournamentDetail({
     // histórico, query directa con filtro de season.
     const pairingsQuery = viewingSeason === currentSeason
       ? await supabase
-          .from("polla_current_season_pairings")
+          .from("continuous_league_current_season_pairings")
           .select("id, team_a_user_ids, team_b_user_ids, match_id, matches(id, status, created_at, target_points, match_rounds(team, points))")
           .eq("tournament_id", tournament.id)
       : await supabase
@@ -125,8 +125,8 @@ export default async function TournamentDetail({
       matches:         RawMatch | RawMatch[] | null;
     };
 
-    // Map a PollaMatchRow + detect activeMatch
-    const matchRows: PollaMatchRow[] = [];
+    // Map a ContinuousLeagueMatchRow + detect activeMatch
+    const matchRows: ContinuousLeagueMatchRow[] = [];
     for (const p of (pairings ?? []) as unknown as RawPairing[]) {
       const m: RawMatch | null = Array.isArray(p.matches) ? p.matches[0] ?? null : p.matches;
       if (!m) continue;
@@ -142,7 +142,7 @@ export default async function TournamentDetail({
       }
       matchRows.push({
         match_id:        m.id,
-        status:          m.status as PollaMatchRow["status"],
+        status:          m.status as ContinuousLeagueMatchRow["status"],
         team_a_user_ids: p.team_a_user_ids,
         team_b_user_ids: p.team_b_user_ids,
         score_a:         scoreA,
@@ -166,7 +166,7 @@ export default async function TournamentDetail({
     const todayCount = finishedMatches.filter((m) => new Date(m.created_at) >= startOfTodayCaracas).length;
 
     return (
-      <PollaHomePage
+      <ContinuousLeagueHomePage
         tournament={{
           id:             tournament.id,
           name:           (tournament as { name: string }).name,
@@ -178,7 +178,7 @@ export default async function TournamentDetail({
           created_at:     (tournament as { created_at: string }).created_at,
         }}
         currentUserId={user!.id}
-        standings={(standings ?? []) as PollaStandingsRow[]}
+        standings={(standings ?? []) as ContinuousLeagueStandingsRow[]}
         rosterUserIds={(players ?? []).map((p) => p.user_id)}
         matches={matchRows}
         activeMatch={activeMatch}

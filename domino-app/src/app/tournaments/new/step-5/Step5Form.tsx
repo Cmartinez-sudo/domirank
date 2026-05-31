@@ -10,7 +10,7 @@ const PRESETS_BY_FORMAT: Record<string, number[]> = {
   round_robin: [8, 12, 16, 20, 24],
   swiss: [8, 12, 16, 24, 32, 48, 64],
   // Polla: roster fijo de 4-8 amigos, par (spec decisión #4).
-  polla: [4, 6, 8],
+  continuous_league: [4, 6, 8],
 };
 
 // En round_robin mostramos parejas (jugadores / 2)

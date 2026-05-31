@@ -311,17 +311,17 @@ export async function finalizeMatch(match_id: string): Promise<{ ok: true } | { 
   // se juegan IRL, el scorekeeper presencial es confianza suficiente.
   // El rating se aplica al instante si rated=true.
   const tournamentId = (matchRow as { tournament_id?: string | null }).tournament_id ?? null;
-  let isPolla = false;
+  let isContinuousLeague = false;
   if (tournamentId) {
     const { data: t } = await supabase
       .from("tournaments")
       .select("format")
       .eq("id", tournamentId)
       .single();
-    isPolla = (t as { format?: string } | null)?.format === "polla";
+    isContinuousLeague = (t as { format?: string } | null)?.format === "continuous_league";
   }
 
-  if (isPolla) {
+  if (isContinuousLeague) {
     // Solo el scorekeeper (creator) puede finalizar
     const createdBy = (matchRow as { created_by?: string }).created_by;
     if (createdBy !== user.id) {

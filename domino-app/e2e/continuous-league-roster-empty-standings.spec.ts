@@ -8,8 +8,8 @@ import { test, expect } from "@playwright/test";
  *   crear polla → iniciar → tap "+ Nueva partida" → ver 4 jugadores → jugar.
  *
  * El bug original (fixed en commit 78b2739): el modal derivaba el roster
- * de polla_standings RPC, que filtra por matches confirmed. En polla
- * nueva sin partidas el roster venía vacío y los <select> no tenían
+ * de continuous_league_standings RPC, que filtra por matches confirmed. En
+ * polla nueva sin partidas el roster venía vacío y los <select> no tenían
  * opciones — feature 100% roto.
  *
  * SKIPPED por ahora: igual que los otros e2e del proyecto, necesita

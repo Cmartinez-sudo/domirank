@@ -13,7 +13,7 @@ const FORMAT_LABELS: Record<string, string> = {
   single_elim: "Eliminación directa",
   round_robin: "Todos contra todos",
   swiss: "Sistema suizo",
-  polla: "Polla (liga continua)",
+  continuous_league: "Polla (liga continua)",
 };
 
 const MODALITY_LABELS: Record<string, string> = {
@@ -79,7 +79,7 @@ export function Step9Form({ userId }: { userId: string }) {
       value: MODE_LABELS[draft.inscription_mode ?? "pre_formed"] ?? "—",
       step: 6,
     },
-    ...(draft.format === "polla"
+    ...(draft.format === "continuous_league"
       ? [{
           label: "Modo",
           value: (draft.is_open_ended ?? false) ? "Indefinida" : "Con número fijo de rondas",
@@ -93,7 +93,7 @@ export function Step9Form({ userId }: { userId: string }) {
     },
     // Step 8 fields (Duración + Mesas) son irrelevantes para polla — las
     // partidas siempre van "hasta la meta" y no hay configuración de mesas.
-    ...(draft.format !== "polla"
+    ...(draft.format !== "continuous_league"
       ? [
           {
             label: "Duración de partida",
@@ -160,7 +160,7 @@ export function Step9Form({ userId }: { userId: string }) {
   // Polla saltó step 8 desde step 7 — el back nav default iría a step 8
   // que el user nunca vio. Override para volver a step 7.
   const backToPrev = () => {
-    const prevStep = draft.format === "polla" ? 7 : 8;
+    const prevStep = draft.format === "continuous_league" ? 7 : 8;
     router.push(`/tournaments/new/step-${prevStep}`);
   };
 

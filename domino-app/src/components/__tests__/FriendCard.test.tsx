@@ -61,7 +61,7 @@ const FRIEND = {
 
 function renderPanel() {
   return render(
-    <FriendsPanel friends={[FRIEND]} incoming={[]} outgoing={[]} viewerMatchesCount={0} viewerActivePollasCount={0} />
+    <FriendsPanel friends={[FRIEND]} incoming={[]} outgoing={[]} viewerMatchesCount={0} viewerActiveContinuousLeaguesCount={0} />
   );
 }
 

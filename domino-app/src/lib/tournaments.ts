@@ -55,18 +55,18 @@ export async function createTournament(input: CreateTournamentInput) {
   }
   const f = parsed.data;
 
-  // Cross-field guard: format='polla' iff inscription_mode='polla'.
+  // Cross-field guard: format='continuous_league' iff inscription_mode='continuous_league'.
   // Auto-corrige el caso de llamadas legacy del wizard pre-refactor
-  // (format='polla' + inscription_mode='pre_formed'). El caso inverso
-  // (inscription_mode='polla' sin format='polla') sí es error.
-  const isPollaFormat = f.format === "polla";
-  const isPollaInscription = f.inscription_mode === "polla";
-  if (isPollaFormat && !isPollaInscription) {
-    (f as { inscription_mode: typeof f.inscription_mode }).inscription_mode = "polla";
-  } else if (!isPollaFormat && isPollaInscription) {
+  // (format='continuous_league' + inscription_mode='pre_formed'). El caso inverso
+  // (inscription_mode='continuous_league' sin format='continuous_league') sí es error.
+  const isContinuousLeagueFormat = f.format === "continuous_league";
+  const isContinuousLeagueInscription = f.inscription_mode === "continuous_league";
+  if (isContinuousLeagueFormat && !isContinuousLeagueInscription) {
+    (f as { inscription_mode: typeof f.inscription_mode }).inscription_mode = "continuous_league";
+  } else if (!isContinuousLeagueFormat && isContinuousLeagueInscription) {
     return {
       ok: false as const,
-      error: "inscription_mode='polla' sólo es válido para format='polla'.",
+      error: "inscription_mode='continuous_league' sólo es válido para format='continuous_league'.",
     };
   }
 
@@ -236,7 +236,7 @@ export async function startTournament(tournamentId: string) {
 
   // Polla: roster lleno, no requiere parejas (se forman per partida).
   // Otros formatos: requiere parejas pre-formadas.
-  if (t.inscription_mode === "polla") {
+  if (t.inscription_mode === "continuous_league") {
     if ((playerCount ?? 0) !== t.max_players) {
       return {
         ok: false as const,

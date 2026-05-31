@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
-import { createNewMatchInPolla } from "@/lib/polla-actions";
+import { createNewMatchInContinuousLeague } from "@/lib/continuous-league-actions";
 import { useModalA11y } from "@/hooks/useModalA11y";
 
 type Props = {
@@ -31,7 +31,7 @@ function randomAssign(selected: string[]): Record<string, Assignment> {
   return { [sh[0]]: "A", [sh[1]]: "A", [sh[2]]: "B", [sh[3]]: "B" };
 }
 
-export function NewMatchInPollaModal({
+export function NewMatchInContinuousLeagueModal({
   tournamentId, rosterUserIds, userNames, currentUserId, onClose,
 }: Props) {
   const router = useRouter();
@@ -116,7 +116,7 @@ export function NewMatchInPollaModal({
     if (!ready) return;
     setPending(true);
     setError(null);
-    const res = await createNewMatchInPolla({
+    const res = await createNewMatchInContinuousLeague({
       tournament_id: tournamentId,
       team_a:        teamA as [string, string],
       team_b:        teamB as [string, string],

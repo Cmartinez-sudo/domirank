@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 
-export type PollaMatchRow = {
+export type ContinuousLeagueMatchRow = {
   match_id:        string;
   status:          "in_progress" | "completed" | "confirmed" | "pending_attestation";
   team_a_user_ids: string[];
@@ -14,7 +14,7 @@ export type PollaMatchRow = {
 };
 
 type Props = {
-  matches: PollaMatchRow[];
+  matches: ContinuousLeagueMatchRow[];
   userNames: Record<string, string>;
 };
 
@@ -29,7 +29,7 @@ function pairName(ids: string[], names: Record<string, string>): string {
  * - Partida `in_progress`: borde naranja + ruta a `/live`
  * - Partida finalizada (`completed`/`confirmed`): ruta a `/matches/[id]`
  */
-export function PollaMatchesList({ matches, userNames }: Props) {
+export function ContinuousLeagueMatchesList({ matches, userNames }: Props) {
   const router = useRouter();
 
   if (matches.length === 0) {

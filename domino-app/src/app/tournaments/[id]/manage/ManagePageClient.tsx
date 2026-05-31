@@ -15,7 +15,7 @@ import {
 import { startTournament, setTournamentStatus } from "@/lib/tournaments";
 import { FinalizeTournamentDialog } from "@/components/FinalizeTournamentDialog";
 import type { SearchedUser } from "@/lib/users";
-import type { InscriptionMode } from "@/types/polla";
+import type { InscriptionMode } from "@/types/continuous-league";
 
 type MiniUser = {
   id: string;
@@ -68,7 +68,7 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
-  const isPolla = tournament.inscription_mode === "polla";
+  const isContinuousLeague = tournament.inscription_mode === "continuous_league";
   const isPreFormed = tournament.inscription_mode === "pre_formed";
   const isManual = tournament.inscription_mode === "individual_manual";
   const isOpen = tournament.status === "open";
@@ -88,7 +88,7 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
   // Verificar si se puede iniciar el torneo
   const expectedPairs = Math.floor(players.length / 2);
   const canStart = isOpen && (
-    isPolla
+    isContinuousLeague
       ? players.length === tournament.max_players
       : pairs.length >= expectedPairs && unpairedPlayers.length === 0
   );
@@ -192,7 +192,7 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
           <p className="text-text-mute text-sm">Inscritos</p>
           <p className="text-2xl font-bold">{players.length} <span className="text-text-mute text-base font-normal">/ {tournament.max_players}</span></p>
         </div>
-        {isPreFormed && !isPolla && (
+        {isPreFormed && !isContinuousLeague && (
           <div className="text-right">
             <p className="text-text-mute text-sm">Parejas</p>
             <p className="text-2xl font-bold">{pairs.length}</p>
@@ -201,7 +201,7 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
       </div>
 
       {/* Parejas formadas */}
-      {isPreFormed && !isPolla && pairs.length > 0 && (
+      {isPreFormed && !isContinuousLeague && pairs.length > 0 && (
         <section className="card p-0 overflow-hidden">
           <h2 className="px-4 py-3 border-b border-border font-semibold text-sm">Parejas formadas</h2>
           <div className="divide-y divide-border/50">
@@ -238,7 +238,7 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
       )}
 
       {/* Jugadores sin pareja */}
-      {isPreFormed && !isPolla && unpairedPlayers.length > 0 && (
+      {isPreFormed && !isContinuousLeague && unpairedPlayers.length > 0 && (
         <section className="card p-0 overflow-hidden">
           <h2 className="px-4 py-3 border-b border-border font-semibold text-sm">Sin partner</h2>
           <div className="divide-y divide-border/50">
@@ -346,7 +346,7 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
       )}
 
       {/* Acciones para agregar */}
-      {isOpen && !isPolla && !showAddPair && !showAddPlayer && (
+      {isOpen && !isContinuousLeague && !showAddPair && !showAddPlayer && (
         <div className="flex gap-2 flex-wrap">
           {isPreFormed && (
             <button
@@ -406,7 +406,7 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
       )}
 
       {/* Polla: roster de inscritos */}
-      {isPolla && (
+      {isContinuousLeague && (
         <section className="card space-y-3">
           <h2 className="font-semibold">Jugadores inscritos</h2>
           <div className="divide-y divide-border">
@@ -451,10 +451,10 @@ export function ManagePageClient({ tournament, players, pairs, invites, userId }
             <h2 className="font-semibold">Iniciar torneo</h2>
             <p className="text-text-mute text-sm mt-0.5">
               {canStart
-                ? isPolla
+                ? isContinuousLeague
                   ? "Todo listo. El torneo está completo."
                   : "Todo listo. Todos los jugadores tienen pareja."
-                : isPolla
+                : isContinuousLeague
                 ? `Faltan ${tournament.max_players - players.length} jugadores.`
                 : isPreFormed
                 ? `Faltan parejas: ${unpairedPlayers.length} jugadores sin partner.`
