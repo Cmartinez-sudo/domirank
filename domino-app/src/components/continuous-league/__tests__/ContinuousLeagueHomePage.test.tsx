@@ -21,6 +21,12 @@ vi.mock('@/lib/continuous-league-actions', () => ({
   closeContinuousLeague:            vi.fn(() => Promise.resolve({ ok: true })),
 }));
 
+// F2.6: realtime refresher monta un canal de Supabase. En tests jsdom no
+// hay env vars de Supabase. Mockeamos a no-op para que el render no falle.
+vi.mock('../ContinuousLeagueRealtimeRefresher', () => ({
+  ContinuousLeagueRealtimeRefresher: () => null,
+}));
+
 const TOURNAMENT = {
   id:             't1',
   name:           'Polla del barrio',

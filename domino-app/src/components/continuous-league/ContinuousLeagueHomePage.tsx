@@ -17,6 +17,7 @@ import { NewSeasonDialog } from "./NewSeasonDialog";
 import { CloseContinuousLeagueDialog } from "./CloseContinuousLeagueDialog";
 import { ContinuousLeagueSeasonSelector } from "./ContinuousLeagueSeasonSelector";
 import { DayWinnerConfetti } from "./DayWinnerConfetti";
+import { ContinuousLeagueRealtimeRefresher } from "./ContinuousLeagueRealtimeRefresher";
 import type {
   ContinuousLeagueStandingsRow,
   ContinuousLeagueDailyStandingsRow,
@@ -105,6 +106,12 @@ export function ContinuousLeagueHomePage({
 
   return (
     <div className="max-w-[720px] mx-auto space-y-4">
+      {/* F2.6: realtime — re-fetch ambos leaderboards cuando hay UPDATE en
+          matches del torneo (típicamente al finalizar una partida). */}
+      {tournament.is_open_ended && !isHistorical && (
+        <ContinuousLeagueRealtimeRefresher tournamentId={tournament.id} />
+      )}
+
       {/* F2.4: confeti cuando el viewer gana el día (1 vez por día por liga) */}
       <DayWinnerConfetti
         shouldFire={viewerIsDayWinner}
