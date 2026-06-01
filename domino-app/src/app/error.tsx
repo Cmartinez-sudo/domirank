@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 
 export default function Error({
@@ -16,7 +17,13 @@ export default function Error({
 
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center text-center gap-4 px-4">
-      <div className="text-5xl select-none">⚠️</div>
+      <Image
+        src="/branding/logo-vertical-tagline.svg"
+        alt="DomiRank"
+        width={200}
+        height={240}
+        className="w-44 h-auto mb-2"
+      />
       <h1 className="text-2xl font-bold">Algo salió mal</h1>
       <p className="text-text-dim max-w-sm text-sm">
         {error.message || "Ocurrió un error inesperado. Por favor intenta de nuevo."}

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -23,14 +24,15 @@ export function Topnav() {
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-[60px] flex items-center justify-between gap-3">
-        <Link href="/" className="flex items-center gap-2.5 font-bold tracking-tight">
-          <span
-            className="inline-grid place-items-center w-9 h-9 rounded-xl text-black text-sm font-extrabold"
-            style={{ background: "linear-gradient(135deg,#10b981,#059669)" }}
-          >
-            DR
-          </span>
-          <span className="text-[17px]">DomiRank</span>
+        <Link href="/" className="flex items-center" aria-label="DomiRank — Inicio">
+          <Image
+            src="/branding/logo-horizontal-tagline.svg"
+            alt="DomiRank · Tu app de dominó"
+            width={150}
+            height={36}
+            priority
+            className="h-9 w-auto"
+          />
         </Link>
 
         <nav className="flex items-center gap-2 sm:gap-3">

@@ -33,15 +33,28 @@ export function ShareTableButton({ tableRef, tournamentName }: ShareTableButtonP
         },
       });
 
-      // Agregar footer "DomiRank · domirank.app" al canvas
+      // Cargar imagen del leaderboard
       const img = new Image();
       img.src = dataUrl;
       await new Promise<void>((res) => { img.onload = () => res(); });
 
+      // Cargar logo PNG (V4 horizontal con tagline) para footer del PNG.
+      // El raster es más confiable que SVG con canvas.drawImage (algunos browsers
+      // tienen issues renderizando SVG inline a canvas).
+      const logo = new Image();
+      logo.crossOrigin = "anonymous";
+      logo.src = "/branding/logo-horizontal-tagline.png";
+      await new Promise<void>((res, rej) => {
+        logo.onload = () => res();
+        logo.onerror = () => rej(new Error("logo load"));
+      }).catch(() => {
+        // Si el logo no carga, seguimos sin él (footer text-only fallback)
+      });
+
       const canvas = document.createElement("canvas");
-      const footerH = 40;
+      const footerH = 56;
       canvas.width = img.width;
-      canvas.height = img.height + footerH * 2; // padding top + footer
+      canvas.height = img.height + footerH * 2;
       const ctx = canvas.getContext("2d")!;
 
       // Fondo igual al card (#131c30)
@@ -49,11 +62,33 @@ export function ShareTableButton({ tableRef, tournamentName }: ShareTableButtonP
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0);
 
-      // Footer
-      ctx.fillStyle = "rgba(255,255,255,.35)";
-      ctx.font = `${footerH * 0.5}px Inter, -apple-system, sans-serif`;
-      ctx.textAlign = "center";
-      ctx.fillText("DomiRank · domirank.app", canvas.width / 2, img.height + footerH * 1.2);
+      // Línea separadora sutil
+      ctx.strokeStyle = "rgba(255,255,255,.10)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(24, img.height + footerH * 0.6);
+      ctx.lineTo(canvas.width - 24, img.height + footerH * 0.6);
+      ctx.stroke();
+
+      // Footer: logo a la izquierda + URL a la derecha
+      const footerY = img.height + footerH * 1.1;
+      if (logo.complete && logo.naturalWidth > 0) {
+        // Logo escalado a ~32px de alto preservando aspecto
+        const targetH = 32;
+        const logoAspect = logo.naturalWidth / logo.naturalHeight;
+        const logoW = targetH * logoAspect;
+        ctx.drawImage(logo, 24, footerY - targetH * 0.7, logoW, targetH);
+      } else {
+        // Fallback: solo text
+        ctx.fillStyle = "rgba(255,255,255,.5)";
+        ctx.font = `${footerH * 0.45}px Inter, -apple-system, sans-serif`;
+        ctx.textAlign = "left";
+        ctx.fillText("DomiRank", 24, footerY);
+      }
+      ctx.fillStyle = "rgba(255,255,255,.4)";
+      ctx.font = `${footerH * 0.32}px Inter, -apple-system, sans-serif`;
+      ctx.textAlign = "right";
+      ctx.fillText("domirank.app", canvas.width - 24, footerY);
 
       const finalUrl = canvas.toDataURL("image/png");
       const blob = await (await fetch(finalUrl)).blob();
