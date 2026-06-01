@@ -99,7 +99,7 @@ export default async function FriendsPage() {
 
   // Stats del viewer para los 3 stat cards (#amigos · #partidas · #pollas)
   let viewerMatchesCount = 0;
-  let viewerActivePollasCount = 0;
+  let viewerActiveContinuousLeaguesCount = 0;
   try {
     const { count: mc } = await supabase
       .from("match_players")
@@ -111,10 +111,10 @@ export default async function FriendsPage() {
     const { count: pc } = await supabase
       .from("tournaments")
       .select("id, tournament_players!inner(user_id)", { count: "exact", head: true })
-      .eq("format", "polla")
+      .eq("format", "continuous_league")
       .in("status", ["open", "in_progress"])
       .eq("tournament_players.user_id", user.id);
-    viewerActivePollasCount = pc ?? 0;
+    viewerActiveContinuousLeaguesCount = pc ?? 0;
   } catch (e) {
     console.error("[friends] viewer stats failed:", e);
   }
@@ -125,7 +125,7 @@ export default async function FriendsPage() {
       incoming={incomingList.map((r) => ({ ...r, from: enrich(r.from) })) as any}
       outgoing={outgoingList.map((r) => ({ ...r, to:   enrich(r.to)   })) as any}
       viewerMatchesCount={viewerMatchesCount}
-      viewerActivePollasCount={viewerActivePollasCount}
+      viewerActiveContinuousLeaguesCount={viewerActiveContinuousLeaguesCount}
     />
   );
 }

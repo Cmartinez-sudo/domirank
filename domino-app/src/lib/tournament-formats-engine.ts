@@ -67,9 +67,9 @@ export async function generateInitialPairings(tournamentId: string): Promise<{ o
 
     let pairings: { round: number; board: number; teamA: Team; teamB: Team }[] = [];
 
-    if (format === "polla") {
+    if (format === "continuous_league") {
       // Polla no tiene initial pairings — se crean per match desde
-      // PollaHomePage via createNewMatchInPolla. Solo retornamos ok;
+      // ContinuousLeagueHomePage via createNewMatchInContinuousLeague. Solo retornamos ok;
       // el caller actualiza tournaments.status='in_progress' aparte.
       return { ok: true };
     }

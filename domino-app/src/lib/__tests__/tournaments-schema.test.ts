@@ -190,20 +190,20 @@ describe('createTournamentSchema', () => {
     expect(createTournamentSchema.safeParse({ ...VALID_BASE, rated: 1 }).success).toBe(false);
   });
 
-  // ── Polla format ───────────────────────────────────────────
-  it('acepta format=polla', () => {
-    expect(createTournamentSchema.safeParse({ ...VALID_BASE, format: 'polla' }).success).toBe(true);
+  // ── Continuous league format ────────────────────────────────
+  it('acepta format=continuous_league', () => {
+    expect(createTournamentSchema.safeParse({ ...VALID_BASE, format: 'continuous_league' }).success).toBe(true);
   });
 
   it('is_open_ended default false', () => {
-    const parsed = createTournamentSchema.safeParse({ ...VALID_BASE, format: 'polla' });
+    const parsed = createTournamentSchema.safeParse({ ...VALID_BASE, format: 'continuous_league' });
     expect(parsed.success).toBe(true);
     if (parsed.success) expect(parsed.data.is_open_ended).toBe(false);
   });
 
   it('acepta is_open_ended true', () => {
     const parsed = createTournamentSchema.safeParse({
-      ...VALID_BASE, format: 'polla', is_open_ended: true
+      ...VALID_BASE, format: 'continuous_league', is_open_ended: true
     });
     expect(parsed.success).toBe(true);
     if (parsed.success) expect(parsed.data.is_open_ended).toBe(true);
@@ -211,23 +211,23 @@ describe('createTournamentSchema', () => {
 
   it('rechaza is_open_ended no-boolean', () => {
     expect(createTournamentSchema.safeParse({
-      ...VALID_BASE, format: 'polla', is_open_ended: 'yes'
+      ...VALID_BASE, format: 'continuous_league', is_open_ended: 'yes'
     }).success).toBe(false);
   });
 
-  // ── Polla inscription_mode ─────────────────────────────────
-  it("acepta inscription_mode='polla' con format='polla'", () => {
+  // ── Continuous league inscription_mode ─────────────────────
+  it("acepta inscription_mode='continuous_league' con format='continuous_league'", () => {
     const parsed = createTournamentSchema.safeParse({
       ...VALID_BASE,
-      format: "polla",
-      inscription_mode: "polla",
+      format: "continuous_league",
+      inscription_mode: "continuous_league",
     });
     expect(parsed.success).toBe(true);
-    if (parsed.success) expect(parsed.data.inscription_mode).toBe("polla");
+    if (parsed.success) expect(parsed.data.inscription_mode).toBe("continuous_league");
   });
 
   it("acepta los 3 inscription_modes válidos", () => {
-    for (const m of ["pre_formed", "individual_manual", "polla"] as const) {
+    for (const m of ["pre_formed", "individual_manual", "continuous_league"] as const) {
       expect(createTournamentSchema.safeParse({ ...VALID_BASE, inscription_mode: m }).success).toBe(true);
     }
   });

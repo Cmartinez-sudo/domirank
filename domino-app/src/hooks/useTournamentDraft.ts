@@ -1,16 +1,32 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { CreateTournamentInput } from "@/lib/tournament-schema";
 
 // ─── Types ───────────────────────────────────────────────────
 
-export type TournamentDraft = Partial<CreateTournamentInput> & {
-  /** Paso actual del wizard (1-9) */
-  currentStep?: number;
-  /** Timestamp de la última vez que se modificó el draft */
-  updatedAt?: number;
-};
+/**
+ * Shape del draft del wizard nuevo (3 pasos).
+ * Refleja las decisiones del usuario antes de llamar a `createTournament`.
+ *
+ * Notas:
+ *  - `num_boards` mapea al DB column del mismo nombre. UI valida 1..10
+ *    (constraint del producto), pero el DB allow 1..16.
+ *  - `requires_attestation` (default true) → escribe a `tournaments.requires_attestation`.
+ *  - `inscription_mode` NO está en el draft: se deriva del `format` en el
+ *    momento de crear el torneo.
+ *  - `participants_data` es solo UI: objetos completos de los jugadores
+ *    seleccionados (para mostrar avatars/nombres sin re-fetch). No se envía
+ *    al server action.
+ */
+export type Format =
+  | "continuous_league"
+  | "swiss"
+  | "round_robin"
+  | "single_elim";
+
+export type Modality = "ven" | "dom" | "cub" | "pri" | "custom";
+
+export type Visibility = "private" | "code";
 
 type SearchedUserMini = {
   id: string;
@@ -20,19 +36,46 @@ type SearchedUserMini = {
   country: string | null;
 };
 
-/** Draft enriquecido con datos de UI que no van al server action */
-export type TournamentDraftUI = TournamentDraft & {
-  /** Objetos de usuario completos para el paso 7 (solo UI, no se envían al server) */
+export type TournamentDraftUI = {
+  /** Nombre (3-60 chars). Si vacío, el wizard usa placeholder "Polla del {día}". */
+  name?: string;
+  format?: Format;
+  modality?: Modality;
+  /** Cantidad de jugadores objetivo (4..64). Default 4. */
+  player_count?: number;
+  /** IDs de participantes seleccionados (NO incluye al organizer). */
+  participant_ids?: string[];
+  /** Objetos completos para UI (avatars/nombres) — no se envían al server. */
   participants_data?: SearchedUserMini[];
-  pre_formed_pairs_data?: Array<{
-    user_a: SearchedUserMini;
-    user_b: SearchedUserMini;
-  }>;
+  /** Mesas físicas (UI 1..10, DB 1..16). Default 1. */
+  num_boards?: number;
+  visibility?: Visibility;
+  /** Si las partidas requieren 3 de 4 firmas para avanzar. Default true. */
+  requires_attestation?: boolean;
+  /** Si afecta el rating Elo global. Default true. */
+  rated?: boolean;
+  /** Minutos de tiempo límite, o null para "sin límite". */
+  time_limit_minutes?: number | null;
+  /** Solo cuando modality='custom'. */
+  custom_goal?: number;
+  custom_capicua?: number;
+  /**
+   * Legacy del wizard viejo. El wizard nuevo (3 pasos) no expone esto al
+   * usuario — siempre false. Mantenido por compatibilidad con
+   * `ContinuousLeagueConfigStep` y callers legacy.
+   */
+  is_open_ended?: boolean;
+  /** Paso actual del wizard (1-3). */
+  currentStep?: number;
+  /** Timestamp de la última modificación. */
+  updatedAt?: number;
 };
 
 // ─── Hook ────────────────────────────────────────────────────
 
-const LS_PREFIX = "domirank:tournament-draft:";
+// Bump de versión cuando el shape del draft cambia (refactor F1.4: 9 → 3 steps).
+// Los drafts viejos quedan abandonados (no migran — el shape cambió demasiado).
+const LS_PREFIX = "domirank:tournament-draft:v2:";
 
 function getKey(userId: string) {
   return `${LS_PREFIX}${userId}`;
@@ -40,14 +83,15 @@ function getKey(userId: string) {
 
 /**
  * Persiste el draft del wizard de torneo en localStorage.
- * Clave: `domirank:tournament-draft:{user_id}`
+ * Clave: `domirank:tournament-draft:v2:{user_id}`
  *
  * @returns
  *  - `draft`     — estado actual del draft
- *  - `setField`  — actualiza un campo puntual del draft
- *  - `saveDraft` — persiste el draft completo (usado después de setField)
+ *  - `setField`  — actualiza uno o varios campos del draft
+ *  - `saveDraft` — persiste el draft completo (usado al reemplazar con un objeto nuevo)
  *  - `clearDraft`— borra el draft (llamar al crear con éxito)
  *  - `hasDraft`  — true si hay un draft guardado en localStorage
+ *  - `initialized` — true después de leer el draft inicial de localStorage
  */
 export function useTournamentDraft(userId: string | null) {
   const [draft, setDraft] = useState<TournamentDraftUI>({});
@@ -98,7 +142,6 @@ export function useTournamentDraft(userId: string | null) {
           ...updates,
           updatedAt: Date.now(),
         };
-        // Flush síncrono — evita race con navegación rápida entre pasos
         persistSync(next);
         return next;
       });
@@ -107,7 +150,7 @@ export function useTournamentDraft(userId: string | null) {
     [persistSync],
   );
 
-  /** Guarda el draft completo (útil al reemplazar con un objeto nuevo) */
+  /** Guarda el draft completo (útil al reemplazar con un objeto nuevo). */
   const saveDraft = useCallback(
     (newDraft: TournamentDraftUI) => {
       const next = { ...newDraft, updatedAt: Date.now() };
@@ -118,7 +161,7 @@ export function useTournamentDraft(userId: string | null) {
     [persistSync],
   );
 
-  /** Borra el draft de localStorage y resetea el estado */
+  /** Borra el draft de localStorage y resetea el estado. */
   const clearDraft = useCallback(() => {
     if (!userId) return;
     try {

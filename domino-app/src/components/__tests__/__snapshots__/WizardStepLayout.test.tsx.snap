@@ -42,9 +42,9 @@ exports[`WizardStepLayout — content size detection > snapshot: large mode (con
           >
             Nuevo torneo
              · Paso 
-            7
+            3
              de 
-            9
+            3
           </div>
         </div>
       </div>
@@ -52,16 +52,16 @@ exports[`WizardStepLayout — content size detection > snapshot: large mode (con
         class="pb-3"
       >
         <div
-          aria-label="Paso 7 de 9"
-          aria-valuemax="9"
+          aria-label="Paso 3 de 3"
+          aria-valuemax="3"
           aria-valuemin="1"
-          aria-valuenow="7"
+          aria-valuenow="3"
           class="h-1.5 bg-surface-3 rounded-full overflow-hidden"
           role="progressbar"
         >
           <div
             class="h-full rounded-full transition-all duration-500 ease-out motion-reduce:transition-none"
-            style="width: 78%; background: linear-gradient(90deg, rgb(16, 185, 129), rgb(5, 150, 105));"
+            style="width: 100%; background: linear-gradient(90deg, rgb(16, 185, 129), rgb(5, 150, 105));"
           />
         </div>
       </div>
@@ -136,7 +136,7 @@ exports[`WizardStepLayout — content size detection > snapshot: medium mode (co
              · Paso 
             2
              de 
-            9
+            3
           </div>
         </div>
       </div>
@@ -144,8 +144,8 @@ exports[`WizardStepLayout — content size detection > snapshot: medium mode (co
         class="pb-3"
       >
         <div
-          aria-label="Paso 2 de 9"
-          aria-valuemax="9"
+          aria-label="Paso 2 de 3"
+          aria-valuemax="3"
           aria-valuemin="1"
           aria-valuenow="2"
           class="h-1.5 bg-surface-3 rounded-full overflow-hidden"
@@ -153,7 +153,7 @@ exports[`WizardStepLayout — content size detection > snapshot: medium mode (co
         >
           <div
             class="h-full rounded-full transition-all duration-500 ease-out motion-reduce:transition-none"
-            style="width: 22%; background: linear-gradient(90deg, rgb(16, 185, 129), rgb(5, 150, 105));"
+            style="width: 67%; background: linear-gradient(90deg, rgb(16, 185, 129), rgb(5, 150, 105));"
           />
         </div>
       </div>
@@ -228,7 +228,7 @@ exports[`WizardStepLayout — content size detection > snapshot: small mode (con
              · Paso 
             1
              de 
-            9
+            3
           </div>
         </div>
       </div>
@@ -236,8 +236,8 @@ exports[`WizardStepLayout — content size detection > snapshot: small mode (con
         class="pb-3"
       >
         <div
-          aria-label="Paso 1 de 9"
-          aria-valuemax="9"
+          aria-label="Paso 1 de 3"
+          aria-valuemax="3"
           aria-valuemin="1"
           aria-valuenow="1"
           class="h-1.5 bg-surface-3 rounded-full overflow-hidden"
@@ -245,7 +245,7 @@ exports[`WizardStepLayout — content size detection > snapshot: small mode (con
         >
           <div
             class="h-full rounded-full transition-all duration-500 ease-out motion-reduce:transition-none"
-            style="width: 11%; background: linear-gradient(90deg, rgb(16, 185, 129), rgb(5, 150, 105));"
+            style="width: 33%; background: linear-gradient(90deg, rgb(16, 185, 129), rgb(5, 150, 105));"
           />
         </div>
       </div>
