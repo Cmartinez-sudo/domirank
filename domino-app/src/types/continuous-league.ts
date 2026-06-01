@@ -26,6 +26,23 @@ export type ContinuousLeagueStandingsRow = {
 /** Tab del leaderboard de polla continua. */
 export type ContinuousLeagueDayFilter = "today" | "all";
 
+/** Fila del RPC continuous_league_daily_standings (mig 0051). Cutoff a 5am
+ *  TZ Caracas — más simple que la fila Global: sin PF/PC/diff/partner,
+ *  pero con is_day_winner (true = #1 del día con games_played>0). */
+export type ContinuousLeagueDailyStandingsRow = {
+  user_id:        string;
+  username:       string;
+  display_name:   string | null;
+  avatar_url:     string | null;
+  total_points:   number;
+  wins:           number;
+  losses:         number;
+  win_pct:        number;
+  games_played:   number;
+  current_streak: string;   // e.g. "3W", "1L", o "—"
+  is_day_winner:  boolean;
+};
+
 export type ContinuousLeaguePartnerRow = {
   partner_id:     string;
   games_together: number;

@@ -9,7 +9,11 @@ import { SecondaryPageShell } from "@/components/SecondaryPageShell";
 import { BACK_FALLBACKS } from "@/lib/back-fallbacks";
 import { Bracket } from "@/components/Bracket";
 import { ContinuousLeagueHomePage } from "@/components/continuous-league/ContinuousLeagueHomePage";
-import type { ContinuousLeagueStandingsRow, ContinuousLeagueMatchRow } from "@/types/continuous-league";
+import type {
+  ContinuousLeagueStandingsRow,
+  ContinuousLeagueDailyStandingsRow,
+  ContinuousLeagueMatchRow,
+} from "@/types/continuous-league";
 // BracketPairing + BracketProfile match the private types inside Bracket.tsx
 type BracketPairing = {
   id: number;
@@ -67,14 +71,28 @@ export default async function TournamentDetail({
     const isOpenEnded  = (tournament as { is_open_ended?: boolean }).is_open_ended ?? false;
     const dayFilter    = isOpenEnded && sp.day === "today" ? "today" : "all";
 
-    // Fetch standings via RPC — pasa p_season para histórico + p_day_filter
-    // para tab "Hoy"
+    // Fetch Global standings via el RPC clásico (rich shape: PF/PC/diff/partner).
+    // El leaderboard "Hoy" usa el nuevo RPC (mig 0051) que cuenta con cutoff 5am
+    // session_day en lugar de medianoche. SIEMPRE pedimos ambos cuando es continua
+    // — así el switch entre tabs no re-fetcha el dataset opuesto.
     const { data: standings } = await supabase
       .rpc("continuous_league_standings", {
         p_tournament_id: tournament.id,
         p_season:        viewingSeason === currentSeason ? null : viewingSeason,
-        p_day_filter:    dayFilter === "today" ? "today" : null,
+        p_day_filter:    null,
       });
+
+    // Fetch Daily standings — solo cuando es polla continua (is_open_ended).
+    // En polla cerrada o histórica no aplica concepto de "hoy".
+    let dailyStandings: ContinuousLeagueDailyStandingsRow[] = [];
+    if (isOpenEnded && viewingSeason === currentSeason) {
+      const { data: daily } = await supabase
+        .rpc("continuous_league_daily_standings", {
+          p_tournament_id: tournament.id,
+          p_session_day:   null, // null = hoy (session_day(now()))
+        });
+      dailyStandings = (daily ?? []) as ContinuousLeagueDailyStandingsRow[];
+    }
 
     // Fetch pairings + matches con rondas para armar la matches list.
     // Para vista actual usamos la view (filtra por current_season); para
@@ -179,6 +197,7 @@ export default async function TournamentDetail({
         }}
         currentUserId={user!.id}
         standings={(standings ?? []) as ContinuousLeagueStandingsRow[]}
+        dailyStandings={dailyStandings}
         rosterUserIds={(players ?? []).map((p) => p.user_id)}
         matches={matchRows}
         activeMatch={activeMatch}
