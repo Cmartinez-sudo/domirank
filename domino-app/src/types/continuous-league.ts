@@ -46,6 +46,19 @@ export type ContinuousLeagueDailyStandingsRow = {
   is_day_winner:  boolean;
 };
 
+/** Fila del RPC continuous_league_winners_history (mig 0051). Una fila por
+ *  cada session_day con partidas confirmadas + el ganador #1 de ese día.
+ *  Ordenado por session_day DESC (más reciente primero). */
+export type ContinuousLeagueWinnerHistoryRow = {
+  session_day:          string;  // YYYY-MM-DD
+  winner_id:            string;
+  winner_username:      string;
+  winner_display_name:  string | null;
+  winner_avatar_url:    string | null;
+  total_points:         number;
+  matches_played:       number;
+};
+
 export type ContinuousLeaguePartnerRow = {
   partner_id:     string;
   games_together: number;

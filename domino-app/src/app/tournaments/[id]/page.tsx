@@ -13,6 +13,7 @@ import type {
   ContinuousLeagueStandingsRow,
   ContinuousLeagueDailyStandingsRow,
   ContinuousLeagueMatchRow,
+  ContinuousLeagueWinnerHistoryRow,
 } from "@/types/continuous-league";
 // BracketPairing + BracketProfile match the private types inside Bracket.tsx
 type BracketPairing = {
@@ -108,6 +109,7 @@ export default async function TournamentDetail({
     // En polla cerrada o histórica no aplica concepto de "hoy".
     let dailyStandings: ContinuousLeagueDailyStandingsRow[] = [];
     let availableSessionDays: string[] = [];
+    let winnersHistory: ContinuousLeagueWinnerHistoryRow[] = [];
     if (isOpenEnded && viewingSeason === currentSeason) {
       const { data: daily } = await supabase
         .rpc("continuous_league_daily_standings", {
@@ -116,15 +118,35 @@ export default async function TournamentDetail({
         });
       dailyStandings = (daily ?? []) as ContinuousLeagueDailyStandingsRow[];
 
-      // session_days con partidas confirmadas para el DateSelector (DESC).
-      // Reusamos continuous_league_winners_history que ya devuelve 1 fila por
-      // session_day. p_limit=100 = ~3 meses, suficiente para el MVP.
+      // Fetch historial de ganadores (mig 0051). Una fila por session_day
+      // con partidas confirmadas. p_limit=100 = ~3 meses, suficiente para el MVP.
+      // Reusamos los mismos datos para:
+      //  (a) DateSelector (session_days disponibles)
+      //  (b) WinnersHistorySection (F2.5)
       const { data: sessionDaysRaw } = await supabase.rpc(
         "continuous_league_winners_history",
         { p_tournament_id: tournament.id, p_limit: 100 },
       );
-      availableSessionDays = ((sessionDaysRaw ?? []) as Array<{ session_day: string }>)
-        .map((r) => r.session_day);
+      type WinnersHistoryRpcRow = {
+        session_day:         string;
+        winner_id:           string;
+        winner_username:     string;
+        winner_display_name: string | null;
+        winner_avatar_url:   string | null;
+        total_points:        number;
+        matches_played:      number;
+      };
+      const rawRows = (sessionDaysRaw ?? []) as WinnersHistoryRpcRow[];
+      availableSessionDays = rawRows.map((r) => r.session_day);
+      winnersHistory = rawRows.map((r) => ({
+        session_day:         r.session_day,
+        winner_id:           r.winner_id,
+        winner_username:     r.winner_username,
+        winner_display_name: r.winner_display_name,
+        winner_avatar_url:   r.winner_avatar_url,
+        total_points:        Number(r.total_points),
+        matches_played:      Number(r.matches_played),
+      }));
     }
 
     // Fetch pairings + matches con rondas para armar la matches list.
@@ -243,6 +265,7 @@ export default async function TournamentDetail({
         selectedDay={selectedDay}
         todaySessionDay={todaySessionDay}
         availableDays={availableSessionDays}
+        winnersHistory={winnersHistory}
       />
     );
   }

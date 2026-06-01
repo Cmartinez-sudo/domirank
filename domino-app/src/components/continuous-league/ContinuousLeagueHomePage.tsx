@@ -7,6 +7,7 @@ import { ContinuousLeagueLeaderboard } from "./ContinuousLeagueLeaderboard";
 import { DailyLeaderboard } from "./DailyLeaderboard";
 import { LeaderboardTabs } from "./LeaderboardTabs";
 import { PartnerStatsCard } from "./PartnerStatsCard";
+import { WinnersHistorySection } from "./WinnersHistorySection";
 import { ContinuousLeagueMatchesList } from "./ContinuousLeagueMatchesList";
 import { ContinuousLeagueContinueOrStartButton } from "./ContinuousLeagueContinueOrStartButton";
 import { ContinuousLeagueChampionCard } from "./ContinuousLeagueChampionCard";
@@ -21,6 +22,7 @@ import type {
   ContinuousLeagueDailyStandingsRow,
   ContinuousLeagueMatchRow,
   ContinuousLeagueDayFilter,
+  ContinuousLeagueWinnerHistoryRow,
 } from "@/types/continuous-league";
 
 type Props = {
@@ -57,12 +59,15 @@ type Props = {
   todaySessionDay?: string;
   /** Lista de session_days con partidas confirmadas (DESC, más reciente primero). */
   availableDays?:   string[];
+  /** F2.5 — Historial cronológico de ganadores del día (DESC). Vacío si no es
+   *  polla continua, no hay partidas confirmadas, o se ve una temporada histórica. */
+  winnersHistory?:  ContinuousLeagueWinnerHistoryRow[];
 };
 
 export function ContinuousLeagueHomePage({
   tournament, currentUserId, standings, dailyStandings, rosterUserIds, matches, activeMatch,
   playerCount, userNames, viewingSeason, dayFilter, todayCount, allCount,
-  selectedDay, todaySessionDay, availableDays,
+  selectedDay, todaySessionDay, availableDays, winnersHistory = [],
 }: Props) {
   const router = useRouter();
   const [showNewMatchModal, setShowNewMatchModal] = useState(false);
@@ -188,6 +193,16 @@ export function ContinuousLeagueHomePage({
           worstRivalName={meRow.worst_rival_name}
           worstRivalWins={meRow.worst_rival_wins}
           worstRivalLosses={meRow.worst_rival_losses}
+        />
+      )}
+
+      {/* F2.5 — Historial cronológico de ganadores. Solo polla continua + temporada
+          actual. El componente devuelve null si winnersHistory está vacío. */}
+      {tournament.is_open_ended && !isHistorical && (
+        <WinnersHistorySection
+          tournamentId={tournament.id}
+          winners={winnersHistory}
+          seasonParam={null}
         />
       )}
 
