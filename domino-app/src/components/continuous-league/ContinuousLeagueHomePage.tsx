@@ -15,6 +15,7 @@ import { NewMatchInContinuousLeagueModal } from "./NewMatchInContinuousLeagueMod
 import { NewSeasonDialog } from "./NewSeasonDialog";
 import { CloseContinuousLeagueDialog } from "./CloseContinuousLeagueDialog";
 import { ContinuousLeagueSeasonSelector } from "./ContinuousLeagueSeasonSelector";
+import { DayWinnerConfetti } from "./DayWinnerConfetti";
 import type {
   ContinuousLeagueStandingsRow,
   ContinuousLeagueDailyStandingsRow,
@@ -74,6 +75,14 @@ export function ContinuousLeagueHomePage({
   const isActive    = tournament.status === "open" || tournament.status === "in_progress";
   const isHistorical = viewingSeason !== tournament.current_season;
 
+  // F2.4: confeti se dispara cuando el viewer ES el ganador del día visible.
+  // Solo en tab "today" + viendo la temporada actual. Una vez por día por
+  // tournament (localStorage flag dentro del componente).
+  const viewerIsDayWinner = dayFilter === "today"
+    && !isHistorical
+    && dailyStandings.some((r) => r.user_id === currentUserId && r.is_day_winner === true);
+  const confettiDay = selectedDay ?? todaySessionDay ?? "";
+
   const meRow = standings.find((r) => r.user_id === currentUserId);
   const totalMatches = matches.filter((m) => m.status !== "in_progress").length;
   const finishedMatchesCount = totalMatches;
@@ -91,6 +100,13 @@ export function ContinuousLeagueHomePage({
 
   return (
     <div className="max-w-[720px] mx-auto space-y-4">
+      {/* F2.4: confeti cuando el viewer gana el día (1 vez por día por liga) */}
+      <DayWinnerConfetti
+        shouldFire={viewerIsDayWinner}
+        tournamentId={tournament.id}
+        sessionDay={confettiDay}
+      />
+
       {/* Header */}
       <div className="space-y-2">
         <Link href="/tournaments" className="inline-flex items-center gap-1 text-sm text-text-mute hover:text-text">

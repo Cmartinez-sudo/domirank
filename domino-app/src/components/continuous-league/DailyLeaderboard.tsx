@@ -1,4 +1,5 @@
 import type { ContinuousLeagueDailyStandingsRow } from "@/types/continuous-league";
+import { DayWinnerBadge } from "./DayWinnerBadge";
 
 type Props = {
   rows:          ContinuousLeagueDailyStandingsRow[];
@@ -7,7 +8,8 @@ type Props = {
 
 /**
  * Tabla del día (5am session_day cutoff). Shape simple: V/D/%/Racha + corona
- * estática para el ganador del día (badge animado + confeti es F2.4).
+ * "Rey del día" para el ganador (badge inline; confeti se dispara desde
+ * ContinuousLeagueHomePage cuando el viewer mismo es el winner).
  */
 export function DailyLeaderboard({ rows, currentUserId }: Props) {
   const hasGames = rows.some((r) => r.games_played > 0);
@@ -85,9 +87,7 @@ function DailyStandingsTable({ rows, currentUserId }: { rows: ContinuousLeagueDa
                   </span>
                 </td>
                 <td data-testid="player-name" className="font-medium truncate max-w-[140px]">
-                  {r.is_day_winner && (
-                    <span className="text-yellow-400 mr-1" aria-label="Ganador del día">👑</span>
-                  )}
+                  {r.is_day_winner && <DayWinnerBadge variant="compact" />}
                   {r.display_name ?? r.username}
                 </td>
                 <td className="text-right font-bold tabular-nums">{r.total_points}</td>
