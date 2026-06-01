@@ -53,9 +53,9 @@ export function validateTournamentConfig(config: {
         break;
       }
       case "continuous_league":
-        if (![4, 8].includes(config.player_count)) {
-          errors.player_count = "Liga continua soporta solo 4 u 8 jugadores.";
-        }
+        // Sin restricción de paridad — puede ser cualquier número >= 4
+        // (decisión Carlos 2026-05-31). El cap absoluto de 4..64 ya está
+        // arriba.
         break;
       case "swiss":
         if (config.player_count < 4) {

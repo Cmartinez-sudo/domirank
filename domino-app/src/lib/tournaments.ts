@@ -103,9 +103,8 @@ export async function createTournament(input: CreateTournamentInput) {
       };
     }
   }
-  if (f.format === "continuous_league" && ![4, 8].includes(maxPlayers)) {
-    return { ok: false as const, error: "Liga continua soporta solo 4 u 8 jugadores." };
-  }
+  // Continuous league acepta cualquier número >= 4 (sin restricción de
+  // paridad). Decisión Carlos 2026-05-31.
   if (f.format === "swiss" && maxPlayers < 4) {
     return { ok: false as const, error: "Suizo requiere al menos 4 jugadores." };
   }

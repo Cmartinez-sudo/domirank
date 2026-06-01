@@ -132,24 +132,41 @@ describe("validateTournamentConfig — reglas por formato", () => {
     expect(res.errors.player_count).toMatch(/4, 8, 16, 32 o 64/);
   });
 
-  it("continuous_league con 6 jugadores → error (solo 4 u 8)", () => {
+  it("continuous_league con 6 jugadores → válido (acepta cualquier ≥ 4)", () => {
     const res = validateTournamentConfig({
       format: "continuous_league",
       player_count: 6,
       num_boards: 1,
     });
-    expect(res.valid).toBe(false);
-    expect(res.errors.player_count).toMatch(/4 u 8/);
+    expect(res.valid).toBe(true);
   });
 
-  it("continuous_league con 16 jugadores → error (solo 4 u 8)", () => {
+  it("continuous_league con 5 jugadores (impar) → válido", () => {
+    const res = validateTournamentConfig({
+      format: "continuous_league",
+      player_count: 5,
+      num_boards: 1,
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it("continuous_league con 16 jugadores → válido", () => {
     const res = validateTournamentConfig({
       format: "continuous_league",
       player_count: 16,
       num_boards: 4,
     });
+    expect(res.valid).toBe(true);
+  });
+
+  it("continuous_league con 3 jugadores → error (cap mínimo 4)", () => {
+    const res = validateTournamentConfig({
+      format: "continuous_league",
+      player_count: 3,
+      num_boards: 1,
+    });
     expect(res.valid).toBe(false);
-    expect(res.errors.player_count).toMatch(/4 u 8/);
+    expect(res.errors.player_count).toMatch(/Mínimo 4/);
   });
 
   it("single_elim con 32 jugadores → válido (potencia de 2)", () => {
