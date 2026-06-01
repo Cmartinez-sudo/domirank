@@ -275,6 +275,10 @@ export async function finalizeMatch(match_id: string): Promise<{ ok: true } | { 
     .eq("id", match_id)
     .single();
   if (!matchRow) return { ok: false, error: "Partida no encontrada." };
+  // Casts defensivos — la generación de tipos de Supabase puede no incluir
+  // todavía requires_attestation (mig 0049). Pedimos los campos necesarios
+  // para decidir bypass.
+  const matchRowExt = matchRow as Record<string, unknown>;
 
   // `time_expired` no es una columna en DB (Postgres no permite now() en
   // GENERATED ALWAYS AS STORED). Se calcula acá desde timer_started_at +
@@ -304,26 +308,35 @@ export async function finalizeMatch(match_id: string): Promise<{ ok: true } | { 
   }
 
   // ============================================================
-  // POLLA BYPASS — saltea attestation 3-of-4
+  // ATTESTATION BYPASS — saltea consenso 3-of-4
   // ============================================================
-  // Si la partida pertenece a una polla, finaliza directo a 'confirmed'
-  // sin pasar por pending_attestation. Carlos lo decidió porque las pollas
-  // se juegan IRL, el scorekeeper presencial es confianza suficiente.
-  // El rating se aplica al instante si rated=true.
-  const tournamentId = (matchRow as { tournament_id?: string | null }).tournament_id ?? null;
-  let isContinuousLeague = false;
+  // Si el torneo tiene requires_attestation=false, la partida finaliza
+  // directo a 'confirmed' sin pasar por pending_attestation. F1.7
+  // generaliza el viejo "polla bypass" a un flag a nivel torneo —
+  // continuous_league heredó requires_attestation=false vía backfill
+  // (mig 0050), y el wizard de F1.4 expone el toggle para que cualquier
+  // formato pueda saltearse el consenso (decisión del organizer).
+  //
+  // Cuando requires_attestation=true → flow normal (3-of-4 via RPC
+  // finalize_match + email dispatch a los otros 3 jugadores).
+  const tournamentId = matchRowExt.tournament_id as string | null ?? null;
+  let requiresAttestation = true; // default seguro: si no hay tournament, attest
   if (tournamentId) {
     const { data: t } = await supabase
       .from("tournaments")
-      .select("format")
+      .select("requires_attestation")
       .eq("id", tournamentId)
       .single();
-    isContinuousLeague = (t as { format?: string } | null)?.format === "continuous_league";
+    const tExt = t as Record<string, unknown> | null;
+    // Si la columna requires_attestation no existe todavía (migración no
+    // aplicada en algún env), tratamos como true (flow normal). Solo
+    // hacemos bypass cuando el flag explícitamente es false.
+    requiresAttestation = tExt?.requires_attestation !== false;
   }
 
-  if (isContinuousLeague) {
-    // Solo el scorekeeper (creator) puede finalizar
-    const createdBy = (matchRow as { created_by?: string }).created_by;
+  if (!requiresAttestation) {
+    // Solo el scorekeeper (creator) puede finalizar bypassing
+    const createdBy = matchRowExt.created_by as string | undefined;
     if (createdBy !== user.id) {
       return { ok: false, error: "Solo el creador puede finalizar la partida." };
     }
@@ -332,28 +345,28 @@ export async function finalizeMatch(match_id: string): Promise<{ ok: true } | { 
       .update({ status: "confirmed", finished_at: new Date().toISOString(), scorekeeper_id: user.id })
       .eq("id", match_id);
     if (updErr) {
-      console.error("[finalizeMatch polla bypass] update failed:", updErr);
+      console.error("[finalizeMatch attestation bypass] update failed:", updErr);
       return { ok: false, error: "No se pudo finalizar la partida." };
     }
 
-    // Aplicar rating si la polla está rateada. Best-effort: si falla logueamos
+    // Aplicar rating si el match está rateado. Best-effort: si falla logueamos
     // pero NO bloqueamos — el match queda confirmed igualmente.
-    const rated = (matchRow as { rated?: boolean }).rated ?? true;
+    const rated = matchRowExt.rated as boolean | undefined ?? true;
     if (rated) {
       try {
         const { applyMatchRating } = await import("@/lib/match-attest-actions");
         const ratingResult = await applyMatchRating(match_id);
         if (!ratingResult.ok) {
-          console.error("[finalizeMatch polla bypass] applyMatchRating failed:", ratingResult.error);
+          console.error("[finalizeMatch attestation bypass] applyMatchRating failed:", ratingResult.error);
         }
       } catch (e) {
-        console.error("[finalizeMatch polla bypass] rating import/apply error:", e);
+        console.error("[finalizeMatch attestation bypass] rating import/apply error:", e);
       }
     }
 
     revalidatePath("/dashboard");
     revalidatePath(`/matches/${match_id}`);
-    revalidatePath(`/tournaments/${tournamentId}`);
+    if (tournamentId) revalidatePath(`/tournaments/${tournamentId}`);
     return { ok: true };
   }
 
