@@ -397,6 +397,45 @@ export async function closeContinuousLeague(
   if (t.created_by !== user.id) return { ok: false, error: "Solo el organizador puede cerrar la polla." };
   if (t.status === "finished") return { ok: true };  // idempotente
 
+  // F1.11: validar que TODOS los participantes (excluyendo el organizer)
+  // son amigos del organizer antes de cerrar la polla. Esto cierra el loop
+  // de F1.10: durante la liga se pudieron agregar no-amigos (si attestation
+  // estaba OFF), pero antes de cerrar tienen que estar como amigos del
+  // organizer.
+  const { data: roster } = await supabase
+    .from("tournament_players")
+    .select("user_id, profiles(username, display_name)")
+    .eq("tournament_id", tournament_id);
+  const playerIds = (roster ?? [])
+    .map((r) => r.user_id as string)
+    .filter((uid) => uid !== user.id);
+
+  if (playerIds.length > 0) {
+    const { data: friendRows } = await supabase
+      .from("friendships")
+      .select("friend_id")
+      .eq("user_id", user.id)
+      .in("friend_id", playerIds);
+    const friendIds = new Set((friendRows ?? []).map((r) => r.friend_id as string));
+    const nonFriends = (roster ?? [])
+      .filter((r) => {
+        const uid = r.user_id as string;
+        return uid !== user.id && !friendIds.has(uid);
+      })
+      .map((r) => {
+        const prof = r.profiles as { username?: string; display_name?: string | null } | null;
+        return prof?.display_name ?? prof?.username ?? "?";
+      });
+
+    if (nonFriends.length > 0) {
+      const list = nonFriends.join(", ");
+      return {
+        ok: false,
+        error: `Para cerrar la polla, todos los jugadores tienen que ser tus amigos. Agregá como amigos: ${list}.`,
+      };
+    }
+  }
+
   const { error: uErr } = await supabase
     .from("tournaments")
     .update({ status: "finished" })

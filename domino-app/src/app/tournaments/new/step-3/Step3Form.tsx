@@ -141,7 +141,7 @@ export function Step3Form({ userId, currentUser }: Props) {
     <WizardStepLayout
       currentStep={3}
       primaryAction={{
-        label: pending ? "Creando torneo…" : "🎲 Empezar a jugar →",
+        label: pending ? "Creando torneo…" : "Empezar a jugar →",
         onClick: handleStart,
         disabled: pending,
         pending,
