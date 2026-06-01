@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { ContinuousLeagueDayFilter } from "@/types/continuous-league";
+import { DateSelector } from "./DateSelector";
 
 type Props = {
   tournamentId:   string;
@@ -13,6 +14,12 @@ type Props = {
   globalContent:  ReactNode;
   /** Contenido a renderizar cuando activeTab === "today". */
   todayContent:   ReactNode;
+  /** Día seleccionado actualmente (YYYY-MM-DD). Solo se usa cuando activeTab="today". */
+  selectedDay?:     string;
+  /** session_day "hoy" calculado en server (YYYY-MM-DD). Solo se usa cuando activeTab="today". */
+  todaySessionDay?: string;
+  /** session_days con partidas confirmadas (DESC). Si está vacío, no se renderiza el DateSelector. */
+  availableDays?:   string[];
 };
 
 function buildHref(tournamentId: string, tab: ContinuousLeagueDayFilter, season: number | null): string {
@@ -33,19 +40,39 @@ function buildHref(tournamentId: string, tab: ContinuousLeagueDayFilter, season:
 export function LeaderboardTabs({
   tournamentId, activeTab, seasonParam, todayCount, allCount, createdAt,
   globalContent, todayContent,
+  selectedDay, todaySessionDay, availableDays,
 }: Props) {
   const isToday  = activeTab === "today";
   const count    = isToday ? todayCount : allCount;
   const plural   = count === 1 ? "partida" : "partidas";
 
+  // Día efectivo a mostrar en el header: el seleccionado si vino, si no hoy (browser TZ).
+  const headerDate = (() => {
+    if (!isToday) return null;
+    if (selectedDay) {
+      const [y, m, d] = selectedDay.split("-").map(Number);
+      return new Date(Date.UTC(y, m - 1, d));
+    }
+    return new Date();
+  })();
+
   let when = "";
-  if (isToday) {
-    when = new Date().toLocaleDateString("es", { weekday: "long", day: "2-digit", month: "long" });
-  } else {
+  if (isToday && headerDate) {
+    when = headerDate.toLocaleDateString("es", {
+      weekday: "long", day: "2-digit", month: "long",
+      timeZone: selectedDay ? "UTC" : undefined,
+    });
+  } else if (!isToday) {
     const since = new Date(createdAt);
     when = `Desde ${since.toLocaleDateString("es", { day: "2-digit", month: "short", year: "numeric" })}`;
   }
   const label = isToday ? "Tabla del día" : "Tabla global";
+
+  const showDateSelector = isToday
+    && selectedDay
+    && todaySessionDay
+    && availableDays
+    && availableDays.length > 0;
 
   return (
     <div className="space-y-3">
@@ -89,6 +116,17 @@ export function LeaderboardTabs({
           </span>
         </Link>
       </div>
+
+      {/* DateSelector — solo en tab "Hoy" y solo si hay días con partidas */}
+      {showDateSelector && (
+        <DateSelector
+          tournamentId={tournamentId}
+          selectedDay={selectedDay!}
+          todaySessionDay={todaySessionDay!}
+          availableDays={availableDays!}
+          seasonParam={seasonParam}
+        />
+      )}
 
       {/* Header con count chip + fecha/rango */}
       <div className="flex items-center justify-between bg-bg-2 rounded-lg px-3 py-2 text-sm">

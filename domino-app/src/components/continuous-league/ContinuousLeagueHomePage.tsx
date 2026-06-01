@@ -50,11 +50,18 @@ type Props = {
   todayCount:     number;
   /** Cantidad de partidas finalizadas totales (current_season). */
   allCount:       number;
+  /** Día seleccionado para la tabla del día (YYYY-MM-DD). Solo polla continua. */
+  selectedDay?:     string;
+  /** session_day "hoy" calculado en server (YYYY-MM-DD, TZ Caracas, cutoff 5am). */
+  todaySessionDay?: string;
+  /** Lista de session_days con partidas confirmadas (DESC, más reciente primero). */
+  availableDays?:   string[];
 };
 
 export function ContinuousLeagueHomePage({
   tournament, currentUserId, standings, dailyStandings, rosterUserIds, matches, activeMatch,
   playerCount, userNames, viewingSeason, dayFilter, todayCount, allCount,
+  selectedDay, todaySessionDay, availableDays,
 }: Props) {
   const router = useRouter();
   const [showNewMatchModal, setShowNewMatchModal] = useState(false);
@@ -142,6 +149,9 @@ export function ContinuousLeagueHomePage({
           todayCount={todayCount}
           allCount={allCount}
           createdAt={tournament.created_at}
+          selectedDay={selectedDay}
+          todaySessionDay={todaySessionDay}
+          availableDays={availableDays}
           globalContent={
             <ContinuousLeagueLeaderboard rows={standings} currentUserId={currentUserId} />
           }

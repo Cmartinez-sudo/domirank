@@ -67,9 +67,31 @@ export default async function TournamentDetail({
       ? requestedSeason
       : currentSeason;
 
-    // Day filter: solo válido en polla continua (is_open_ended)
+    // Day filter: solo válido en polla continua (is_open_ended).
+    // sp.day puede ser "today", una fecha YYYY-MM-DD, o nada.
     const isOpenEnded  = (tournament as { is_open_ended?: boolean }).is_open_ended ?? false;
-    const dayFilter    = isOpenEnded && sp.day === "today" ? "today" : "all";
+    const rawDay       = typeof sp.day === "string" ? sp.day : null;
+    // Regex YYYY-MM-DD — solo permitimos formato exacto
+    const isValidDate  = rawDay != null && /^\d{4}-\d{2}-\d{2}$/.test(rawDay) && !Number.isNaN(Date.parse(rawDay));
+    const dayFilter    = isOpenEnded && (rawDay === "today" || isValidDate) ? "today" : "all";
+
+    // Calcular session_day "hoy" en server.
+    // Caracas = UTC-4 (no DST), cutoff a 5am Caracas = 9am UTC.
+    // Estrategia: tomar "now" en hora Caracas y restar 5 horas. Lo que quede
+    // como fecha (YYYY-MM-DD en Caracas) es el session_day actual.
+    //   nowCaracas = nowUTC - 4h  (Caracas está atrás de UTC)
+    //   sessionStart = nowCaracas - 5h
+    //   session_day = fecha (YYYY-MM-DD) de sessionStart
+    // Combinando: session_day = fecha de (nowUTC - 9h) en UTC.
+    const sessionStartUtc = new Date(Date.now() - 9 * 60 * 60 * 1000);
+    const todaySessionDay = sessionStartUtc.toISOString().slice(0, 10);
+
+    // selectedDay para el DateSelector. Se determina así:
+    //  - ?day=today o ausente o inválido → selectedDay = todaySessionDay
+    //  - ?day=YYYY-MM-DD válido          → selectedDay = ese día
+    const selectedDay: string = isValidDate ? (rawDay as string) : todaySessionDay;
+    // p_session_day para el RPC: null cuando es hoy (default del RPC), o la fecha.
+    const rpcSessionDay: string | null = isValidDate ? (rawDay as string) : null;
 
     // Fetch Global standings via el RPC clásico (rich shape: PF/PC/diff/partner).
     // El leaderboard "Hoy" usa el nuevo RPC (mig 0051) que cuenta con cutoff 5am
@@ -85,13 +107,24 @@ export default async function TournamentDetail({
     // Fetch Daily standings — solo cuando es polla continua (is_open_ended).
     // En polla cerrada o histórica no aplica concepto de "hoy".
     let dailyStandings: ContinuousLeagueDailyStandingsRow[] = [];
+    let availableSessionDays: string[] = [];
     if (isOpenEnded && viewingSeason === currentSeason) {
       const { data: daily } = await supabase
         .rpc("continuous_league_daily_standings", {
           p_tournament_id: tournament.id,
-          p_session_day:   null, // null = hoy (session_day(now()))
+          p_session_day:   rpcSessionDay, // null = hoy, o 'YYYY-MM-DD'
         });
       dailyStandings = (daily ?? []) as ContinuousLeagueDailyStandingsRow[];
+
+      // session_days con partidas confirmadas para el DateSelector (DESC).
+      // Reusamos continuous_league_winners_history que ya devuelve 1 fila por
+      // session_day. p_limit=100 = ~3 meses, suficiente para el MVP.
+      const { data: sessionDaysRaw } = await supabase.rpc(
+        "continuous_league_winners_history",
+        { p_tournament_id: tournament.id, p_limit: 100 },
+      );
+      availableSessionDays = ((sessionDaysRaw ?? []) as Array<{ session_day: string }>)
+        .map((r) => r.session_day);
     }
 
     // Fetch pairings + matches con rondas para armar la matches list.
@@ -207,6 +240,9 @@ export default async function TournamentDetail({
         dayFilter={dayFilter}
         todayCount={todayCount}
         allCount={allCount}
+        selectedDay={selectedDay}
+        todaySessionDay={todaySessionDay}
+        availableDays={availableSessionDays}
       />
     );
   }
