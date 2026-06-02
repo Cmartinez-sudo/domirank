@@ -171,18 +171,23 @@ export function AppShell({
         <header className="md:hidden border-b border-border bg-bg/80 backdrop-blur-xl sticky top-0 z-30"
           style={{ paddingTop: "env(safe-area-inset-top)" }}>
           <div className="px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
-            <Link href={user ? "/dashboard" : "/"} className="flex items-center group" aria-label="DomiRank — Inicio">
+            <Link
+              href={user ? "/dashboard" : "/"}
+              className="flex items-center group"
+              style={{ touchAction: "manipulation" }}
+              aria-label="DomiRank — Inicio"
+            >
               <Image
                 src="/branding/logo-horizontal-clean.svg"
                 alt="DomiRank"
-                width={174}
-                height={44}
+                width={158}
+                height={40}
                 priority
-                className="h-11 w-auto transition-transform group-hover:scale-105"
+                className="h-10 w-auto transition-transform group-hover:scale-105"
               />
             </Link>
             {user ? (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
                 <NotificationBell userId={user.id} initialUnreadCount={unread} />
                 <Link
                   href="/settings"
