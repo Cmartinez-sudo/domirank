@@ -100,15 +100,18 @@ export function AppShell({
       {user && (
         <aside className="hidden md:flex md:flex-col w-64 shrink-0 border-r border-border bg-bg-2/40">
           <div className="px-5 h-16 flex items-center justify-between gap-3">
-            <Link href="/" className="flex items-center" aria-label="DomiRank — Inicio">
+            <Link href="/" className="flex items-center gap-2 group" aria-label="DomiRank — Inicio">
               <Image
-                src="/branding/logo-vertical.svg"
-                alt="DomiRank"
-                width={120}
-                height={56}
+                src="/branding/logo-icon.svg"
+                alt=""
+                width={36}
+                height={36}
                 priority
-                className="h-12 w-auto"
+                className="h-9 w-9 transition-transform group-hover:scale-105"
               />
+              <span className="text-[18px] font-extrabold tracking-tight text-white">
+                DomiRank
+              </span>
             </Link>
             <NotificationBell userId={user.id} initialUnreadCount={unread} />
           </div>
@@ -170,16 +173,19 @@ export function AppShell({
         {/* TOPBAR mobile */}
         <header className="md:hidden border-b border-border bg-bg/80 backdrop-blur-xl sticky top-0 z-30"
           style={{ paddingTop: "env(safe-area-inset-top)" }}>
-          <div className="px-4 h-[56px] flex items-center justify-between gap-3">
-            <Link href={user ? "/dashboard" : "/"} className="flex items-center" aria-label="DomiRank — Inicio">
+          <div className="px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+            <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2.5 group" aria-label="DomiRank — Inicio">
               <Image
-                src="/branding/logo-horizontal-tagline.svg"
-                alt="DomiRank · Tu app de dominó"
-                width={140}
-                height={32}
+                src="/branding/logo-icon.svg"
+                alt=""
+                width={40}
+                height={40}
                 priority
-                className="h-8 w-auto"
+                className="h-10 w-10 transition-transform group-hover:scale-105"
               />
+              <span className="text-[20px] font-extrabold tracking-tight text-white">
+                DomiRank
+              </span>
             </Link>
             {user ? (
               <div className="flex items-center gap-1">
