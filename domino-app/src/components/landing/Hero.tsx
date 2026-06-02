@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { PhoneMockup } from "./PhoneMockup";
@@ -23,14 +24,29 @@ export function Hero() {
         <div className="grid md:grid-cols-[1.05fr_.95fr] gap-10 md:gap-12 items-center">
           {/* TEXT COLUMN */}
           <div className="text-center md:text-left">
-            <motion.h1
+            <motion.div
               initial={{ y: 24, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.55, ease: EASE_OUT }}
+              className="flex justify-center md:justify-start mb-6"
+            >
+              <Image
+                src="/branding/logo-vertical-tagline.svg"
+                alt="DomiRank · Tu app de dominó"
+                width={260}
+                height={300}
+                priority
+                className="w-48 md:w-56 h-auto"
+              />
+            </motion.div>
+
+            <motion.h1
+              initial={{ y: 24, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.55, delay: 0.08, ease: EASE_OUT }}
               className="font-extrabold tracking-tight leading-[1.05]"
               style={{ fontSize: "clamp(2.4rem, 5.5vw, 3.6rem)" }}
             >
-              <span>DomiRank — </span>
               <span
                 style={{
                   backgroundImage: "linear-gradient(135deg,#10b981,#3b82f6)",
@@ -39,7 +55,7 @@ export function Hero() {
                   backgroundClip: "text",
                 }}
               >
-                tu nivel real de dominó
+                Tu nivel real de dominó
               </span>
               <span>, oficial.</span>
             </motion.h1>

@@ -32,25 +32,30 @@ function initialsFor(name: string): string {
 
 export function Avatar({ player, size = 36, className = "" }: Props) {
   // Defensa: el caller puede pasar null (e.g., notificación sin actor,
-  // partida con jugador huérfano). Renderizamos un placeholder neutro
-  // en vez de crashear el render entero.
+  // partida con jugador huérfano). En lugar del "?" gris, mostramos el
+  // logo icon (V3) — más alineado con la marca y reconocible como
+  // "system/anonymous player".
   if (!player) {
+    const inner = Math.round(size * 0.7);
     return (
       <div
         style={{
           width: size, height: size, borderRadius: "50%",
-          background: "var(--surface-3)",
+          background: "var(--bg-2)",
           display: "grid", placeItems: "center", flexShrink: 0,
-          color: "var(--text-mute)",
-          fontWeight: 600,
-          fontSize: Math.round(size * 0.4),
-          lineHeight: 1,
-          userSelect: "none",
+          overflow: "hidden", userSelect: "none",
         }}
         className={className}
         aria-hidden
       >
-        ?
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/branding/logo-icon.svg"
+          alt=""
+          width={inner}
+          height={inner}
+          style={{ width: inner, height: inner, display: "block" }}
+        />
       </div>
     );
   }

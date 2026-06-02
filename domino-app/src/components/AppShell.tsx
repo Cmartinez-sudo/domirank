@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { NavigationLoader } from "@/components/NavigationLoader";
@@ -99,14 +100,15 @@ export function AppShell({
       {user && (
         <aside className="hidden md:flex md:flex-col w-64 shrink-0 border-r border-border bg-bg-2/40">
           <div className="px-5 h-16 flex items-center justify-between gap-3">
-            <Link href="/" className="flex items-center gap-2.5 font-bold tracking-tight">
-              <span
-                className="inline-grid place-items-center w-8 h-8 rounded-lg text-black text-xs font-extrabold"
-                style={{ background: "linear-gradient(135deg,#10b981,#059669)" }}
-              >
-                DR
-              </span>
-              <span className="text-[15px]">DomiRank</span>
+            <Link href="/" className="flex items-center group" aria-label="DomiRank — Inicio">
+              <Image
+                src="/branding/logo-horizontal-clean.svg"
+                alt="DomiRank"
+                width={158}
+                height={40}
+                priority
+                className="h-10 w-auto transition-transform group-hover:scale-105"
+              />
             </Link>
             <NotificationBell userId={user.id} initialUnreadCount={unread} />
           </div>
@@ -168,18 +170,24 @@ export function AppShell({
         {/* TOPBAR mobile */}
         <header className="md:hidden border-b border-border bg-bg/80 backdrop-blur-xl sticky top-0 z-30"
           style={{ paddingTop: "env(safe-area-inset-top)" }}>
-          <div className="px-4 h-[56px] flex items-center justify-between gap-3">
-            <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2.5 font-bold tracking-tight">
-              <span
-                className="inline-grid place-items-center w-8 h-8 rounded-lg text-black text-xs font-extrabold"
-                style={{ background: "linear-gradient(135deg,#10b981,#059669)" }}
-              >
-                DR
-              </span>
-              <span className="text-[16px]">DomiRank</span>
+          <div className="px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+            <Link
+              href={user ? "/dashboard" : "/"}
+              className="flex items-center group"
+              style={{ touchAction: "manipulation" }}
+              aria-label="DomiRank — Inicio"
+            >
+              <Image
+                src="/branding/logo-horizontal-clean.svg"
+                alt="DomiRank"
+                width={158}
+                height={40}
+                priority
+                className="h-10 w-auto transition-transform group-hover:scale-105"
+              />
             </Link>
             {user ? (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
                 <NotificationBell userId={user.id} initialUnreadCount={unread} />
                 <Link
                   href="/settings"

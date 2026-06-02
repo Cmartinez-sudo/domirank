@@ -18,16 +18,45 @@ import type { User } from "@supabase/supabase-js";
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
-  title: "DomiRank · Ranking oficial de dominó",
-  description: "DomiRank — la plataforma de ranking para jugadores de dominó. Singles, parejas y torneos.",
+  title: "DomiRank — Tu app de dominó",
+  description: "Ranking transparente, torneos profesionales y comunidad para jugadores de dominó en Latinoamérica.",
+  applicationName: "DomiRank",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "DomiRank",
   },
+  openGraph: {
+    type: "website",
+    siteName: "DomiRank",
+    title: "DomiRank — Tu app de dominó",
+    description: "Ranking, torneos y comunidad para jugadores de dominó.",
+    url: "https://domirank.app",
+    locale: "es_VE",
+    images: [
+      {
+        url: "/branding/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "DomiRank — Tu app de dominó",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DomiRank — Tu app de dominó",
+    description: "Ranking, torneos y comunidad para jugadores de dominó.",
+    images: ["/branding/og-image.png"],
+  },
   icons: {
-    apple: "/icons/apple-touch-icon-180.png",
+    icon: [
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/favicon-16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icons/apple-touch-icon-180.png", sizes: "180x180", type: "image/png" },
+    ],
   },
   other: {
     "mobile-web-app-capable": "yes",

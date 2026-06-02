@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 const VISIT_KEY   = "domirank_visit_count";
@@ -75,12 +76,14 @@ export function InstallPrompt() {
       className="fixed bottom-20 md:bottom-4 inset-x-4 md:inset-x-auto md:right-4 md:left-auto md:w-80 z-50 card border-primary/30 flex items-start gap-3 shadow-pop animate-slide-up-fade"
       style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
     >
-      <div
-        className="inline-grid place-items-center w-10 h-10 rounded-xl text-white text-xs font-extrabold shrink-0"
-        style={{ background: "linear-gradient(135deg,#10b981,#059669)" }}
-        aria-hidden="true"
-      >
-        DR
+      <div className="shrink-0">
+        <Image
+          src="/branding/logo-icon.svg"
+          alt="DomiRank"
+          width={40}
+          height={40}
+          className="w-10 h-10"
+        />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold">Instalar DomiRank</p>

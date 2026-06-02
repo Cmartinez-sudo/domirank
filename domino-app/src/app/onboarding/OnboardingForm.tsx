@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { COUNTRIES, MODALIDADES, type CountryCode, type ModalityCode } from "@/lib/modalidades";
 import { initialRatingFromAssessment } from "@/lib/rating";
@@ -130,13 +131,15 @@ export function OnboardingForm({
           {/* ── Step 1: Country ──────────────────────────────────────────── */}
           {step === 1 && (
             <div className="space-y-6">
-              <div className="text-center pt-6">
-                <div
-                  className="inline-grid place-items-center w-16 h-16 rounded-2xl text-white font-extrabold text-2xl mb-3"
-                  style={{ background: "linear-gradient(135deg,#10b981,#3b82f6)" }}
-                >
-                  DR
-                </div>
+              <div className="flex flex-col items-center pt-6 text-center">
+                <Image
+                  src="/branding/logo-vertical-tagline.svg"
+                  alt="DomiRank · Tu app de dominó"
+                  width={220}
+                  height={260}
+                  priority
+                  className="w-48 h-auto mb-4"
+                />
                 <h1 className="text-3xl font-bold tracking-tight">¡Bienvenido a DomiRank!</h1>
                 <p className="text-text-dim mt-2">Antes de empezar, cuéntanos un poco sobre ti.</p>
               </div>

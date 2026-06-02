@@ -1,17 +1,18 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export function Footer() {
   return (
     <footer className="border-t border-border mt-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 flex flex-col sm:flex-row gap-6 items-center justify-between text-sm">
-        <Link href="/" className="flex items-center gap-2.5 font-bold tracking-tight">
-          <span
-            className="inline-grid place-items-center w-8 h-8 rounded-lg text-black text-xs font-extrabold"
-            style={{ background: "linear-gradient(135deg,#10b981,#059669)" }}
-          >
-            DR
-          </span>
-          <span className="text-[15px]">DomiRank</span>
+        <Link href="/" className="flex items-center" aria-label="DomiRank — Inicio">
+          <Image
+            src="/branding/logo-horizontal-tagline.svg"
+            alt="DomiRank · Tu app de dominó"
+            width={130}
+            height={32}
+            className="h-8 w-auto"
+          />
         </Link>
 
         <nav className="flex items-center gap-5 text-text-dim flex-wrap justify-center">

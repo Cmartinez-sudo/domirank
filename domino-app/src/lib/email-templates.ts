@@ -47,7 +47,7 @@ function shell(title: string, bodyHtml: string, cta?: { label: string; href: str
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:${BRAND.card};border:1px solid ${BRAND.border};border-radius:16px;overflow:hidden;">
             <tr>
               <td style="padding:24px 24px 8px 24px;">
-                <div style="display:inline-block;width:42px;height:42px;background:linear-gradient(135deg,#10b981,#059669);border-radius:10px;text-align:center;line-height:42px;font-weight:800;color:#000;font-size:14px;letter-spacing:-0.5px;">DR</div>
+                <img src="${getAppUrl()}/branding/logo-horizontal-tagline.png" alt="DomiRank · Tu app de dominó" width="200" style="display:block;max-width:200px;height:auto;border:0;" />
               </td>
             </tr>
             <tr>
