@@ -21,6 +21,12 @@ vi.mock('@/lib/continuous-league-actions', () => ({
   closeContinuousLeague:            vi.fn(() => Promise.resolve({ ok: true })),
 }));
 
+// F2.6: realtime refresher monta un canal de Supabase. En tests jsdom no
+// hay env vars de Supabase. Mockeamos a no-op para que el render no falle.
+vi.mock('../ContinuousLeagueRealtimeRefresher', () => ({
+  ContinuousLeagueRealtimeRefresher: () => null,
+}));
+
 const TOURNAMENT = {
   id:             't1',
   name:           'Polla del barrio',
@@ -66,6 +72,7 @@ describe('ContinuousLeagueHomePage', () => {
         tournament={TOURNAMENT}
         currentUserId="carlos"
         standings={[]}
+        dailyStandings={[]}
         rosterUserIds={ROSTER}
         matches={[]}
         activeMatch={null}
@@ -96,6 +103,7 @@ describe('ContinuousLeagueHomePage', () => {
         tournament={TOURNAMENT}
         currentUserId="carlos"
         standings={[]}
+        dailyStandings={[]}
         rosterUserIds={ROSTER}
         matches={[activeMatch]}
         activeMatch={activeMatch}
@@ -114,14 +122,14 @@ describe('ContinuousLeagueHomePage', () => {
 
   it('badge "Continua" / "Cerrada" según is_open_ended', () => {
     const { container: c1 } = render(
-      <ContinuousLeagueHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} dailyStandings={[]} rosterUserIds={ROSTER}
         matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
         dayFilter="all" todayCount={0} allCount={0} />,
     );
     expect(c1.textContent).toContain('Continua');
 
     const { container: c2 } = render(
-      <ContinuousLeagueHomePage tournament={{ ...TOURNAMENT, is_open_ended: false }} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={{ ...TOURNAMENT, is_open_ended: false }} currentUserId="carlos" standings={[]} dailyStandings={[]} rosterUserIds={ROSTER}
         matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
         dayFilter="all" todayCount={0} allCount={0} />,
     );
@@ -138,7 +146,7 @@ describe('ContinuousLeagueHomePage', () => {
       },
     ];
     const { container } = render(
-      <ContinuousLeagueHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} dailyStandings={[]} rosterUserIds={ROSTER}
         matches={matches} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
         dayFilter="all" todayCount={0} allCount={0} />,
     );
@@ -151,7 +159,7 @@ describe('ContinuousLeagueHomePage', () => {
     const standings = [row('carlos', 'Carlos', { total_points: 510, wins: 7, losses: 3 })];
     const finished = { ...TOURNAMENT, status: 'finished' as const };
     const { container } = render(
-      <ContinuousLeagueHomePage tournament={finished} currentUserId="carlos" standings={standings} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={finished} currentUserId="carlos" standings={standings} dailyStandings={[]} rosterUserIds={ROSTER}
         matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
         dayFilter="all" todayCount={0} allCount={0} />,
     );
@@ -171,7 +179,7 @@ describe('ContinuousLeagueHomePage', () => {
   it('modo histórico oculta el big button y las acciones del organizador', () => {
     const t2 = { ...TOURNAMENT, current_season: 2 };
     const { container } = render(
-      <ContinuousLeagueHomePage tournament={t2} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={t2} currentUserId="carlos" standings={[]} dailyStandings={[]} rosterUserIds={ROSTER}
         matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
         dayFilter="all" todayCount={0} allCount={0} />,
     );
@@ -189,7 +197,7 @@ describe('ContinuousLeagueHomePage', () => {
 
   it('botón "Cerrar polla" visible al organizer en polla continua', () => {
     const { container } = render(
-      <ContinuousLeagueHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} dailyStandings={[]} rosterUserIds={ROSTER}
         matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
         dayFilter="all" todayCount={0} allCount={0} />,
     );
@@ -201,7 +209,7 @@ describe('ContinuousLeagueHomePage', () => {
   it('botón dice "Finalizar polla" cuando is_open_ended=false', () => {
     const closed = { ...TOURNAMENT, is_open_ended: false };
     const { container } = render(
-      <ContinuousLeagueHomePage tournament={closed} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={closed} currentUserId="carlos" standings={[]} dailyStandings={[]} rosterUserIds={ROSTER}
         matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
         dayFilter="all" todayCount={0} allCount={0} />,
     );
@@ -212,7 +220,7 @@ describe('ContinuousLeagueHomePage', () => {
 
   it('acciones del organizador ocultas para no-organizers', () => {
     const { container } = render(
-      <ContinuousLeagueHomePage tournament={TOURNAMENT} currentUserId="erik" standings={[]} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={TOURNAMENT} currentUserId="erik" standings={[]} dailyStandings={[]} rosterUserIds={ROSTER}
         matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
         dayFilter="all" todayCount={0} allCount={0} />,
     );
@@ -222,14 +230,14 @@ describe('ContinuousLeagueHomePage', () => {
 
   it('ContinuousLeagueSeasonSelector aparece solo si current_season > 1', () => {
     const { container: c1 } = render(
-      <ContinuousLeagueHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={TOURNAMENT} currentUserId="carlos" standings={[]} dailyStandings={[]} rosterUserIds={ROSTER}
         matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={1}
         dayFilter="all" todayCount={0} allCount={0} />,
     );
     expect(c1.querySelector('nav[aria-label="Temporadas"]')).toBeNull();
 
     const { container: c2 } = render(
-      <ContinuousLeagueHomePage tournament={{ ...TOURNAMENT, current_season: 2 }} currentUserId="carlos" standings={[]} rosterUserIds={ROSTER}
+      <ContinuousLeagueHomePage tournament={{ ...TOURNAMENT, current_season: 2 }} currentUserId="carlos" standings={[]} dailyStandings={[]} rosterUserIds={ROSTER}
         matches={[]} activeMatch={null} playerCount={4} userNames={USER_NAMES} viewingSeason={2}
         dayFilter="all" todayCount={0} allCount={0} />,
     );

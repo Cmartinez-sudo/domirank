@@ -9,7 +9,12 @@ import { SecondaryPageShell } from "@/components/SecondaryPageShell";
 import { BACK_FALLBACKS } from "@/lib/back-fallbacks";
 import { Bracket } from "@/components/Bracket";
 import { ContinuousLeagueHomePage } from "@/components/continuous-league/ContinuousLeagueHomePage";
-import type { ContinuousLeagueStandingsRow, ContinuousLeagueMatchRow } from "@/types/continuous-league";
+import type {
+  ContinuousLeagueStandingsRow,
+  ContinuousLeagueDailyStandingsRow,
+  ContinuousLeagueMatchRow,
+  ContinuousLeagueWinnerHistoryRow,
+} from "@/types/continuous-league";
 // BracketPairing + BracketProfile match the private types inside Bracket.tsx
 type BracketPairing = {
   id: number;
@@ -63,18 +68,86 @@ export default async function TournamentDetail({
       ? requestedSeason
       : currentSeason;
 
-    // Day filter: solo válido en polla continua (is_open_ended)
+    // Day filter: solo válido en polla continua (is_open_ended).
+    // sp.day puede ser "today", una fecha YYYY-MM-DD, o nada.
     const isOpenEnded  = (tournament as { is_open_ended?: boolean }).is_open_ended ?? false;
-    const dayFilter    = isOpenEnded && sp.day === "today" ? "today" : "all";
+    const rawDay       = typeof sp.day === "string" ? sp.day : null;
+    // Regex YYYY-MM-DD — solo permitimos formato exacto
+    const isValidDate  = rawDay != null && /^\d{4}-\d{2}-\d{2}$/.test(rawDay) && !Number.isNaN(Date.parse(rawDay));
+    const dayFilter    = isOpenEnded && (rawDay === "today" || isValidDate) ? "today" : "all";
 
-    // Fetch standings via RPC — pasa p_season para histórico + p_day_filter
-    // para tab "Hoy"
+    // Calcular session_day "hoy" en server.
+    // Caracas = UTC-4 (no DST), cutoff a 5am Caracas = 9am UTC.
+    // Estrategia: tomar "now" en hora Caracas y restar 5 horas. Lo que quede
+    // como fecha (YYYY-MM-DD en Caracas) es el session_day actual.
+    //   nowCaracas = nowUTC - 4h  (Caracas está atrás de UTC)
+    //   sessionStart = nowCaracas - 5h
+    //   session_day = fecha (YYYY-MM-DD) de sessionStart
+    // Combinando: session_day = fecha de (nowUTC - 9h) en UTC.
+    const sessionStartUtc = new Date(Date.now() - 9 * 60 * 60 * 1000);
+    const todaySessionDay = sessionStartUtc.toISOString().slice(0, 10);
+
+    // selectedDay para el DateSelector. Se determina así:
+    //  - ?day=today o ausente o inválido → selectedDay = todaySessionDay
+    //  - ?day=YYYY-MM-DD válido          → selectedDay = ese día
+    const selectedDay: string = isValidDate ? (rawDay as string) : todaySessionDay;
+    // p_session_day para el RPC: null cuando es hoy (default del RPC), o la fecha.
+    const rpcSessionDay: string | null = isValidDate ? (rawDay as string) : null;
+
+    // Fetch Global standings via el RPC clásico (rich shape: PF/PC/diff/partner).
+    // El leaderboard "Hoy" usa el nuevo RPC (mig 0051) que cuenta con cutoff 5am
+    // session_day en lugar de medianoche. SIEMPRE pedimos ambos cuando es continua
+    // — así el switch entre tabs no re-fetcha el dataset opuesto.
     const { data: standings } = await supabase
       .rpc("continuous_league_standings", {
         p_tournament_id: tournament.id,
         p_season:        viewingSeason === currentSeason ? null : viewingSeason,
-        p_day_filter:    dayFilter === "today" ? "today" : null,
+        p_day_filter:    null,
       });
+
+    // Fetch Daily standings — solo cuando es polla continua (is_open_ended).
+    // En polla cerrada o histórica no aplica concepto de "hoy".
+    let dailyStandings: ContinuousLeagueDailyStandingsRow[] = [];
+    let availableSessionDays: string[] = [];
+    let winnersHistory: ContinuousLeagueWinnerHistoryRow[] = [];
+    if (isOpenEnded && viewingSeason === currentSeason) {
+      const { data: daily } = await supabase
+        .rpc("continuous_league_daily_standings", {
+          p_tournament_id: tournament.id,
+          p_session_day:   rpcSessionDay, // null = hoy, o 'YYYY-MM-DD'
+        });
+      dailyStandings = (daily ?? []) as ContinuousLeagueDailyStandingsRow[];
+
+      // Fetch historial de ganadores (mig 0051). Una fila por session_day
+      // con partidas confirmadas. p_limit=100 = ~3 meses, suficiente para el MVP.
+      // Reusamos los mismos datos para:
+      //  (a) DateSelector (session_days disponibles)
+      //  (b) WinnersHistorySection (F2.5)
+      const { data: sessionDaysRaw } = await supabase.rpc(
+        "continuous_league_winners_history",
+        { p_tournament_id: tournament.id, p_limit: 100 },
+      );
+      type WinnersHistoryRpcRow = {
+        session_day:         string;
+        winner_id:           string;
+        winner_username:     string;
+        winner_display_name: string | null;
+        winner_avatar_url:   string | null;
+        total_points:        number;
+        matches_played:      number;
+      };
+      const rawRows = (sessionDaysRaw ?? []) as WinnersHistoryRpcRow[];
+      availableSessionDays = rawRows.map((r) => r.session_day);
+      winnersHistory = rawRows.map((r) => ({
+        session_day:         r.session_day,
+        winner_id:           r.winner_id,
+        winner_username:     r.winner_username,
+        winner_display_name: r.winner_display_name,
+        winner_avatar_url:   r.winner_avatar_url,
+        total_points:        Number(r.total_points),
+        matches_played:      Number(r.matches_played),
+      }));
+    }
 
     // Fetch pairings + matches con rondas para armar la matches list.
     // Para vista actual usamos la view (filtra por current_season); para
@@ -179,6 +252,7 @@ export default async function TournamentDetail({
         }}
         currentUserId={user!.id}
         standings={(standings ?? []) as ContinuousLeagueStandingsRow[]}
+        dailyStandings={dailyStandings}
         rosterUserIds={(players ?? []).map((p) => p.user_id)}
         matches={matchRows}
         activeMatch={activeMatch}
@@ -188,6 +262,10 @@ export default async function TournamentDetail({
         dayFilter={dayFilter}
         todayCount={todayCount}
         allCount={allCount}
+        selectedDay={selectedDay}
+        todaySessionDay={todaySessionDay}
+        availableDays={availableSessionDays}
+        winnersHistory={winnersHistory}
       />
     );
   }

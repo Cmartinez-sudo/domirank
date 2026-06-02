@@ -4,7 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ContinuousLeagueLeaderboard } from "./ContinuousLeagueLeaderboard";
+import { DailyLeaderboard } from "./DailyLeaderboard";
+import { LeaderboardTabs } from "./LeaderboardTabs";
 import { PartnerStatsCard } from "./PartnerStatsCard";
+import { WinnersHistorySection } from "./WinnersHistorySection";
 import { ContinuousLeagueMatchesList } from "./ContinuousLeagueMatchesList";
 import { ContinuousLeagueContinueOrStartButton } from "./ContinuousLeagueContinueOrStartButton";
 import { ContinuousLeagueChampionCard } from "./ContinuousLeagueChampionCard";
@@ -13,7 +16,15 @@ import { NewMatchInContinuousLeagueModal } from "./NewMatchInContinuousLeagueMod
 import { NewSeasonDialog } from "./NewSeasonDialog";
 import { CloseContinuousLeagueDialog } from "./CloseContinuousLeagueDialog";
 import { ContinuousLeagueSeasonSelector } from "./ContinuousLeagueSeasonSelector";
-import type { ContinuousLeagueStandingsRow, ContinuousLeagueMatchRow, ContinuousLeagueDayFilter } from "@/types/continuous-league";
+import { DayWinnerConfetti } from "./DayWinnerConfetti";
+import { ContinuousLeagueRealtimeRefresher } from "./ContinuousLeagueRealtimeRefresher";
+import type {
+  ContinuousLeagueStandingsRow,
+  ContinuousLeagueDailyStandingsRow,
+  ContinuousLeagueMatchRow,
+  ContinuousLeagueDayFilter,
+  ContinuousLeagueWinnerHistoryRow,
+} from "@/types/continuous-league";
 
 type Props = {
   tournament: {
@@ -28,6 +39,9 @@ type Props = {
   };
   currentUserId:  string;
   standings:      ContinuousLeagueStandingsRow[];
+  /** Standings del día (session_day cutoff 5am). Vacío si la polla no es
+   *  continua o si se está viendo una temporada histórica. */
+  dailyStandings: ContinuousLeagueDailyStandingsRow[];
   rosterUserIds:  string[];
   matches:        ContinuousLeagueMatchRow[];
   activeMatch:    ContinuousLeagueMatchRow | null;
@@ -40,11 +54,21 @@ type Props = {
   todayCount:     number;
   /** Cantidad de partidas finalizadas totales (current_season). */
   allCount:       number;
+  /** Día seleccionado para la tabla del día (YYYY-MM-DD). Solo polla continua. */
+  selectedDay?:     string;
+  /** session_day "hoy" calculado en server (YYYY-MM-DD, TZ Caracas, cutoff 5am). */
+  todaySessionDay?: string;
+  /** Lista de session_days con partidas confirmadas (DESC, más reciente primero). */
+  availableDays?:   string[];
+  /** F2.5 — Historial cronológico de ganadores del día (DESC). Vacío si no es
+   *  polla continua, no hay partidas confirmadas, o se ve una temporada histórica. */
+  winnersHistory?:  ContinuousLeagueWinnerHistoryRow[];
 };
 
 export function ContinuousLeagueHomePage({
-  tournament, currentUserId, standings, rosterUserIds, matches, activeMatch,
+  tournament, currentUserId, standings, dailyStandings, rosterUserIds, matches, activeMatch,
   playerCount, userNames, viewingSeason, dayFilter, todayCount, allCount,
+  selectedDay, todaySessionDay, availableDays, winnersHistory = [],
 }: Props) {
   const router = useRouter();
   const [showNewMatchModal, setShowNewMatchModal] = useState(false);
@@ -56,6 +80,14 @@ export function ContinuousLeagueHomePage({
   const isClosed    = isFinished || tournament.status === "cancelled";
   const isActive    = tournament.status === "open" || tournament.status === "in_progress";
   const isHistorical = viewingSeason !== tournament.current_season;
+
+  // F2.4: confeti se dispara cuando el viewer ES el ganador del día visible.
+  // Solo en tab "today" + viendo la temporada actual. Una vez por día por
+  // tournament (localStorage flag dentro del componente).
+  const viewerIsDayWinner = dayFilter === "today"
+    && !isHistorical
+    && dailyStandings.some((r) => r.user_id === currentUserId && r.is_day_winner === true);
+  const confettiDay = selectedDay ?? todaySessionDay ?? "";
 
   const meRow = standings.find((r) => r.user_id === currentUserId);
   const totalMatches = matches.filter((m) => m.status !== "in_progress").length;
@@ -74,6 +106,19 @@ export function ContinuousLeagueHomePage({
 
   return (
     <div className="max-w-[720px] mx-auto space-y-4">
+      {/* F2.6: realtime — re-fetch ambos leaderboards cuando hay UPDATE en
+          matches del torneo (típicamente al finalizar una partida). */}
+      {tournament.is_open_ended && !isHistorical && (
+        <ContinuousLeagueRealtimeRefresher tournamentId={tournament.id} />
+      )}
+
+      {/* F2.4: confeti cuando el viewer gana el día (1 vez por día por liga) */}
+      <DayWinnerConfetti
+        shouldFire={viewerIsDayWinner}
+        tournamentId={tournament.id}
+        sessionDay={confettiDay}
+      />
+
       {/* Header */}
       <div className="space-y-2">
         <Link href="/tournaments" className="inline-flex items-center gap-1 text-sm text-text-mute hover:text-text">
@@ -122,18 +167,29 @@ export function ContinuousLeagueHomePage({
         />
       )}
 
-      {/* Leaderboard */}
-      <ContinuousLeagueLeaderboard
-        rows={standings}
-        currentUserId={currentUserId}
-        showTabs={tournament.is_open_ended}
-        activeTab={dayFilter}
-        tournamentId={tournament.id}
-        createdAt={tournament.created_at}
-        todayCount={todayCount}
-        allCount={allCount}
-        seasonParam={viewingSeason === tournament.current_season ? null : viewingSeason}
-      />
+      {/* Leaderboard — polla continua: tabs Global/Hoy.
+          Polla cerrada o histórica: solo Global (sin tabs).               */}
+      {tournament.is_open_ended && viewingSeason === tournament.current_season ? (
+        <LeaderboardTabs
+          tournamentId={tournament.id}
+          activeTab={dayFilter}
+          seasonParam={null}
+          todayCount={todayCount}
+          allCount={allCount}
+          createdAt={tournament.created_at}
+          selectedDay={selectedDay}
+          todaySessionDay={todaySessionDay}
+          availableDays={availableDays}
+          globalContent={
+            <ContinuousLeagueLeaderboard rows={standings} currentUserId={currentUserId} />
+          }
+          todayContent={
+            <DailyLeaderboard rows={dailyStandings} currentUserId={currentUserId} />
+          }
+        />
+      ) : (
+        <ContinuousLeagueLeaderboard rows={standings} currentUserId={currentUserId} />
+      )}
 
       {/* Partner stats — solo si el current user es del roster */}
       {meRow && (
@@ -144,6 +200,16 @@ export function ContinuousLeagueHomePage({
           worstRivalName={meRow.worst_rival_name}
           worstRivalWins={meRow.worst_rival_wins}
           worstRivalLosses={meRow.worst_rival_losses}
+        />
+      )}
+
+      {/* F2.5 — Historial cronológico de ganadores. Solo polla continua + temporada
+          actual. El componente devuelve null si winnersHistory está vacío. */}
+      {tournament.is_open_ended && !isHistorical && (
+        <WinnersHistorySection
+          tournamentId={tournament.id}
+          winners={winnersHistory}
+          seasonParam={null}
         />
       )}
 
