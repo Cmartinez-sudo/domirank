@@ -4,6 +4,8 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { NR_THRESHOLD, isRated } from "@/lib/rating";
 import { PageTransition, StaggerChildren, StaggerItem } from "@/components/Motion";
 import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
+import { ReliabilityBadge } from "@/components/reliability/ReliabilityBadge";
+import { NROnboardingCard } from "@/components/reliability/NROnboardingCard";
 import { PendingAttestationsCard } from "@/components/dashboard/PendingAttestationsCard";
 import { GameIcon } from "@/components/icons";
 import { NotificationPermissionPrompt } from "@/components/notifications/NotificationPermissionPrompt";
@@ -91,8 +93,19 @@ export default async function Dashboard() {
                   >
                     {globalDisplay.toFixed(1)}
                   </span>
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-1 items-start">
                     <TierBadge display={globalDisplay} />
+                    <ReliabilityBadge
+                      score={profile.reliability_score ?? 0}
+                      showScore
+                      factors={{
+                        volume:      profile.reliability_volume,
+                        recency:     profile.reliability_recency,
+                        attestation: profile.reliability_attestation,
+                        diversity:   profile.reliability_diversity,
+                      }}
+                      updatedAt={profile.reliability_updated_at}
+                    />
                   </div>
                 </>
               ) : (
@@ -121,6 +134,12 @@ export default async function Dashboard() {
             </div>
           </div>
         </StaggerItem>
+
+        {!rated && (
+          <StaggerItem>
+            <NROnboardingCard totalGames={totalGames} />
+          </StaggerItem>
+        )}
 
         <StaggerItem>
           <PendingAttestationsCard userId={user.id} />

@@ -4,6 +4,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { DOMIRANK_MIN_GAMES } from "@/lib/rating";
 import { PageTransition } from "@/components/Motion";
 import { TierBadge, ColHeader } from "@/components/RatingInfo";
+import { ReliabilityBadge } from "@/components/reliability/ReliabilityBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -192,6 +193,12 @@ export default async function Leaderboard({
                     <div className="flex flex-col items-end gap-0.5">
                       <span className="font-mono font-bold text-primary">{Number(display ?? 1).toFixed(1)}</span>
                       {display != null && <TierBadge display={Number(display)} />}
+                      {isGlobal && r.reliability_score != null && (
+                        <ReliabilityBadge
+                          score={r.reliability_score}
+                          size="xs"
+                        />
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right hidden md:table-cell font-mono text-text-dim text-sm">

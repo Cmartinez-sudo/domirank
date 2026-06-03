@@ -4,6 +4,7 @@ import { Avatar } from "@/components/Avatar";
 import { supabaseServer } from "@/lib/supabase/server";
 import { NR_THRESHOLD, isRated } from "@/lib/rating";
 import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
+import { ReliabilityBadge } from "@/components/reliability/ReliabilityBadge";
 import { FriendActionButton } from "@/components/FriendActionButton";
 import { getRelationStatus, type RelationStatus } from "@/lib/friends";
 import { SecondaryPageShell } from "@/components/SecondaryPageShell";
@@ -172,8 +173,19 @@ export default async function PublicProfile({
                 >
                   {globalDisplay.toFixed(1)}
                 </div>
-                <div className="flex justify-end gap-2 items-center mt-1">
+                <div className="flex justify-end gap-2 items-center mt-1 flex-wrap">
                   <TierBadge display={globalDisplay} />
+                  <ReliabilityBadge
+                    score={p.reliability_score ?? 0}
+                    showScore
+                    factors={{
+                      volume:      p.reliability_volume,
+                      recency:     p.reliability_recency,
+                      attestation: p.reliability_attestation,
+                      diversity:   p.reliability_diversity,
+                    }}
+                    updatedAt={p.reliability_updated_at}
+                  />
                 </div>
               </>
             ) : (
