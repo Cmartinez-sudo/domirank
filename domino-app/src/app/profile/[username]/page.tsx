@@ -2,8 +2,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { supabaseServer } from "@/lib/supabase/server";
-import { DOMIRANK_MIN_GAMES } from "@/lib/rating";
+import { NR_THRESHOLD, isRated } from "@/lib/rating";
 import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
+import { ReliabilityBadge } from "@/components/reliability/ReliabilityBadge";
 import { FriendActionButton } from "@/components/FriendActionButton";
 import { getRelationStatus, type RelationStatus } from "@/lib/friends";
 import { SecondaryPageShell } from "@/components/SecondaryPageShell";
@@ -29,7 +30,8 @@ export default async function PublicProfile({
   if (!profile) return notFound();
 
   const p = profile as any;
-  const qualified = p.total_games >= DOMIRANK_MIN_GAMES;
+  const rated = isRated(p);
+  const remainingToRated = Math.max(0, NR_THRESHOLD - (p.total_games ?? 0));
   // global_display comes from profile_ratings view (SQL authoritative source).
   const globalDisplay = Number.isFinite(Number(p.global_display)) ? Number(p.global_display) : 1;
 
@@ -156,31 +158,54 @@ export default async function PublicProfile({
               <div className="text-text-mute text-xs uppercase tracking-wider">DomiRank Global</div>
               <RatingInfoTooltip />
             </div>
-            <div
-              className="font-mono font-extrabold"
-              style={{
-                fontSize: "2.75rem",
-                lineHeight: 1,
-                backgroundImage: "linear-gradient(135deg,#10b981,#3b82f6)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-                opacity: qualified ? 1 : 0.85,
-              }}
-            >
-              {globalDisplay.toFixed(1)}
-            </div>
-            <div className="flex justify-end gap-2 items-center mt-1">
-              <TierBadge display={globalDisplay} />
-              {!qualified && (
-                <span className="text-text-mute text-[10px] uppercase tracking-wider font-semibold">
-                  Provisional
+            {rated ? (
+              <>
+                <div
+                  className="font-mono font-extrabold"
+                  style={{
+                    fontSize: "2.75rem",
+                    lineHeight: 1,
+                    backgroundImage: "linear-gradient(135deg,#10b981,#3b82f6)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }}
+                >
+                  {globalDisplay.toFixed(1)}
+                </div>
+                <div className="flex justify-end gap-2 items-center mt-1 flex-wrap">
+                  <TierBadge display={globalDisplay} />
+                  <ReliabilityBadge
+                    score={p.reliability_score ?? 0}
+                    showScore
+                    factors={{
+                      volume:      p.reliability_volume,
+                      recency:     p.reliability_recency,
+                      attestation: p.reliability_attestation,
+                      diversity:   p.reliability_diversity,
+                    }}
+                    updatedAt={p.reliability_updated_at}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-end gap-1">
+                <span
+                  className="font-mono font-extrabold text-text-mute"
+                  style={{ fontSize: "2.75rem", lineHeight: 1 }}
+                >
+                  NR
                 </span>
-              )}
-            </div>
+                <span className="badge bg-amber-400/15 text-amber-400 text-[10px] uppercase tracking-wider font-semibold">
+                  Calibrando
+                </span>
+              </div>
+            )}
             <div className="text-text-mute text-xs mt-1">
               {p.total_games} {p.total_games === 1 ? "partida" : "partidas"} totales
-              {!qualified && ` · faltan ${DOMIRANK_MIN_GAMES - p.total_games} para confirmar`}
+              {!rated && remainingToRated > 0 && (
+                ` · faltan ${remainingToRated} para activar tu rating`
+              )}
             </div>
           </div>
         </div>
