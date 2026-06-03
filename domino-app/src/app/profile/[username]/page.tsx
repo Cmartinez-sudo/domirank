@@ -10,6 +10,8 @@ import { getRelationStatus, type RelationStatus } from "@/lib/friends";
 import { SecondaryPageShell } from "@/components/SecondaryPageShell";
 import { BACK_FALLBACKS } from "@/lib/back-fallbacks";
 import { RemoveFriendAction } from "./RemoveFriendAction";
+import { ModalityCard } from "@/components/ModalityCard";
+import { buildModalities, getVisibleModalities } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
 
@@ -132,10 +134,10 @@ export default async function PublicProfile({
           <div className="flex items-center gap-4 flex-1">
             <Avatar player={p} size={72} />
             <div className="flex-1 min-w-0">
-              <h1 className="text-3xl font-bold truncate">{p.display_name || p.username}</h1>
-              <p className="text-text-mute">@{p.username}</p>
+              <h1 className="text-2xl md:text-3xl font-bold leading-tight break-words line-clamp-2">{p.display_name || p.username}</h1>
+              <p className="text-text-mute truncate">@{p.username}</p>
               {p.bio && (
-                <p className="text-text-dim text-sm mt-1 max-w-xs">{p.bio}</p>
+                <p className="text-text-dim text-sm mt-1 max-w-xs line-clamp-3">{p.bio}</p>
               )}
               <div className="mt-3 md:hidden">
                 <FriendActionButton
@@ -153,15 +155,15 @@ export default async function PublicProfile({
               />
             </div>
           </div>
-          <div className="text-right">
-            <div className="flex items-center justify-end gap-2">
+          <div className="text-center w-full md:w-auto">
+            <div className="flex items-center justify-center gap-2">
               <div className="text-text-mute text-xs uppercase tracking-wider">DomiRank Global</div>
               <RatingInfoTooltip />
             </div>
             {rated ? (
               <>
                 <div
-                  className="font-mono font-extrabold"
+                  className="font-mono font-extrabold tabular-nums mt-1"
                   style={{
                     fontSize: "2.75rem",
                     lineHeight: 1,
@@ -173,7 +175,7 @@ export default async function PublicProfile({
                 >
                   {globalDisplay.toFixed(1)}
                 </div>
-                <div className="flex justify-end gap-2 items-center mt-1 flex-wrap">
+                <div className="flex justify-center gap-2 items-center mt-2 flex-wrap">
                   <TierBadge display={globalDisplay} />
                   <ReliabilityBadge
                     score={p.reliability_score ?? 0}
@@ -189,19 +191,19 @@ export default async function PublicProfile({
                 </div>
               </>
             ) : (
-              <div className="flex flex-col items-end gap-1">
+              <div className="flex flex-col items-center gap-1.5 mt-1">
                 <span
                   className="font-mono font-extrabold text-text-mute"
                   style={{ fontSize: "2.75rem", lineHeight: 1 }}
                 >
                   NR
                 </span>
-                <span className="badge bg-amber-400/15 text-amber-400 text-xs uppercase tracking-wider font-semibold px-2.5 py-1">
+                <span className="inline-flex items-center bg-amber-400/15 text-amber-400 text-xs uppercase tracking-wider font-semibold px-2.5 py-1 rounded-full">
                   Calibrando
                 </span>
               </div>
             )}
-            <div className="text-text-mute text-xs mt-1">
+            <div className="text-text-mute text-xs mt-2">
               {p.total_games} {p.total_games === 1 ? "partida" : "partidas"} totales
               {!rated && remainingToRated > 0 && (
                 ` · faltan ${remainingToRated} para activar tu rating`
@@ -210,45 +212,25 @@ export default async function PublicProfile({
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4 mt-6">
-          <StatBlock
-            title="Singles (6-6)"
-            display={safeNumber(p.d6_singles_display, 1)}
-            elo={safeNumber(p.d6_singles_elo, 1500)}
-            games={p.d6_singles_games ?? 0}
-            wins={p.d6_singles_wins ?? 0}
-            losses={p.d6_singles_losses ?? 0}
-          />
-          <StatBlock
-            title="Parejas (6-6)"
-            display={safeNumber(p.d6_doubles_display, 1)}
-            elo={safeNumber(p.d6_doubles_elo, 1500)}
-            games={p.d6_doubles_games ?? 0}
-            wins={p.d6_doubles_wins ?? 0}
-            losses={p.d6_doubles_losses ?? 0}
-          />
-        </div>
-
-        {(p.d9_singles_games > 0 || p.d9_doubles_games > 0) && (
-          <div className="grid md:grid-cols-2 gap-4 mt-4">
-            <StatBlock
-              title="Singles (9-9)"
-              display={safeNumber(p.d9_singles_display, 1)}
-              elo={safeNumber(p.d9_singles_elo, 1500)}
-              games={p.d9_singles_games ?? 0}
-              wins={p.d9_singles_wins ?? 0}
-              losses={p.d9_singles_losses ?? 0}
-            />
-            <StatBlock
-              title="Parejas (9-9)"
-              display={safeNumber(p.d9_doubles_display, 1)}
-              elo={safeNumber(p.d9_doubles_elo, 1500)}
-              games={p.d9_doubles_games ?? 0}
-              wins={p.d9_doubles_wins ?? 0}
-              losses={p.d9_doubles_losses ?? 0}
-            />
-          </div>
-        )}
+        {(() => {
+          const modalities = buildModalities(p);
+          const visible = getVisibleModalities(modalities, isOwnProfile);
+          if (visible.length === 0) {
+            // Vista pública de un user sin partidas: mensaje neutro, no grid vacío.
+            return (
+              <p className="text-text-mute text-sm mt-6">
+                Este jugador aún no ha registrado partidas confirmadas.
+              </p>
+            );
+          }
+          return (
+            <div className="grid md:grid-cols-2 gap-4 mt-6">
+              {visible.map((m) => (
+                <ModalityCard key={m.key} modality={m} isOwnView={isOwnProfile} />
+              ))}
+            </div>
+          );
+        })()}
       </div>
 
       {relation.kind === "friends" && !isOwnProfile && (
@@ -365,37 +347,3 @@ export default async function PublicProfile({
   );
 }
 
-function safeNumber(v: unknown, fallback: number): number {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
-}
-
-function StatBlock({ title, display, elo, games, wins, losses }: {
-  title: string; display: number; elo: number; games: number; wins: number; losses: number;
-}) {
-  const winRate = games > 0 ? Math.round((wins / games) * 100) : null;
-  const isProvisional = games > 0 && games < 10;
-  return (
-    <div className="bg-surface-2 rounded-md p-4">
-      <div className="text-text-mute text-sm">{title}</div>
-      <div className="flex items-center gap-2 mt-1 flex-wrap">
-        <span className="text-3xl font-bold text-primary font-mono tabular-nums leading-none">
-          {games > 0 ? display.toFixed(1) : "—"}
-        </span>
-        {games > 0 && <TierBadge display={display} />}
-        {isProvisional && (
-          <span className="text-text-mute text-[10px] uppercase tracking-wider font-semibold">Provisional</span>
-        )}
-      </div>
-      {games > 0 && <div className="text-text-mute text-xs mt-0.5">Elo {elo}</div>}
-      <div className="flex items-center gap-3 mt-2 text-sm">
-        <span className="text-text-dim">{games} partidas</span>
-        <span className="text-primary">{wins}G</span>
-        <span className="text-danger">{losses}P</span>
-        {winRate !== null && (
-          <span className="text-text-mute">{winRate}%</span>
-        )}
-      </div>
-    </div>
-  );
-}
