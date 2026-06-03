@@ -132,10 +132,10 @@ export default async function PublicProfile({
           <div className="flex items-center gap-4 flex-1">
             <Avatar player={p} size={72} />
             <div className="flex-1 min-w-0">
-              <h1 className="text-3xl font-bold truncate">{p.display_name || p.username}</h1>
-              <p className="text-text-mute">@{p.username}</p>
+              <h1 className="text-2xl md:text-3xl font-bold leading-tight break-words line-clamp-2">{p.display_name || p.username}</h1>
+              <p className="text-text-mute truncate">@{p.username}</p>
               {p.bio && (
-                <p className="text-text-dim text-sm mt-1 max-w-xs">{p.bio}</p>
+                <p className="text-text-dim text-sm mt-1 max-w-xs line-clamp-3">{p.bio}</p>
               )}
               <div className="mt-3 md:hidden">
                 <FriendActionButton
