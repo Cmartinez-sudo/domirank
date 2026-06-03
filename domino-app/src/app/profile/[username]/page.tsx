@@ -10,6 +10,8 @@ import { getRelationStatus, type RelationStatus } from "@/lib/friends";
 import { SecondaryPageShell } from "@/components/SecondaryPageShell";
 import { BACK_FALLBACKS } from "@/lib/back-fallbacks";
 import { RemoveFriendAction } from "./RemoveFriendAction";
+import { ModalityCard } from "@/components/ModalityCard";
+import { buildModalities, getVisibleModalities } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
 
@@ -210,45 +212,25 @@ export default async function PublicProfile({
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4 mt-6">
-          <StatBlock
-            title="Singles (6-6)"
-            display={safeNumber(p.d6_singles_display, 1)}
-            elo={safeNumber(p.d6_singles_elo, 1500)}
-            games={p.d6_singles_games ?? 0}
-            wins={p.d6_singles_wins ?? 0}
-            losses={p.d6_singles_losses ?? 0}
-          />
-          <StatBlock
-            title="Parejas (6-6)"
-            display={safeNumber(p.d6_doubles_display, 1)}
-            elo={safeNumber(p.d6_doubles_elo, 1500)}
-            games={p.d6_doubles_games ?? 0}
-            wins={p.d6_doubles_wins ?? 0}
-            losses={p.d6_doubles_losses ?? 0}
-          />
-        </div>
-
-        {(p.d9_singles_games > 0 || p.d9_doubles_games > 0) && (
-          <div className="grid md:grid-cols-2 gap-4 mt-4">
-            <StatBlock
-              title="Singles (9-9)"
-              display={safeNumber(p.d9_singles_display, 1)}
-              elo={safeNumber(p.d9_singles_elo, 1500)}
-              games={p.d9_singles_games ?? 0}
-              wins={p.d9_singles_wins ?? 0}
-              losses={p.d9_singles_losses ?? 0}
-            />
-            <StatBlock
-              title="Parejas (9-9)"
-              display={safeNumber(p.d9_doubles_display, 1)}
-              elo={safeNumber(p.d9_doubles_elo, 1500)}
-              games={p.d9_doubles_games ?? 0}
-              wins={p.d9_doubles_wins ?? 0}
-              losses={p.d9_doubles_losses ?? 0}
-            />
-          </div>
-        )}
+        {(() => {
+          const modalities = buildModalities(p);
+          const visible = getVisibleModalities(modalities, isOwnProfile);
+          if (visible.length === 0) {
+            // Vista pública de un user sin partidas: mensaje neutro, no grid vacío.
+            return (
+              <p className="text-text-mute text-sm mt-6">
+                Este jugador aún no ha registrado partidas confirmadas.
+              </p>
+            );
+          }
+          return (
+            <div className="grid md:grid-cols-2 gap-4 mt-6">
+              {visible.map((m) => (
+                <ModalityCard key={m.key} modality={m} isOwnView={isOwnProfile} />
+              ))}
+            </div>
+          );
+        })()}
       </div>
 
       {relation.kind === "friends" && !isOwnProfile && (
@@ -365,37 +347,3 @@ export default async function PublicProfile({
   );
 }
 
-function safeNumber(v: unknown, fallback: number): number {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
-}
-
-function StatBlock({ title, display, elo, games, wins, losses }: {
-  title: string; display: number; elo: number; games: number; wins: number; losses: number;
-}) {
-  const winRate = games > 0 ? Math.round((wins / games) * 100) : null;
-  const isProvisional = games > 0 && games < 10;
-  return (
-    <div className="bg-surface-2 rounded-md p-4">
-      <div className="text-text-mute text-sm">{title}</div>
-      <div className="flex items-baseline gap-2 mt-1 flex-wrap">
-        <span className="text-3xl font-bold text-primary font-mono">
-          {games > 0 ? display.toFixed(1) : "—"}
-        </span>
-        {games > 0 && <TierBadge display={display} />}
-        {isProvisional && (
-          <span className="text-text-mute text-[10px] uppercase tracking-wider font-semibold">Provisional</span>
-        )}
-      </div>
-      {games > 0 && <div className="text-text-mute text-xs mt-0.5">Elo {elo}</div>}
-      <div className="flex items-center gap-3 mt-2 text-sm">
-        <span className="text-text-dim">{games} partidas</span>
-        <span className="text-primary">{wins}G</span>
-        <span className="text-danger">{losses}P</span>
-        {winRate !== null && (
-          <span className="text-text-mute">{winRate}%</span>
-        )}
-      </div>
-    </div>
-  );
-}

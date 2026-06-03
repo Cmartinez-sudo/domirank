@@ -9,6 +9,8 @@ import { NROnboardingCard } from "@/components/reliability/NROnboardingCard";
 import { PendingAttestationsCard } from "@/components/dashboard/PendingAttestationsCard";
 import { GameIcon } from "@/components/icons";
 import { NotificationPermissionPrompt } from "@/components/notifications/NotificationPermissionPrompt";
+import { ModalityCard } from "@/components/ModalityCard";
+import { buildModalities } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
 
@@ -26,10 +28,6 @@ export default async function Dashboard() {
   const remainingToRated = Math.max(0, NR_THRESHOLD - totalGames);
 
   const globalDisplay  = Number(profile.global_display  ?? 1);
-  const singlesDisplay = Number(profile.d6_singles_display ?? 1);
-  const doublesDisplay = Number(profile.d6_doubles_display ?? 1);
-  const singlesElo     = Number(profile.d6_singles_elo ?? 1500);
-  const doublesElo     = Number(profile.d6_doubles_elo ?? 1500);
 
   const supabase = await supabaseServer();
   const { data: recent } = await supabase
@@ -145,26 +143,19 @@ export default async function Dashboard() {
           <PendingAttestationsCard userId={user.id} />
         </StaggerItem>
 
-        <StaggerItem>
-          <div className="grid md:grid-cols-2 gap-4">
-            <RatingCard
-              title="Singles (1v1)"
-              display={singlesDisplay}
-              elo={singlesElo}
-              games={profile.d6_singles_games || 0}
-              wins={profile.d6_singles_wins || 0}
-              losses={profile.d6_singles_losses || 0}
-            />
-            <RatingCard
-              title="Parejas (2v2)"
-              display={doublesDisplay}
-              elo={doublesElo}
-              games={profile.d6_doubles_games || 0}
-              wins={profile.d6_doubles_wins || 0}
-              losses={profile.d6_doubles_losses || 0}
-            />
-          </div>
-        </StaggerItem>
+        {totalGames === 0 ? (
+          <StaggerItem>
+            <FirstMatchCTA />
+          </StaggerItem>
+        ) : (
+          <StaggerItem>
+            <div className="grid md:grid-cols-2 gap-4">
+              {buildModalities(profile).map((m) => (
+                <ModalityCard key={m.key} modality={m} isOwnView variant="detailed" />
+              ))}
+            </div>
+          </StaggerItem>
+        )}
 
         <StaggerItem>
           <div className="card">
@@ -232,41 +223,33 @@ export default async function Dashboard() {
   );
 }
 
-function RatingCard({ title, display, elo, games, wins, losses }: {
-  title: string; display: number; elo: number;
-  games: number; wins: number; losses: number;
-}) {
-  const winRate = games > 0 ? Math.round((wins / games) * 100) : null;
-  const isProvisional = games > 0 && games < 10;
+/**
+ * Zero-state card mostrada cuando el usuario no tiene NINGUNA partida.
+ * Evita el "efecto cementerio" de 4 cards vacías con el mismo CTA.
+ */
+function FirstMatchCTA() {
   return (
-    <div className="card">
-      <div className="text-text-mute text-sm">{title}</div>
-      <div className="flex items-baseline gap-2 mt-1 flex-wrap">
-        <span className="text-4xl font-bold text-primary font-mono">{games > 0 ? display.toFixed(1) : "—"}</span>
-        {games > 0 && <TierBadge display={display} />}
-        {isProvisional && (
-          <span className="text-text-mute text-[10px] uppercase tracking-wider font-semibold">Provisional</span>
-        )}
+    <div
+      className="card text-center"
+      style={{
+        background: "linear-gradient(135deg, rgba(16,185,129,.10), rgba(59,130,246,.06))",
+        borderColor: "rgba(16,185,129,.25)",
+      }}
+    >
+      <div className="mb-3 flex justify-center" aria-hidden="true">
+        <GameIcon className="w-12 h-12 text-primary" />
       </div>
-      {games > 0 && <div className="text-text-mute text-xs mt-0.5">Elo {elo}</div>}
-      <div className="grid grid-cols-3 gap-3 mt-4 text-sm">
-        <div>
-          <div className="text-text-mute text-xs">Partidas</div>
-          <div className="font-mono">{games}</div>
-        </div>
-        <div>
-          <div className="text-text-mute text-xs">G / P</div>
-          <div className="font-mono">
-            <span className="text-primary">{wins}</span>
-            <span className="text-text-mute"> / </span>
-            <span className="text-danger">{losses}</span>
-          </div>
-        </div>
-        <div>
-          <div className="text-text-mute text-xs">W%</div>
-          <div className="font-mono">{winRate !== null ? `${winRate}%` : "—"}</div>
-        </div>
-      </div>
+      <h2 className="text-xl font-bold">Juega tu primera partida</h2>
+      <p className="text-text-dim text-sm mt-2 max-w-md mx-auto">
+        Aún no tienes partidas registradas. Crea una para empezar a calibrar
+        tu rating DomiRank.
+      </p>
+      <Link
+        href="/matches/new"
+        className="btn-primary mt-4 inline-block"
+      >
+        + Nueva partida
+      </Link>
     </div>
   );
 }
