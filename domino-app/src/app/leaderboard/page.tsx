@@ -24,7 +24,7 @@ export default async function Leaderboard({
     const { data } = await supabase
       .from("profile_ratings")
       .select("*")
-      .gte("total_games", DOMIRANK_MIN_GAMES)
+      .eq("is_rated", true)
       .order("global_elo", { ascending: false })
       .limit(100);
     rows = data ?? [];

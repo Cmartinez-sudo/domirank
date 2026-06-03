@@ -22,8 +22,15 @@ export const DEFAULT_ELO = 1500;
 /** Games-played threshold below which a player is Provisional in a bucket. */
 export const PROVISIONAL_THRESHOLD = 10;
 
-/** Minimum total games (all buckets) to appear in the global leaderboard. */
+/** Minimum total games (all buckets) to appear in the global leaderboard.
+ *  Equivalent to NR_THRESHOLD — both come from the same product decision
+ *  ("5 confirmed matches before we trust the rating"). Kept as a separate
+ *  exported constant for readability at call sites; the DB column
+ *  `profiles.is_rated` is the canonical source of truth. */
 export const DOMIRANK_MIN_GAMES = 5;
+
+/** NR (Not Rated) threshold — matches DOMIRANK_MIN_GAMES. */
+export const NR_THRESHOLD = 5;
 
 /** K-factor ladder (Provisional always wins over tier). */
 export const K_FACTORS = {
@@ -268,6 +275,72 @@ export function tierFor(display: number): SkillTier {
  */
 export function winProbability(teamA: Player[], teamB: Player[]): number {
   return expected(teamAvgElo(teamA), teamAvgElo(teamB));
+}
+
+// ─── NR / Reliability helpers ────────────────────────────────────────────────
+
+/**
+ * Minimal shape needed to evaluate NR + reliability state. Compatible with
+ * both `profiles` rows and `profile_ratings` view rows.
+ */
+export type RatedProfileLike = {
+  is_rated?: boolean | null;
+  reliability_score?: number | null;
+  singles_games?: number | null;
+  doubles_games?: number | null;
+  d9_singles_games?: number | null;
+  d9_doubles_games?: number | null;
+};
+
+/**
+ * Returns true if the player has reached NR_THRESHOLD confirmed matches.
+ * Prefers the DB column `is_rated` (canonical, GENERATED) when present;
+ * falls back to summing bucket games for synthetic objects in tests.
+ */
+export function isRated(p: RatedProfileLike): boolean {
+  if (typeof p.is_rated === "boolean") return p.is_rated;
+  const total =
+    (p.singles_games    ?? 0)
+  + (p.doubles_games    ?? 0)
+  + (p.d9_singles_games ?? 0)
+  + (p.d9_doubles_games ?? 0);
+  return total >= NR_THRESHOLD;
+}
+
+/**
+ * Returns the display rating for a profile, or `null` if the player is NR.
+ * Use this at every UI surface that shows a "DomiRank Global" number.
+ *
+ * Callers that already have the display value (e.g. from profile_ratings.global_display)
+ * can pass it via `precomputedDisplay` to avoid re-deriving from Elo.
+ */
+export function getDisplayRating(
+  p: RatedProfileLike & { global_elo?: number | null; global_display?: number | null },
+  opts?: { precomputedDisplay?: number | null },
+): number | null {
+  if (!isRated(p)) return null;
+  if (opts?.precomputedDisplay != null) return opts.precomputedDisplay;
+  if (p.global_display != null) return Number(p.global_display);
+  if (p.global_elo != null)     return toDisplayRating(Number(p.global_elo));
+  return null;
+}
+
+/**
+ * Reliability bucket — 4 tiers per RELIABILITY_NR_HOW_IT_WORKS.md.
+ * Used by the badge component to pick label + color.
+ */
+export type ReliabilityBucket = {
+  key: "calibrating" | "developing" | "reliable" | "very_reliable";
+  label: string;
+  /** Tailwind class fragment (text + bg) for the badge. */
+  className: string;
+};
+
+export function getReliabilityBucket(score: number): ReliabilityBucket {
+  if (score < 30)  return { key: "calibrating",   label: "Calibrando",     className: "text-slate-300 bg-slate-300/15" };
+  if (score < 60)  return { key: "developing",    label: "En desarrollo",  className: "text-amber-400 bg-amber-400/15" };
+  if (score < 90)  return { key: "reliable",      label: "Confiable",      className: "text-emerald-300 bg-emerald-300/15" };
+  return                  { key: "very_reliable", label: "Muy confiable",  className: "text-emerald-400 bg-emerald-400/15" };
 }
 
 // ─── Initial rating from assessment ──────────────────────────────────────────
