@@ -190,9 +190,9 @@ export default async function Leaderboard({
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex flex-col items-end gap-0.5">
-                      <span className="font-mono font-bold text-primary">{Number(display ?? 1).toFixed(1)}</span>
-                      {display != null && <TierBadge display={Number(display)} />}
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="font-mono font-bold text-primary tabular-nums">{Number(display ?? 1).toFixed(1)}</span>
+                      {display != null && <TierBadge display={Number(display)} size="xs" />}
                       {isGlobal && r.reliability_score != null && (
                         <ReliabilityBadge
                           score={r.reliability_score}

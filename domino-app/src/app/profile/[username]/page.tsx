@@ -196,7 +196,7 @@ export default async function PublicProfile({
                 >
                   NR
                 </span>
-                <span className="badge bg-amber-400/15 text-amber-400 text-[10px] uppercase tracking-wider font-semibold">
+                <span className="badge bg-amber-400/15 text-amber-400 text-xs uppercase tracking-wider font-semibold px-2.5 py-1">
                   Calibrando
                 </span>
               </div>
@@ -378,8 +378,8 @@ function StatBlock({ title, display, elo, games, wins, losses }: {
   return (
     <div className="bg-surface-2 rounded-md p-4">
       <div className="text-text-mute text-sm">{title}</div>
-      <div className="flex items-baseline gap-2 mt-1 flex-wrap">
-        <span className="text-3xl font-bold text-primary font-mono">
+      <div className="flex items-center gap-2 mt-1 flex-wrap">
+        <span className="text-3xl font-bold text-primary font-mono tabular-nums leading-none">
           {games > 0 ? display.toFixed(1) : "—"}
         </span>
         {games > 0 && <TierBadge display={display} />}
