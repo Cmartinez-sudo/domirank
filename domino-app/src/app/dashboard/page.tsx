@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireUser, getCurrentProfile } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
-import { DOMIRANK_MIN_GAMES } from "@/lib/rating";
+import { NR_THRESHOLD, isRated } from "@/lib/rating";
 import { PageTransition, StaggerChildren, StaggerItem } from "@/components/Motion";
 import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
 import { PendingAttestationsCard } from "@/components/dashboard/PendingAttestationsCard";
@@ -20,7 +20,8 @@ export default async function Dashboard() {
   const totalGames =
     (profile.d6_singles_games || 0) + (profile.d6_doubles_games || 0) +
     (profile.d9_singles_games || 0) + (profile.d9_doubles_games || 0);
-  const qualified = totalGames >= DOMIRANK_MIN_GAMES;
+  const rated = isRated(profile);
+  const remainingToRated = Math.max(0, NR_THRESHOLD - totalGames);
 
   const globalDisplay  = Number(profile.global_display  ?? 1);
   const singlesDisplay = Number(profile.d6_singles_display ?? 1);
@@ -75,33 +76,43 @@ export default async function Dashboard() {
               <RatingInfoTooltip />
             </div>
             <div className="flex items-baseline gap-3 mt-1 flex-wrap">
-              <span
-                className="font-mono font-extrabold"
-                style={{
-                  fontSize: "3.5rem",
-                  lineHeight: 1,
-                  backgroundImage: "linear-gradient(135deg,#10b981,#3b82f6)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                  opacity: qualified ? 1 : 0.85,
-                }}
-              >
-                {globalDisplay.toFixed(1)}
-              </span>
-              <div className="flex flex-col gap-1">
-                <TierBadge display={globalDisplay} />
-                {!qualified && (
-                  <span className="text-text-mute text-[10px] uppercase tracking-wider font-semibold">
-                    Provisional
+              {rated ? (
+                <>
+                  <span
+                    className="font-mono font-extrabold"
+                    style={{
+                      fontSize: "3.5rem",
+                      lineHeight: 1,
+                      backgroundImage: "linear-gradient(135deg,#10b981,#3b82f6)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                    }}
+                  >
+                    {globalDisplay.toFixed(1)}
                   </span>
-                )}
-              </div>
+                  <div className="flex flex-col gap-1">
+                    <TierBadge display={globalDisplay} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <span
+                    className="font-mono font-extrabold text-text-mute"
+                    style={{ fontSize: "3.5rem", lineHeight: 1 }}
+                  >
+                    NR
+                  </span>
+                  <span className="badge bg-amber-400/15 text-amber-400 text-[10px] uppercase tracking-wider font-semibold">
+                    Calibrando
+                  </span>
+                </>
+              )}
             </div>
             <div className="text-text-dim text-sm mt-2">
               {totalGames} {totalGames === 1 ? "partida" : "partidas"} totales
-              {!qualified && (
-                <> · faltan {DOMIRANK_MIN_GAMES - totalGames} para confirmar tu rating</>
+              {!rated && remainingToRated > 0 && (
+                <> · faltan {remainingToRated} para activar tu rating</>
               )}
               {" · "}
               <Link href="/como-funciona" className="text-primary hover:underline">
