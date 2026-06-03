@@ -75,11 +75,11 @@ export default async function Dashboard() {
               <div className="text-text-mute text-xs uppercase tracking-wider">DomiRank Global</div>
               <RatingInfoTooltip />
             </div>
-            <div className="flex items-baseline gap-3 mt-1 flex-wrap">
+            <div className="flex items-center justify-between gap-4 mt-1">
               {rated ? (
                 <>
                   <span
-                    className="font-mono font-extrabold"
+                    className="font-mono font-extrabold tabular-nums shrink-0"
                     style={{
                       fontSize: "3.5rem",
                       lineHeight: 1,
@@ -91,10 +91,11 @@ export default async function Dashboard() {
                   >
                     {globalDisplay.toFixed(1)}
                   </span>
-                  <div className="flex flex-col gap-1 items-start">
-                    <TierBadge display={globalDisplay} />
+                  <div className="flex flex-col items-end gap-2 shrink-0 min-w-0">
+                    <TierBadge display={globalDisplay} size="md" />
                     <ReliabilityBadge
                       score={profile.reliability_score ?? 0}
+                      size="md"
                       showScore
                       factors={{
                         volume:      profile.reliability_volume,
@@ -109,12 +110,12 @@ export default async function Dashboard() {
               ) : (
                 <>
                   <span
-                    className="font-mono font-extrabold text-text-mute"
+                    className="font-mono font-extrabold text-text-mute shrink-0"
                     style={{ fontSize: "3.5rem", lineHeight: 1 }}
                   >
                     NR
                   </span>
-                  <span className="badge bg-amber-400/15 text-amber-400 text-[10px] uppercase tracking-wider font-semibold">
+                  <span className="badge bg-amber-400/15 text-amber-400 text-xs uppercase tracking-wider font-semibold px-2.5 py-1 shrink-0">
                     Calibrando
                   </span>
                 </>
