@@ -168,21 +168,6 @@ export default function ComoFuncionaPage() {
         </ul>
       </Section>
 
-      <Section n={7} title="¿Por qué Elo y no OpenSkill?">
-        <p>
-          DomiRank empezó con OpenSkill (μ + σ bayesianos) en 2024 y migró a Elo con
-          ajuste por <em>Margin of Victory</em> (estilo FiveThirtyEight) en mayo 2025.
-          Razones:
-        </p>
-        <ul className="list-disc pl-6 mt-2 space-y-1 text-text-dim">
-          <li>Elo es <strong>más explicable</strong>: "ganaste +15, perdiste −12".</li>
-          <li>Funciona bien para 2 equipos (lo que cubre 99% de partidas de dominó).</li>
-          <li>El MoV multiplier captura "ganaste 100-30" vs "ganaste 100-95".</li>
-          <li>Para incertidumbre usamos el <strong>score de confiabilidad</strong>{" "}
-            (sección 3) en vez de σ — más legible para el usuario final.</li>
-        </ul>
-      </Section>
-
       <div className="text-center pt-4 space-y-3">
         <p className="text-text-mute text-sm">
           ¿Preguntas? <Link href="/landing#contacto" className="text-primary hover:underline">Escríbenos</Link>.
