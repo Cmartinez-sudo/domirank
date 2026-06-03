@@ -242,8 +242,8 @@ function RatingCard({ title, display, elo, games, wins, losses }: {
   return (
     <div className="card">
       <div className="text-text-mute text-sm">{title}</div>
-      <div className="flex items-baseline gap-2 mt-1 flex-wrap">
-        <span className="text-4xl font-bold text-primary font-mono">{games > 0 ? display.toFixed(1) : "—"}</span>
+      <div className="flex items-center gap-2 mt-1 flex-wrap">
+        <span className="text-4xl font-bold text-primary font-mono tabular-nums leading-none">{games > 0 ? display.toFixed(1) : "—"}</span>
         {games > 0 && <TierBadge display={display} />}
         {isProvisional && (
           <span className="text-text-mute text-[10px] uppercase tracking-wider font-semibold">Provisional</span>
