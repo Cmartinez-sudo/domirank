@@ -153,15 +153,15 @@ export default async function PublicProfile({
               />
             </div>
           </div>
-          <div className="text-right">
-            <div className="flex items-center justify-end gap-2">
+          <div className="text-center w-full md:w-auto">
+            <div className="flex items-center justify-center gap-2">
               <div className="text-text-mute text-xs uppercase tracking-wider">DomiRank Global</div>
               <RatingInfoTooltip />
             </div>
             {rated ? (
               <>
                 <div
-                  className="font-mono font-extrabold"
+                  className="font-mono font-extrabold tabular-nums mt-1"
                   style={{
                     fontSize: "2.75rem",
                     lineHeight: 1,
@@ -173,7 +173,7 @@ export default async function PublicProfile({
                 >
                   {globalDisplay.toFixed(1)}
                 </div>
-                <div className="flex justify-end gap-2 items-center mt-1 flex-wrap">
+                <div className="flex justify-center gap-2 items-center mt-2 flex-wrap">
                   <TierBadge display={globalDisplay} />
                   <ReliabilityBadge
                     score={p.reliability_score ?? 0}
@@ -189,19 +189,19 @@ export default async function PublicProfile({
                 </div>
               </>
             ) : (
-              <div className="flex flex-col items-end gap-1">
+              <div className="flex flex-col items-center gap-1.5 mt-1">
                 <span
                   className="font-mono font-extrabold text-text-mute"
                   style={{ fontSize: "2.75rem", lineHeight: 1 }}
                 >
                   NR
                 </span>
-                <span className="badge bg-amber-400/15 text-amber-400 text-[10px] uppercase tracking-wider font-semibold">
+                <span className="inline-flex items-center bg-amber-400/15 text-amber-400 text-xs uppercase tracking-wider font-semibold px-2.5 py-1 rounded-full">
                   Calibrando
                 </span>
               </div>
             )}
-            <div className="text-text-mute text-xs mt-1">
+            <div className="text-text-mute text-xs mt-2">
               {p.total_games} {p.total_games === 1 ? "partida" : "partidas"} totales
               {!rated && remainingToRated > 0 && (
                 ` · faltan ${remainingToRated} para activar tu rating`
