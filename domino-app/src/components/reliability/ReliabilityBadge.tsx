@@ -124,7 +124,7 @@ function ReliabilityBadgeWithTooltip({
         onClick={(e) => { e.preventDefault(); setOpen(v => !v); }}
         aria-expanded={open}
         aria-label={`Confiabilidad: ${score}% — ${bucket.label}. Tocar para detalles`}
-        className={`inline-flex items-center font-semibold rounded-full border border-current/30 ${sizeClass} ${bucket.className} ${className} hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/40`}
+        className={`inline-flex items-center justify-center font-semibold rounded-full border border-current/30 min-h-9 md:min-h-8 ${sizeClass} ${bucket.className} ${className} hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/40`}
       >
         {children}
       </button>

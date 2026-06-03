@@ -3,11 +3,23 @@
 import { useState, useRef, useEffect } from "react";
 import { SKILL_TIERS, tierFor, type SkillTier } from "@/lib/rating";
 
-export function TierBadge({ display, className = "" }: { display: number; className?: string }) {
+export function TierBadge({
+  display,
+  size = "sm",
+  className = "",
+}: {
+  display: number;
+  size?: "xs" | "sm" | "md";
+  className?: string;
+}) {
   const tier = tierFor(display);
+  const sizeClass =
+    size === "xs" ? "text-[10px] px-1.5 py-0" :
+    size === "md" ? "text-sm px-2.5 py-1" :
+    "text-xs px-2 py-0.5";
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${className}`}
+      className={`inline-flex items-center font-semibold rounded-full ${sizeClass} ${className}`}
       style={{ background: `${tier.color}22`, color: tier.color, border: `1px solid ${tier.color}44` }}
     >
       {tier.name}
