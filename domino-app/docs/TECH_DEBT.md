@@ -63,3 +63,60 @@ pero el feature no activará hasta que Carlos aplique la migración.
 **Acción pendiente**: Carlos aplica `supabase db push` al finalizar el sprint.
 
 ---
+
+## Sprint Reliability NR · Profile Page Polish
+
+### TD-014: 9 implementaciones distintas de "chip/badge/pill"
+
+**Descripción**: El audit del sprint Profile Page Polish reveló 9 patrones
+de chip distintos en el codebase (`TierBadge`, `ReliabilityBadge`, `RatingBadge`,
+`RankBadge`, `StreakChip`, `DayWinnerBadge`, `ModalityChips`, clase CSS
+`.badge` global, y spans hardcoded inline). Cada uno define su propio
+sizing/padding/radius. Resultado: heights desiguales entre chips en el
+mismo stack, font-size variations sutiles, mantenimiento doble cuando
+hay que cambiar el design system de chips.
+
+**Lo que falta**: Consolidar en un `<Chip>` base con variants
+(`bucket`, `reliability`, `friend`, `rank`, `streak`, etc). El base
+encapsula sizing/padding/radius; las variants solo cambian color +
+borde. Migrar los 9 call-sites.
+
+**Impacto**: Medio. Hoy funciona, pero cualquier cambio de design system
+de chips requiere editar 9 lugares y testear todos los surfaces.
+
+**Acción pendiente**: PR separado post-sprint Reliability NR. Estimado:
+1 día de trabajo + verificación visual en 5+ pantallas.
+
+### TD-015: Header de rating duplicado entre dashboard y profile
+
+**Descripción**: El bloque "DomiRank Global label + número grande +
+TierBadge + ReliabilityBadge" vive inline en dashboard/page.tsx
+(líneas 80-124) y profile/[username]/page.tsx (líneas 156-205). El sprint
+los dejó con layouts distintos a propósito (dashboard right-aligned vs
+profile center-aligned), pero gran parte del markup es idéntico.
+
+**Lo que falta**: Extraer a `<RatingHeader profile={…} variant="dashboard" | "profile"/>`
+que encapsule el render del label + número + chips + meta line.
+
+**Impacto**: Bajo. El código funciona; el riesgo es divergencia entre los
+dos cuando se cambie copy/styling sin sincronizar.
+
+**Acción pendiente**: Hacer junto con TD-014 (chip refactor) si se decide
+abordar el design system completo.
+
+### TD-016: ModalityCard variant prop crecerá si se piden 3+ layouts
+
+**Descripción**: `src/components/ModalityCard.tsx` expone hoy 2 variants
+(`compact` para profile, `detailed` para dashboard). Si se piden más
+layouts (e.g. una variante para clubes o leaderboard-row), el prop debería
+splitearse en componentes separados o usar composition pattern.
+
+**Lo que falta**: Vigilar el crecimiento. Si llegamos a 3 variants,
+refactor a `<ModalityCardCompact/>`, `<ModalityCardDetailed/>`, etc, o
+exponer las primitivas internas (`<ModalityHeader/>`, `<ModalityStats/>`).
+
+**Impacto**: Bajo. Preventivo.
+
+**Acción pendiente**: Re-evaluar cuando se pida la tercera variant.
+
+---
