@@ -26,13 +26,18 @@ vi.mock("@/hooks/useActiveMatch", () => ({
 // Mock next/navigation
 const mockReplace = vi.fn();
 const mockPathname = vi.fn(() => "/");
-const mockSearch = vi.fn(() => new URLSearchParams());
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: mockReplace, push: vi.fn() }),
   usePathname: () => mockPathname(),
-  useSearchParams: () => mockSearch(),
 }));
+
+function setWindowSearch(qs: string) {
+  // jsdom allows mutating location.search via assigning location.href.
+  const u = new URL(window.location.href);
+  u.search = qs;
+  window.history.replaceState({}, "", u.toString());
+}
 
 import { ActiveMatchRedirect } from "@/components/match/ActiveMatchRedirect";
 
@@ -51,12 +56,13 @@ afterEach(() => {
   cleanup();
   mockReplace.mockReset();
   sessionStorage.clear();
+  setWindowSearch("");
 });
 
 describe("ActiveMatchRedirect — smart redirect rules", () => {
   beforeEach(() => {
     mockPathname.mockReturnValue("/dashboard");
-    mockSearch.mockReturnValue(new URLSearchParams());
+    setWindowSearch("");
     mockActiveMatch.mockReturnValue(ACTIVE_MATCH);
   });
 
@@ -94,7 +100,7 @@ describe("ActiveMatchRedirect — smart redirect rules", () => {
   });
 
   it("NO redirige cuando query string tiene ?from=*", () => {
-    mockSearch.mockReturnValue(new URLSearchParams("?from=external"));
+    setWindowSearch("from=external");
     render(<ActiveMatchRedirect userId="user-1" />);
     expect(mockReplace).not.toHaveBeenCalled();
   });

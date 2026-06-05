@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useActiveMatch } from "@/hooks/useActiveMatch";
 
 type Props = {
@@ -11,33 +11,33 @@ type Props = {
 /**
  * Smart redirect — Spec C7.
  *
- * If the user has an active match, auto-navigate to it ONCE per session.
- * sessionStorage flag persists the "I already redirected to match X"
- * decision so the user can hit back / navigate freely without being
- * teleported again until they close the tab.
+ * Si el viewer tiene partida activa, navega a /matches/[id]/live una vez
+ * por sesión (sessionStorage flag persiste el "ya redirigí a match X").
  *
  * Exceptions (never redirect):
- *   • /matches/[id]/...  (any match route — they may be checking history)
+ *   • /matches/[id]/...  (cualquier match — incluye history)
  *   • /onboarding
- *   • /login, /signup, /reset-password, /forgot-password
- *   • Deep links (?from=external or ?from=push)
+ *   • /login, /signup, /reset-password, /forgot-password, /auth/*
+ *   • Deep links con ?from=…
  *
- * Spectators are not in match_players → useActiveMatch returns null → no
- * redirect for them (correct per spec).
+ * Spectators no están en match_players → useActiveMatch retorna null →
+ * no redirect.
  *
- * This is a client-only component intended to be mounted once near the
- * top of the authenticated layout.
+ * NOTA: Antes usaba `useSearchParams()` pero Next 14 lo requiere envuelto
+ * en <Suspense> y sin eso crashea con "parallelRoutes.get null" en
+ * producción. Leemos la query string desde window.location.search dentro
+ * del effect (client-only).
  */
 export function ActiveMatchRedirect({ userId }: Props) {
   const { activeMatch } = useActiveMatch(userId);
   const pathname = usePathname() ?? "/";
   const router = useRouter();
-  const search = useSearchParams();
 
   useEffect(() => {
     if (!activeMatch || !userId) return;
     if (typeof window === "undefined") return;
 
+    const search = new URLSearchParams(window.location.search);
     if (shouldSkipRedirect(pathname, search)) return;
 
     const sessionKey = `active-match-redirected:${activeMatch.match_id}`;
@@ -45,14 +45,14 @@ export function ActiveMatchRedirect({ userId }: Props) {
 
     sessionStorage.setItem(sessionKey, "1");
     router.replace(`/matches/${activeMatch.match_id}/live`);
-  }, [activeMatch?.match_id, pathname, search, router, userId]);
+  }, [activeMatch?.match_id, pathname, router, userId]);
 
   return null;
 }
 
 function shouldSkipRedirect(
   pathname: string,
-  search: URLSearchParams | null,
+  search: URLSearchParams,
 ): boolean {
   if (pathname.startsWith("/matches/")) return true;
   if (pathname.startsWith("/onboarding")) return true;
@@ -61,6 +61,6 @@ function shouldSkipRedirect(
   if (pathname.startsWith("/reset-password")) return true;
   if (pathname.startsWith("/forgot-password")) return true;
   if (pathname.startsWith("/auth/")) return true;
-  if (search?.has("from")) return true;
+  if (search.has("from")) return true;
   return false;
 }
