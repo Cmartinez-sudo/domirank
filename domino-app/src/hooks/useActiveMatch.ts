@@ -76,14 +76,24 @@ export function useActiveMatch(userId: string | null) {
     const safeInstance = instanceId.replace(/[^a-zA-Z0-9-]/g, "");
     const channel = supabase
       .channel(`active-match-${safeInstance}-${data.match_id}`)
+      // Manos: score actualiza en chip mientras la partida está in_progress
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "match_rounds", filter: `match_id=eq.${data.match_id}` },
         () => { refetch(); },
       )
+      // Match status: cuando pasa a pending_attestation / confirmed / void
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "matches", filter: `id=eq.${data.match_id}` },
+        () => { refetch(); },
+      )
+      // Attestations: cuando YO firmo, la view me excluye → refetch para
+      // que el chip ámbar desaparezca sin necesidad de recargar la página.
+      // También cubre el caso "otro firmó y el match pasó a confirmed".
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "match_attestations", filter: `match_id=eq.${data.match_id}` },
         () => { refetch(); },
       )
       .subscribe();
