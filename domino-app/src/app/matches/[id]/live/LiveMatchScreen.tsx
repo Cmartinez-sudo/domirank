@@ -14,6 +14,7 @@ import { analytics } from "@/lib/analytics";
 import { ContinuousLeagueFinishedState } from "@/components/continuous-league/ContinuousLeagueFinishedState";
 import { HandRow, type HandRowData } from "@/components/match/HandRow";
 import { ScoreKeeperTransfer } from "@/components/match/ScoreKeeperTransfer";
+import { EditHandModal } from "@/components/match/EditHandModal";
 
 type PublicUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; country: string | null };
 type AttributionProfile = { username: string; display_name: string | null; avatar_url: string | null };
@@ -75,6 +76,7 @@ export function LiveMatchScreen({
   const [input, setInput] = useState(0);
   const [err, setErr] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [editingHandId, setEditingHandId] = useState<number | null>(null);
 
   // Cronómetro reactivo (solo activo si la partida tiene límite de tiempo)
   const timer = useMatchTimer(timerStartedAt, timeLimitMinutes);
@@ -412,10 +414,27 @@ export function LiveMatchScreen({
               nameA={nameA}
               nameB={nameB}
               canEdit={!isSpectator}
+              onEdit={(id) => setEditingHandId(id)}
             />
           ))
         )}
       </div>
+
+      <EditHandModal
+        open={editingHandId !== null}
+        hand={editingHandId === null ? null : (() => {
+          const r = rounds.find((x) => x.id === editingHandId);
+          if (!r) return null;
+          return {
+            id: r.id, round_number: r.round_number, team: r.team,
+            points: r.points, kind: r.kind as "points" | "capicua" | "tranque",
+          };
+        })()}
+        matchId={matchId}
+        nameA={nameA}
+        nameB={nameB}
+        onClose={() => setEditingHandId(null)}
+      />
 
       <ConfirmDialog
         open={confirmCancel}
