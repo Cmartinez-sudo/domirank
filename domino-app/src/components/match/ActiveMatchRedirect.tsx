@@ -44,8 +44,14 @@ export function ActiveMatchRedirect({ userId }: Props) {
     if (sessionStorage.getItem(sessionKey)) return;
 
     sessionStorage.setItem(sessionKey, "1");
-    router.replace(`/matches/${activeMatch.match_id}/live`);
-  }, [activeMatch?.match_id, pathname, router, userId]);
+    // in_progress → /live (seguir scoreando)
+    // pending_attestation (ya hay ganador, falta firma) → /matches/[id]
+    //   donde vive el AttestationPanel.
+    const dest = activeMatch.status === "pending_attestation"
+      ? `/matches/${activeMatch.match_id}`
+      : `/matches/${activeMatch.match_id}/live`;
+    router.replace(dest);
+  }, [activeMatch?.match_id, activeMatch?.status, pathname, router, userId]);
 
   return null;
 }
