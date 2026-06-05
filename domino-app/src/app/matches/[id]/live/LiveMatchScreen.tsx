@@ -210,10 +210,13 @@ export function LiveMatchScreen({
         </div>
       )}
 
-      {/* Banner espectador — Feature 1 */}
+      {/* Banner espectador — Feature 1 + Spec C9 */}
       {isSpectator && (
-        <div className="mb-3 rounded-lg border border-border bg-surface-2 px-4 py-3 text-center text-sm text-text-mute">
-          Estás mirando esta partida. No puedes registrar puntos.
+        <div className="mb-3 rounded-lg border border-border bg-surface-2 px-4 py-3 flex items-center justify-center gap-2 text-sm text-text-mute">
+          <span aria-hidden="true">👁</span>
+          <span>
+            <strong className="text-text">Mirando como espectador.</strong> Sin permiso para registrar ni editar manos.
+          </span>
         </div>
       )}
 

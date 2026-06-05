@@ -43,6 +43,7 @@ export default async function LivePage({
   const isPlayer = Boolean(myMatchPlayer);
 
   // Si no es jugador, verificar si es participante del torneo (modo espectador)
+  // o si la partida tiene visibilidad pública / friends-of-creator (Spec C9).
   let isSpectator = false;
   if (!isPlayer) {
     const tournamentId = (match as Record<string, unknown>).tournament_id as string | null;
@@ -53,7 +54,6 @@ export default async function LivePage({
         .eq("tournament_id", tournamentId)
         .eq("user_id", user.id)
         .maybeSingle();
-      // El organizador del torneo también puede espectarse
       const { data: tourney } = await supabase
         .from("tournaments")
         .select("created_by")
@@ -61,6 +61,16 @@ export default async function LivePage({
         .maybeSingle();
       isSpectator = Boolean(tp) || tourney?.created_by === user.id;
     }
+
+    // Fallback al check de visibility (público o friends-of-creator).
+    if (!isSpectator) {
+      const { data: canSpec } = await supabase.rpc("can_spectate_match", {
+        p_match_id: id,
+        p_user_id: user.id,
+      });
+      if (canSpec === true) isSpectator = true;
+    }
+
     if (!isSpectator) redirect(`/matches/${id}`);
   }
 
