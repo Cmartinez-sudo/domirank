@@ -390,6 +390,12 @@ export async function finalizeMatch(match_id: string): Promise<{ ok: true } | { 
   revalidatePath("/dashboard");
   revalidatePath(`/matches/${match_id}`);
 
+  // Notif in-app a participantes que deben firmar (Spec C10).
+  // RPC idempotente: si ya existe match_ended notif, no duplica.
+  void supabase.rpc("notify_match_ended", { p_match_id: match_id }).then(({ error }) => {
+    if (error) console.error("[finalizeMatch] notify_match_ended failed:", error);
+  });
+
   // Notificar por email a los 3 jugadores no-scorekeeper que deben firmar.
   // Fire-and-forget — no bloquea el response al scorekeeper.
   void (async () => {
