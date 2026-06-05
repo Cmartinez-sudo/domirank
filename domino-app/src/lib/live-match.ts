@@ -188,7 +188,9 @@ export async function addRound(input: z.infer<typeof AddRoundSchema>) {
   const round_number = (existing?.round_number ?? 0) + 1;
 
   const { error } = await supabase.from("match_rounds").insert({
-    match_id, round_number, team, points, kind, created_by: user.id,
+    match_id, round_number, team, points, kind,
+    created_by: user.id,
+    recorded_by_user_id: user.id,
   });
   if (error) return { ok: false as const, error: error.message };
 

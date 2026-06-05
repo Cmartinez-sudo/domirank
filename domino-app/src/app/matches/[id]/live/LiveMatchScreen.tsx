@@ -12,9 +12,14 @@ import { validateMatchClosure } from "@/lib/match-validation";
 import { useMatchTimer } from "@/hooks/useMatchTimer";
 import { analytics } from "@/lib/analytics";
 import { ContinuousLeagueFinishedState } from "@/components/continuous-league/ContinuousLeagueFinishedState";
+import { HandRow, type HandRowData } from "@/components/match/HandRow";
 
 type PublicUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; country: string | null };
-type Round = { id: number; round_number: number; team: number; points: number; kind: string; created_at: string };
+type AttributionProfile = { username: string; display_name: string | null; avatar_url: string | null };
+type Round = HandRowData & {
+  /** Legacy alias kept for compute below; mirrors `recorded_at`. */
+  created_at: string;
+};
 
 export function LiveMatchScreen({
   matchId, modality, setSize, format, targetPoints, capicuaBonus,
@@ -375,16 +380,13 @@ export function LiveMatchScreen({
           <div className="px-4 py-6 text-center text-text-mute text-sm">Aún no hay manos registradas.</div>
         ) : (
           rounds.slice().reverse().map((r) => (
-            <div key={r.id} className="flex items-center justify-between px-4 py-2.5 border-t border-border/40 text-sm first:border-t-0">
-              <span className="text-text-mute font-mono">#{r.round_number}</span>
-              <span className={r.team === 1 ? "text-teamA font-medium" : "text-teamB font-medium"}>
-                {r.team === 1 ? nameA : nameB}
-              </span>
-              <span className="font-mono font-semibold">
-                +{r.points}
-                {r.kind === "capicua" && <span className="text-warning ml-1 text-xs">capicúa</span>}
-              </span>
-            </div>
+            <HandRow
+              key={r.id}
+              hand={r}
+              nameA={nameA}
+              nameB={nameB}
+              canEdit={!isSpectator}
+            />
           ))
         )}
       </div>

@@ -70,11 +70,39 @@ export default async function LivePage({
     .eq("match_id", id)
     .order("team");
 
-  const { data: rounds } = await supabase
+  const { data: roundsRaw } = await supabase
     .from("match_rounds")
-    .select("id, round_number, team, points, kind, created_at")
+    .select(`
+      id, round_number, team, points, kind, created_at,
+      recorded_by_user_id, recorded_at:created_at,
+      last_edited_by_user_id, last_edited_at, edit_count,
+      attestation_required, attestation_status
+    `)
     .eq("match_id", id)
     .order("round_number", { ascending: true });
+
+  // Fetch profile info for everyone who recorded or last-edited a hand,
+  // in a single round-trip. Merge in TS so we don't rely on Supabase FK
+  // auto-resolution to two different relationships from match_rounds.
+  const userIdsInRounds = [...new Set(
+    (roundsRaw ?? []).flatMap((r: any) => [r.recorded_by_user_id, r.last_edited_by_user_id])
+      .filter((id): id is string => typeof id === "string")
+  )];
+  const profileMap = new Map<string, { username: string; display_name: string | null; avatar_url: string | null }>();
+  if (userIdsInRounds.length > 0) {
+    const { data: profs } = await supabase
+      .from("profiles")
+      .select("id, username, display_name, avatar_url")
+      .in("id", userIdsInRounds);
+    for (const p of (profs ?? [])) {
+      profileMap.set(p.id as string, p as any);
+    }
+  }
+  const rounds = (roundsRaw ?? []).map((r: any) => ({
+    ...r,
+    recorded_by: r.recorded_by_user_id ? profileMap.get(r.recorded_by_user_id) ?? null : null,
+    last_edited_by: r.last_edited_by_user_id ? profileMap.get(r.last_edited_by_user_id) ?? null : null,
+  }));
 
   const teamA = (mps ?? []).filter((r: any) => r.team === 1).map((r: any) => r.profiles);
   const teamB = (mps ?? []).filter((r: any) => r.team === 2).map((r: any) => r.profiles);
