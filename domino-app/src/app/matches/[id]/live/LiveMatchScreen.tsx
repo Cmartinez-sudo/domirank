@@ -13,6 +13,7 @@ import { useMatchTimer } from "@/hooks/useMatchTimer";
 import { analytics } from "@/lib/analytics";
 import { ContinuousLeagueFinishedState } from "@/components/continuous-league/ContinuousLeagueFinishedState";
 import { HandRow, type HandRowData } from "@/components/match/HandRow";
+import { ScoreKeeperTransfer } from "@/components/match/ScoreKeeperTransfer";
 
 type PublicUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; country: string | null };
 type AttributionProfile = { username: string; display_name: string | null; avatar_url: string | null };
@@ -31,6 +32,8 @@ export function LiveMatchScreen({
   isContinuousLeague = false,
   matchStatus = "in_progress",
   isCreator = false,
+  currentScoreKeeperId,
+  currentUserId,
 }: {
   matchId: string;
   modality: ModalityCode;
@@ -61,6 +64,10 @@ export function LiveMatchScreen({
   matchStatus?: "in_progress" | "confirmed" | "pending_attestation";
   /** True si el current user creó esta partida (puede Editar/Eliminar). */
   isCreator?: boolean;
+  /** ID del score-keeper actual (matches.scorekeeper_id). C5. */
+  currentScoreKeeperId?: string | null;
+  /** ID del viewer actual. C5. */
+  currentUserId?: string | null;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -372,6 +379,25 @@ export function LiveMatchScreen({
           )}
         </div>
       ))}
+
+      {/* Score-keeper transfer — solo visible si el viewer es el current keeper
+          y la partida está in_progress. */}
+      {!isSpectator
+        && matchStatus === "in_progress"
+        && currentUserId
+        && currentScoreKeeperId === currentUserId
+        && (teamA.length + teamB.length) > 1 && (
+        <ScoreKeeperTransfer
+          matchId={matchId}
+          currentKeeperId={currentScoreKeeperId}
+          candidates={[...teamA, ...teamB].map((p) => ({
+            id: p.id,
+            username: p.username,
+            display_name: p.display_name,
+            avatar_url: p.avatar_url,
+          }))}
+        />
+      )}
 
       {/* Rounds list */}
       <div className="mt-5 card p-0 overflow-hidden">

@@ -145,6 +145,8 @@ export default async function LivePage({
       isContinuousLeague={isContinuousLeague}
       matchStatus={match.status as "in_progress" | "confirmed" | "pending_attestation"}
       isCreator={match.created_by === user.id}
+      currentScoreKeeperId={(match as { scorekeeper_id?: string | null }).scorekeeper_id ?? match.created_by}
+      currentUserId={user.id}
     />
   );
 }
