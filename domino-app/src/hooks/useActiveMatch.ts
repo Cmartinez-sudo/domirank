@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 
 export type ActiveMatch = {
@@ -22,6 +22,11 @@ export type ActiveMatch = {
  * chip disappears).
  */
 export function useActiveMatch(userId: string | null) {
+  // Stable ID per hook instance — multiple components (ActiveMatchRedirect,
+  // ActiveMatchChip, …) call this hook con el mismo userId, lo que provocaba
+  // colisión de channel names en Supabase realtime ("cannot add callbacks
+  // after subscribe()"). useId() garantiza names únicos por instancia.
+  const instanceId = useId();
   const [data, setData] = useState<ActiveMatch | null>(null);
   const [scoreA, setScoreA] = useState(0);
   const [scoreB, setScoreB] = useState(0);
@@ -65,8 +70,12 @@ export function useActiveMatch(userId: string | null) {
   useEffect(() => {
     if (!userId || !data?.match_id) return;
     const supabase = supabaseBrowser();
+    // Channel name = instanceId + match_id → único por (hook instance × match).
+    // useId genera "::r1::" o similar; lo sanitizamos para evitar caracteres
+    // problemáticos en el channel name.
+    const safeInstance = instanceId.replace(/[^a-zA-Z0-9-]/g, "");
     const channel = supabase
-      .channel(`active-match-${data.match_id}`)
+      .channel(`active-match-${safeInstance}-${data.match_id}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "match_rounds", filter: `match_id=eq.${data.match_id}` },
@@ -82,7 +91,7 @@ export function useActiveMatch(userId: string | null) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, data?.match_id, refetch]);
+  }, [userId, data?.match_id, refetch, instanceId]);
 
   return { activeMatch: data, scoreA, scoreB, loading, refetch };
 }
