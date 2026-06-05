@@ -8,6 +8,8 @@ import { NavigationLoader } from "@/components/NavigationLoader";
 import { RealtimeNotifications } from "@/components/RealtimeNotifications";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ActiveMatchRedirect } from "@/components/match/ActiveMatchRedirect";
+import { ActiveMatchChip } from "@/components/match/ActiveMatchChip";
+import { FloatingActionStack } from "@/components/match/FloatingActionStack";
 import { PodiumIcon } from "@/components/icons/PodiumIcon";
 import { TrophyIcon } from "@/components/icons/TrophyIcon";
 
@@ -97,6 +99,12 @@ export function AppShell({
       <NavigationLoader />
       {user && <RealtimeNotifications userId={user.id} />}
       {user && <ActiveMatchRedirect userId={user.id} />}
+      {user && (
+        <FloatingActionStack>
+          <ActiveMatchChip userId={user.id} />
+          {/* TODO: <BugReportFAB/> aterriza acá cuando se mergee */}
+        </FloatingActionStack>
+      )}
 
       {/* SIDEBAR DESKTOP */}
       {user && (
