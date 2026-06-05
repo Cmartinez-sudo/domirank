@@ -7,6 +7,7 @@ import { Avatar } from "@/components/Avatar";
 import { NavigationLoader } from "@/components/NavigationLoader";
 import { RealtimeNotifications } from "@/components/RealtimeNotifications";
 import { NotificationBell } from "@/components/NotificationBell";
+import { ActiveMatchRedirect } from "@/components/match/ActiveMatchRedirect";
 import { PodiumIcon } from "@/components/icons/PodiumIcon";
 import { TrophyIcon } from "@/components/icons/TrophyIcon";
 
@@ -95,6 +96,7 @@ export function AppShell({
     <div className="min-h-screen md:flex">
       <NavigationLoader />
       {user && <RealtimeNotifications userId={user.id} />}
+      {user && <ActiveMatchRedirect userId={user.id} />}
 
       {/* SIDEBAR DESKTOP */}
       {user && (
