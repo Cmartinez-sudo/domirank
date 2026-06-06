@@ -37,10 +37,17 @@ describe("Cancel-Elo invariant — DB level", () => {
     expect(sql).toMatch(/v_match\.status\s*<>\s*'confirmed'\s+then\s+raise exception\s+'not_rateable'/i);
   });
 
-  it("cancel_match RPC (mig 0067) NO llama apply_match_rating", () => {
-    const sql = fs.readFileSync(path.join(MIG_ROOT, "0067_match_cancellation_rpcs.sql"), "utf8");
-    // El cancel_match body no debe invocar apply_match_rating bajo
-    // ninguna circunstancia.
+  it("cancel_match RPC (latest version) NO llama apply_match_rating", () => {
+    // El RPC vive en 0067 (versión inicial) y se reescribe en
+    // 0072 (security hardening). Validamos la versión más reciente:
+    // si existe 0072, ese es el body activo.
+    const sources = [
+      path.join(MIG_ROOT, "0072_cancel_match_security_hardening.sql"),
+      path.join(MIG_ROOT, "0067_match_cancellation_rpcs.sql"),
+    ];
+    const sqlFile = sources.find((p) => fs.existsSync(p));
+    if (!sqlFile) throw new Error("No cancel_match definition found");
+    const sql = fs.readFileSync(sqlFile, "utf8");
     const fnStart = sql.indexOf("function public.cancel_match");
     const fnEnd = sql.indexOf("$$", fnStart) + 2;
     const fnBody = sql.substring(fnStart, fnEnd);
@@ -66,6 +73,39 @@ describe("Cancel-Elo invariant — DB level", () => {
     expect(fnBody).not.toMatch(/update\s+public\.profiles/i);
     expect(fnBody).not.toMatch(/update\s+public\.match_players/i);
     expect(fnBody).not.toMatch(/singles_mu|singles_elo|doubles_mu|doubles_elo|d9_/i);
+  });
+});
+
+describe("cancel_match security hardening (mig 0072)", () => {
+  // Regresión del finding crítico del code review:
+  // un caller con JWT no debe poder pasarse por sistema.
+  const sql = fs.readFileSync(
+    path.join(MIG_ROOT, "0072_cancel_match_security_hardening.sql"),
+    "utf8",
+  );
+
+  it("fuerza p_reason='user_cancelled' cuando auth.uid IS NOT NULL", () => {
+    expect(sql).toMatch(/if v_caller is not null then/i);
+    expect(sql).toMatch(/v_effective_reason\s*:=\s*'user_cancelled'/i);
+  });
+
+  it("solo permite reasons sistémicas cuando v_caller IS NULL (service_role)", () => {
+    expect(sql).toMatch(/p_reason not in/i);
+    expect(sql).toMatch(/'inactivity_auto'/);
+    expect(sql).toMatch(/Invalid system reason/i);
+  });
+
+  it("exige participant check siempre que hay JWT", () => {
+    expect(sql).toMatch(/v_is_participant/i);
+    expect(sql).toMatch(/Only participants can cancel/i);
+  });
+
+  it("DELETE en match_rounds bumpea matches.updated_at (trigger 0072)", () => {
+    expect(sql).toMatch(/after insert or update or delete on public\.match_rounds/i);
+  });
+
+  it("dropea notifications_type_check defensivamente", () => {
+    expect(sql).toMatch(/drop constraint if exists notifications_type_check/i);
   });
 });
 
