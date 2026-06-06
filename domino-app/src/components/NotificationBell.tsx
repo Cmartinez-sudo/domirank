@@ -62,6 +62,16 @@ function notifText(n: NotifPreview): { html: React.ReactNode; href: string } {
       return { html: <>Tu partida se auto-confirmó (7 días)</>, href: matchHref };
     case "match_disputed":
       return { html: <>Tu partida pasó a disputa</>, href: matchHref };
+    case "match_cancelled": {
+      const reason = (n.payload as any)?.reason;
+      if (reason === "inactivity_auto")
+        return { html: <>Una partida tuya fue auto-cancelada por inactividad</>, href: matchHref };
+      return { html: <><strong>{display}</strong> canceló una partida. Tenés 5 min para revertir</>, href: matchHref };
+    }
+    case "match_cancellation_undone":
+      return { html: <><strong>{display}</strong> revirtió la cancelación</>, href: matchHref };
+    case "match_inactivity_warning":
+      return { html: <>Tu partida lleva 1h sin actividad. Si pasa 1h más, se cancela.</>, href: matchHref };
     default:
       return { html: <>Nueva notificación</>, href: "/notifications" };
   }

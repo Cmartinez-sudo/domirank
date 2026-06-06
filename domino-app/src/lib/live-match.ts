@@ -52,8 +52,19 @@ export async function startLiveMatch(input: StartLiveMatchInput): Promise<{ ok: 
   // Epic Q: ya no validamos amistad. Cualquier jugador puede agregarse.
   // La confianza viene del attestation system (3 de 4 firmas).
 
-  // Si ya hay una partida in_progress del usuario, cancelarla primero
-  await supabase.from("matches").update({ status: "cancelled" }).eq("created_by", user.id).eq("status", "in_progress");
+  // Si ya hay una partida in_progress del usuario, cancelarla vía RPC
+  // (reason='replaced_by_new_match' → sistémica, sin undo window).
+  const { data: prevActive } = await supabase
+    .from("matches")
+    .select("id")
+    .eq("created_by", user.id)
+    .eq("status", "in_progress");
+  for (const m of (prevActive ?? []) as Array<{ id: string }>) {
+    await supabase.rpc("cancel_match", {
+      p_match_id: m.id,
+      p_reason: "replaced_by_new_match",
+    });
+  }
 
   // Si la partida tiene límite de tiempo, el timer arranca inmediatamente
   // al crearla (ya está "in_progress" desde el momento de creación).
@@ -220,12 +231,37 @@ export async function undoLastRound(match_id: string) {
 
 export async function cancelLiveMatch(match_id: string, redirect_to: string = "/dashboard") {
   const supabase = await supabaseServer();
-  const { error } = await supabase
-    .from("matches")
-    .update({ status: "cancelled" })
-    .eq("id", match_id);
+  // Soft-delete via RPC: audit + 5-min undo window + in-app notifs.
+  // RPC valida que el caller es match_player (RLS-level check).
+  const { data, error } = await supabase.rpc("cancel_match", {
+    p_match_id: match_id,
+    p_reason: "user_cancelled",
+  });
   if (error) return { ok: false as const, error: error.message };
+  const result = data as { ok: boolean; error?: string; message?: string } | null;
+  if (result && result.ok === false) {
+    return { ok: false as const, error: result.message ?? result.error ?? "No se pudo cancelar" };
+  }
   redirect(redirect_to);
+}
+
+/**
+ * Revierte una cancelación dentro de la ventana de 5 min.
+ * Llamada desde el UndoBanner que aparece al cancelar.
+ */
+export async function undoMatchCancellation(match_id: string) {
+  const supabase = await supabaseServer();
+  const { data, error } = await supabase.rpc("undo_cancellation", {
+    p_match_id: match_id,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  const result = data as { ok: boolean; error?: string; message?: string } | null;
+  if (result && result.ok === false) {
+    return { ok: false as const, error: result.message ?? result.error ?? "No se pudo revertir" };
+  }
+  revalidatePath(`/matches/${match_id}`);
+  revalidatePath(`/matches/${match_id}/live`);
+  return { ok: true as const };
 }
 
 /* ============================================================
