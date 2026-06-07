@@ -120,3 +120,36 @@ exponer las primitivas internas (`<ModalityHeader/>`, `<ModalityStats/>`).
 **Acción pendiente**: Re-evaluar cuando se pida la tercera variant.
 
 ---
+
+## Sprint Match Cancellation · Cron not scheduled
+
+### TD-018: auto-cancel-inactive endpoint vive sin schedule
+
+**Descripción**: El endpoint `/api/cron/auto-cancel-inactive` se construyó
+para que corra cada hora vía Vercel Cron (warning a 1h, auto-cancel a 2h,
+finalize-expired-undo-windows). Pero Vercel Hobby plan limita a 2 crons
+totales — los slots ya están ocupados por `auto-confirm` y
+`recompute-reliability`. El endpoint quedó funcional pero sin disparador
+automático.
+
+**Impacto**: Medio. Las consecuencias del no-schedule:
+- Partidas zombie (>2h sin actividad) NO se auto-cancelan; van quedando
+  abiertas hasta que el dueño las cancele manualmente o se corra el
+  endpoint ad-hoc.
+- Warnings de 1h no se mandan.
+- Undo windows expirados quedan visibles en banner ámbar más tiempo del
+  necesario (técnicamente la ventana ya expiró server-side por
+  `cancellation_undo_until < now()`, pero el `undo_until` no se setea
+  NULL → UI sigue mostrando countdown que llegó a 0).
+
+**Mitigaciones disponibles**:
+1. **Upgrade Vercel Pro** ($20/mes) y agregar la entry a vercel.json.
+2. **Cron externo** (GitHub Actions schedule, EasyCron, cron-job.org):
+   HTTP GET al endpoint con `Authorization: Bearer $CRON_SECRET`.
+3. **Disparo ad-hoc** cuando se detecten zombies.
+
+**Acción pendiente**: cuando MAU crezca y aparezcan zombies reales,
+priorizar upgrade Pro o configurar cron externo. Mientras tanto, el
+zombie cleanup one-shot (mig 0068-0071) limpia el inventario histórico.
+
+---

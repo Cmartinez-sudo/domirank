@@ -5,22 +5,30 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /**
- * Vercel Cron — Sprint Match Cancellation F3.
+ * Auto-cancel inactive matches endpoint — Sprint Match Cancellation F3.
  *
- * Runs hourly. Two passes:
- *   1. Warning: matches in_progress sin actividad 1h–2h Y sin
- *      inactivity_warning_sent_at → inserta notification
- *      type='match_inactivity_warning' a cada participante. Marca
- *      inactivity_warning_sent_at para no duplicar.
- *   2. Auto-cancel: matches in_progress sin actividad > 2h → llama
- *      cancel_match(p_reason='inactivity_auto'). El RPC inserta
- *      audit + notifications.type='match_cancelled' a otros.
+ * ⚠️ NOT SCHEDULED en Vercel — Vercel Hobby plan permite max 2 crons y
+ * los 2 slots ya están ocupados por `auto-confirm` y
+ * `recompute-reliability`. Este endpoint vive funcional pero requiere
+ * disparo manual o externo:
  *
- * Schedule: `0 * * * *` (cada hora). Hobby-plan friendly.
+ *   • Upgrade a Vercel Pro ($20/mes) → desbloquea ~40 cron slots, sumar
+ *     entry a vercel.json:
+ *       { "path": "/api/cron/auto-cancel-inactive", "schedule": "0 * * * *" }
+ *
+ *   • O cron externo (GitHub Actions schedule, EasyCron, cron-job.org)
+ *     que hace HTTP GET con header Authorization: Bearer $CRON_SECRET.
+ *
+ *   • O manual: curl ad-hoc cuando notes que hay zombies pegados.
+ *
+ * Tres pasadas:
+ *   1. Auto-cancel: matches in_progress sin actividad > 2h → llama
+ *      cancel_match(p_reason='inactivity_auto').
+ *   2. Warning: matches in_progress entre 1h-2h sin inactivity_warning_sent_at
+ *      → inserta notification + marca columna.
+ *   3. finalize_expired_cancellations RPC → limpia undo windows vencidas.
  *
  * Protegido con CRON_SECRET vía header Authorization: Bearer.
- * También aplica el finalize_expired_cancellations RPC para limpiar
- * undo windows vencidas (5min ya pasaron desde un cancel anterior).
  */
 export async function GET(request: Request) {
   const expected = process.env.CRON_SECRET;
