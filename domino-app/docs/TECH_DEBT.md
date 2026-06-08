@@ -120,3 +120,40 @@ exponer las primitivas internas (`<ModalityHeader/>`, `<ModalityStats/>`).
 **Acción pendiente**: Re-evaluar cuando se pida la tercera variant.
 
 ---
+
+## Sprint Active Match Awareness · Pre-existing data conflict
+
+### TD-017: Orphan active matches detected at migration 0059
+
+**Descripción**: La migración 0059 (`enforce_one_active_match` trigger) reportó WARNING:
+"1 users with multiple active matches detected". Confirmado: user `cmartinezegana`
+tiene 3 matches en status `in_progress`. Son partidas de testing dev abandonadas
+sin finalize.
+
+El trigger NO auto-limpia (decisión explícita del Plan agent — auto-void en
+migration es destructivo). Bloquea futuros INSERTs pero las 3 existentes coexisten.
+
+**Lo que falta**: Script de cleanup manual `scripts/cleanup-orphan-active-matches.ts`
+que liste los conflictos y permita void-ear con confirmación. O ad-hoc:
+
+  ```sql
+  -- Marcar como void las viejas, dejar solo la más reciente activa
+  update matches set status = 'void', notes = 'orphan dev test cleanup'
+   where status = 'in_progress'
+     and created_by = '74445036-5eb1-4857-a220-f1acab3db88f'
+     and id <> (
+       select id from matches
+        where status = 'in_progress'
+          and created_by = '74445036-5eb1-4857-a220-f1acab3db88f'
+        order by created_at desc limit 1
+     );
+  ```
+
+**Impacto**: Bajo. Solo afecta a un user dev. UI puede comportarse raro al
+intentar mostrar "tu partida activa" — 3 candidatas. Hook `useActiveMatch`
+debe handle el caso (LIMIT 1 ORDER BY created_at DESC, ya hace eso).
+
+**Acción pendiente**: Carlos corre cleanup ad-hoc o ignora hasta que afecte
+producción real.
+
+---

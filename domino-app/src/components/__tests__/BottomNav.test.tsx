@@ -14,6 +14,14 @@ import { AppShell } from "../AppShell";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+// Stub the active-match hook so AppShell's new ActiveMatchRedirect + ChipB
+// don't try to call supabase in jsdom (no env vars).
+vi.mock("@/hooks/useActiveMatch", () => ({
+  useActiveMatch: () => ({ activeMatch: null, scoreA: 0, scoreB: 0, loading: false, refetch: () => {} }),
 }));
 
 vi.mock("next/link", () => ({

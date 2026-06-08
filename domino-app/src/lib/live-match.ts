@@ -188,7 +188,9 @@ export async function addRound(input: z.infer<typeof AddRoundSchema>) {
   const round_number = (existing?.round_number ?? 0) + 1;
 
   const { error } = await supabase.from("match_rounds").insert({
-    match_id, round_number, team, points, kind, created_by: user.id,
+    match_id, round_number, team, points, kind,
+    created_by: user.id,
+    recorded_by_user_id: user.id,
   });
   if (error) return { ok: false as const, error: error.message };
 
@@ -387,6 +389,12 @@ export async function finalizeMatch(match_id: string): Promise<{ ok: true } | { 
 
   revalidatePath("/dashboard");
   revalidatePath(`/matches/${match_id}`);
+
+  // Notif in-app a participantes que deben firmar (Spec C10).
+  // RPC idempotente: si ya existe match_ended notif, no duplica.
+  void supabase.rpc("notify_match_ended", { p_match_id: match_id }).then(({ error }) => {
+    if (error) console.error("[finalizeMatch] notify_match_ended failed:", error);
+  });
 
   // Notificar por email a los 3 jugadores no-scorekeeper que deben firmar.
   // Fire-and-forget — no bloquea el response al scorekeeper.
