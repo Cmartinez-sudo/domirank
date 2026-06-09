@@ -121,6 +121,22 @@ exponer las primitivas internas (`<ModalityHeader/>`, `<ModalityStats/>`).
 
 ---
 
+## Sprint Active Match Awareness · Pre-existing data conflict
+
+### TD-017: Orphan active matches detected at migration 0059 (✅ RESOLVED by Sprint Match Cancellation)
+
+**Descripción**: La migración 0059 (`enforce_one_active_match` trigger) reportó WARNING:
+"1 users with multiple active matches detected". Confirmado: user `cmartinezegana`
+tiene 3 matches en status `in_progress`. Son partidas de testing dev abandonadas
+sin finalize.
+
+**Resolución**: El sprint Match Cancellation incluye un zombie cleanup oneshot
+(migraciones 0068-0071) que cancelló las matches in_progress sin actividad > 48h.
+Eso resolvió el conflict legacy de cmartinezegana sin perder data (soft delete con
+audit log). El trigger `enforce_one_active_match` ya no detecta conflicts.
+
+---
+
 ## Sprint Match Cancellation · Cron not scheduled
 
 ### TD-018: auto-cancel-inactive endpoint vive sin schedule

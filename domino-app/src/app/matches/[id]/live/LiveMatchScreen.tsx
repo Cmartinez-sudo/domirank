@@ -12,9 +12,16 @@ import { validateMatchClosure } from "@/lib/match-validation";
 import { useMatchTimer } from "@/hooks/useMatchTimer";
 import { analytics } from "@/lib/analytics";
 import { ContinuousLeagueFinishedState } from "@/components/continuous-league/ContinuousLeagueFinishedState";
+import { HandRow, type HandRowData } from "@/components/match/HandRow";
+import { ScoreKeeperTransfer } from "@/components/match/ScoreKeeperTransfer";
+import { EditHandModal } from "@/components/match/EditHandModal";
 
 type PublicUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; country: string | null };
-type Round = { id: number; round_number: number; team: number; points: number; kind: string; created_at: string };
+type AttributionProfile = { username: string; display_name: string | null; avatar_url: string | null };
+type Round = HandRowData & {
+  /** Legacy alias kept for compute below; mirrors `recorded_at`. */
+  created_at: string;
+};
 
 export function LiveMatchScreen({
   matchId, modality, setSize, format, targetPoints, capicuaBonus,
@@ -26,6 +33,8 @@ export function LiveMatchScreen({
   isContinuousLeague = false,
   matchStatus = "in_progress",
   isCreator = false,
+  currentScoreKeeperId,
+  currentUserId,
 }: {
   matchId: string;
   modality: ModalityCode;
@@ -56,6 +65,10 @@ export function LiveMatchScreen({
   matchStatus?: "in_progress" | "confirmed" | "pending_attestation";
   /** True si el current user creó esta partida (puede Editar/Eliminar). */
   isCreator?: boolean;
+  /** ID del score-keeper actual (matches.scorekeeper_id). C5. */
+  currentScoreKeeperId?: string | null;
+  /** ID del viewer actual. C5. */
+  currentUserId?: string | null;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -63,6 +76,7 @@ export function LiveMatchScreen({
   const [input, setInput] = useState(0);
   const [err, setErr] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [editingHandId, setEditingHandId] = useState<number | null>(null);
 
   // Cronómetro reactivo (solo activo si la partida tiene límite de tiempo)
   const timer = useMatchTimer(timerStartedAt, timeLimitMinutes);
@@ -196,10 +210,13 @@ export function LiveMatchScreen({
         </div>
       )}
 
-      {/* Banner espectador — Feature 1 */}
+      {/* Banner espectador — Feature 1 + Spec C9 */}
       {isSpectator && (
-        <div className="mb-3 rounded-lg border border-border bg-surface-2 px-4 py-3 text-center text-sm text-text-mute">
-          Estás mirando esta partida. No puedes registrar puntos.
+        <div className="mb-3 rounded-lg border border-border bg-surface-2 px-4 py-3 flex items-center justify-center gap-2 text-sm text-text-mute">
+          <span aria-hidden="true">👁</span>
+          <span>
+            <strong className="text-text">Mirando como espectador.</strong> Sin permiso para registrar ni editar manos.
+          </span>
         </div>
       )}
 
@@ -368,6 +385,25 @@ export function LiveMatchScreen({
         </div>
       ))}
 
+      {/* Score-keeper transfer — solo visible si el viewer es el current keeper
+          y la partida está in_progress. */}
+      {!isSpectator
+        && matchStatus === "in_progress"
+        && currentUserId
+        && currentScoreKeeperId === currentUserId
+        && (teamA.length + teamB.length) > 1 && (
+        <ScoreKeeperTransfer
+          matchId={matchId}
+          currentKeeperId={currentScoreKeeperId}
+          candidates={[...teamA, ...teamB].map((p) => ({
+            id: p.id,
+            username: p.username,
+            display_name: p.display_name,
+            avatar_url: p.avatar_url,
+          }))}
+        />
+      )}
+
       {/* Rounds list */}
       <div className="mt-5 card p-0 overflow-hidden">
         <div className="px-4 py-3 border-b border-border font-semibold">Manos jugadas ({rounds.length})</div>
@@ -375,19 +411,33 @@ export function LiveMatchScreen({
           <div className="px-4 py-6 text-center text-text-mute text-sm">Aún no hay manos registradas.</div>
         ) : (
           rounds.slice().reverse().map((r) => (
-            <div key={r.id} className="flex items-center justify-between px-4 py-2.5 border-t border-border/40 text-sm first:border-t-0">
-              <span className="text-text-mute font-mono">#{r.round_number}</span>
-              <span className={r.team === 1 ? "text-teamA font-medium" : "text-teamB font-medium"}>
-                {r.team === 1 ? nameA : nameB}
-              </span>
-              <span className="font-mono font-semibold">
-                +{r.points}
-                {r.kind === "capicua" && <span className="text-warning ml-1 text-xs">capicúa</span>}
-              </span>
-            </div>
+            <HandRow
+              key={r.id}
+              hand={r}
+              nameA={nameA}
+              nameB={nameB}
+              canEdit={!isSpectator}
+              onEdit={(id) => setEditingHandId(id)}
+            />
           ))
         )}
       </div>
+
+      <EditHandModal
+        open={editingHandId !== null}
+        hand={editingHandId === null ? null : (() => {
+          const r = rounds.find((x) => x.id === editingHandId);
+          if (!r) return null;
+          return {
+            id: r.id, round_number: r.round_number, team: r.team,
+            points: r.points, kind: r.kind as "points" | "capicua" | "tranque",
+          };
+        })()}
+        matchId={matchId}
+        nameA={nameA}
+        nameB={nameB}
+        onClose={() => setEditingHandId(null)}
+      />
 
       <ConfirmDialog
         open={confirmCancel}
