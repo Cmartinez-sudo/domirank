@@ -6,6 +6,7 @@ import { VoidMatchButton } from "./VoidMatchButton";
 import { AttestationPanel, type AttestationStatus, type AttestPlayer, type Attestation } from "@/components/match/AttestationPanel";
 import { SecondaryPageShell } from "@/components/SecondaryPageShell";
 import { BACK_FALLBACKS } from "@/lib/back-fallbacks";
+import { CancellationUndoBanner } from "@/components/match/CancellationUndoBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -30,9 +31,25 @@ export default async function MatchDetail({
   // Carga campos extra de matches no expuestos por match_feed
   const { data: matchExtra } = await supabase
     .from("matches")
-    .select("scorekeeper_id, finalized_at, confirmed_at, rated_at, set_size")
+    .select("scorekeeper_id, finalized_at, confirmed_at, rated_at, set_size, cancelled_at, cancelled_by_user_id, cancellation_reason, cancellation_undo_until")
     .eq("id", id)
     .single();
+
+  // Si la partida está cancelled, fetch del profile de quién canceló
+  let cancelledByProfile: { username: string; display_name: string | null } | null = null;
+  if (match.status === "cancelled" && matchExtra?.cancelled_by_user_id) {
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("username, display_name")
+      .eq("id", matchExtra.cancelled_by_user_id)
+      .maybeSingle();
+    cancelledByProfile = prof as { username: string; display_name: string | null } | null;
+  }
+
+  // Viewer is a participant?
+  const viewerIsParticipant = currentUserId
+    ? ((match.players ?? []) as any[]).some((p) => p.user_id === currentUserId)
+    : false;
 
   const { data: attestationsData } = await supabase
     .from("match_attestations")
@@ -85,6 +102,17 @@ export default async function MatchDetail({
         </div>
         {canVoid && <VoidMatchButton matchId={id} />}
       </div>
+
+      {status === "cancelled" && (
+        <CancellationUndoBanner
+          matchId={id}
+          undoUntilIso={matchExtra?.cancellation_undo_until ?? null}
+          cancelledBy={cancelledByProfile}
+          cancelledAtIso={matchExtra?.cancelled_at ?? null}
+          reason={matchExtra?.cancellation_reason ?? null}
+          canUndo={viewerIsParticipant}
+        />
+      )}
 
       {showAttestation && currentUserId && (
         <AttestationPanel

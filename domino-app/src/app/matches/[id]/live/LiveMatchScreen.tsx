@@ -442,7 +442,9 @@ export function LiveMatchScreen({
       <ConfirmDialog
         open={confirmCancel}
         title="¿Cancelar la partida?"
-        description={`Vas a perder ${rounds.length} mano${rounds.length === 1 ? "" : "s"} registradas. Esta acción no se puede deshacer.`}
+        description={`${rounds.length === 0
+          ? "Esta partida no tiene manos registradas todavía. Cancelar es seguro."
+          : `Esta partida tiene ${rounds.length} mano${rounds.length === 1 ? "" : "s"} registradas. Si la cancelás, NO afecta el rating de nadie. Tenés 5 minutos para revertir antes de que quede definitiva.`}`}
         confirmLabel="Sí, cancelar"
         cancelLabel="Seguir jugando"
         destructive

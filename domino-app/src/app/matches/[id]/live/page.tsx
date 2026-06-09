@@ -20,7 +20,9 @@ export default async function LivePage({
     .eq("id", id)
     .single();
   if (!match) return notFound();
-  if (match.status === "cancelled") redirect(`/dashboard`);
+  // Cancelled: redirige al detalle donde vive el CancellationUndoBanner
+  // (con undo button si aún hay ventana de 5min).
+  if (match.status === "cancelled") redirect(`/matches/${id}`);
   // Para partidas de polla: permitimos status='confirmed' (trophy state inline).
   // Para quick match: solo in_progress entra al /live, lo demás va al detalle.
   const matchAnyEarly = match as Record<string, unknown>;

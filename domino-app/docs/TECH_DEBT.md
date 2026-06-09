@@ -123,37 +123,49 @@ exponer las primitivas internas (`<ModalityHeader/>`, `<ModalityStats/>`).
 
 ## Sprint Active Match Awareness · Pre-existing data conflict
 
-### TD-017: Orphan active matches detected at migration 0059
+### TD-017: Orphan active matches detected at migration 0059 (✅ RESOLVED by Sprint Match Cancellation)
 
 **Descripción**: La migración 0059 (`enforce_one_active_match` trigger) reportó WARNING:
 "1 users with multiple active matches detected". Confirmado: user `cmartinezegana`
 tiene 3 matches en status `in_progress`. Son partidas de testing dev abandonadas
 sin finalize.
 
-El trigger NO auto-limpia (decisión explícita del Plan agent — auto-void en
-migration es destructivo). Bloquea futuros INSERTs pero las 3 existentes coexisten.
+**Resolución**: El sprint Match Cancellation incluye un zombie cleanup oneshot
+(migraciones 0068-0071) que cancelló las matches in_progress sin actividad > 48h.
+Eso resolvió el conflict legacy de cmartinezegana sin perder data (soft delete con
+audit log). El trigger `enforce_one_active_match` ya no detecta conflicts.
 
-**Lo que falta**: Script de cleanup manual `scripts/cleanup-orphan-active-matches.ts`
-que liste los conflictos y permita void-ear con confirmación. O ad-hoc:
+---
 
-  ```sql
-  -- Marcar como void las viejas, dejar solo la más reciente activa
-  update matches set status = 'void', notes = 'orphan dev test cleanup'
-   where status = 'in_progress'
-     and created_by = '74445036-5eb1-4857-a220-f1acab3db88f'
-     and id <> (
-       select id from matches
-        where status = 'in_progress'
-          and created_by = '74445036-5eb1-4857-a220-f1acab3db88f'
-        order by created_at desc limit 1
-     );
-  ```
+## Sprint Match Cancellation · Cron not scheduled
 
-**Impacto**: Bajo. Solo afecta a un user dev. UI puede comportarse raro al
-intentar mostrar "tu partida activa" — 3 candidatas. Hook `useActiveMatch`
-debe handle el caso (LIMIT 1 ORDER BY created_at DESC, ya hace eso).
+### TD-018: auto-cancel-inactive endpoint vive sin schedule
 
-**Acción pendiente**: Carlos corre cleanup ad-hoc o ignora hasta que afecte
-producción real.
+**Descripción**: El endpoint `/api/cron/auto-cancel-inactive` se construyó
+para que corra cada hora vía Vercel Cron (warning a 1h, auto-cancel a 2h,
+finalize-expired-undo-windows). Pero Vercel Hobby plan limita a 2 crons
+totales — los slots ya están ocupados por `auto-confirm` y
+`recompute-reliability`. El endpoint quedó funcional pero sin disparador
+automático.
+
+**Impacto**: Medio. Las consecuencias del no-schedule:
+- Partidas zombie (>2h sin actividad) NO se auto-cancelan; van quedando
+  abiertas hasta que el dueño las cancele manualmente o se corra el
+  endpoint ad-hoc.
+- Warnings de 1h no se mandan.
+- Undo windows expirados quedan visibles en banner ámbar más tiempo del
+  necesario (técnicamente la ventana ya expiró server-side por
+  `cancellation_undo_until < now()`, pero el `undo_until` no se setea
+  NULL → UI sigue mostrando countdown que llegó a 0).
+
+**Mitigaciones disponibles**:
+1. **Upgrade Vercel Pro** ($20/mes) y agregar la entry a vercel.json.
+2. **Cron externo** (GitHub Actions schedule, EasyCron, cron-job.org):
+   HTTP GET al endpoint con `Authorization: Bearer $CRON_SECRET`.
+3. **Disparo ad-hoc** cuando se detecten zombies.
+
+**Acción pendiente**: cuando MAU crezca y aparezcan zombies reales,
+priorizar upgrade Pro o configurar cron externo. Mientras tanto, el
+zombie cleanup one-shot (mig 0068-0071) limpia el inventario histórico.
 
 ---
