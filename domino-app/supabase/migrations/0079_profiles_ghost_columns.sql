@@ -30,9 +30,22 @@
 --   2. profiles_read_all USING (true):
 --      Los ghost profiles son visibles a cualquier usuario autenticado.
 --      Esto es INTENCIONAL para que el admin de la org pueda buscar perfiles.
---      IMPORTANTE: claim_token es una columna presente pero las queries
---      del cliente NUNCA deben seleccionarlo (*.select('*') puede exponerlo).
---      El server action /claim/[token] usa service_role para lookup por token.
+--
+--      ATAQUE PREVENIDO: sin protección column-level, un attacker authenticated
+--      podría hacer `SELECT claim_token FROM profiles WHERE is_ghost AND
+--      claimed_at IS NULL` y robar los tokens pendientes → account takeover
+--      del ghost antes que el invitado legítimo abra el email.
+--
+--      DEFENSA: REVOKE SELECT (claim_token) a roles públicos (al final de la
+--      migración). Postgres bloquea la columna a nivel del motor.
+--      • Queries con columnas explícitas (la convención del repo, verificado:
+--        cero `.select('*')` sobre profiles en src/) NUNCA piden claim_token,
+--        así que NO se afectan.
+--      • Un eventual `SELECT *` futuro fallaría con "permission denied for
+--        column claim_token" — esto es POR DISEÑO (fail-loud).
+--      • service_role bypasea GRANTs — la edge function
+--        send-tournament-invitation y el server action /claim/[token] siguen
+--        leyendo el token sin problema.
 --
 --   3. Leaderboard (is_rated = true):
 --      Los ghost users tienen 0 partidas confirmadas, por lo que
@@ -73,7 +86,24 @@ COMMENT ON COLUMN public.profiles.is_ghost IS
   'true si este perfil fue creado por la edge function send-tournament-invitation. Se pone a false cuando el usuario completa el claim flow. Ghost users tienen is_rated=false por diseño (0 partidas confirmadas).';
 
 COMMENT ON COLUMN public.profiles.claim_token IS
-  'Token secreto único para el link de activación: /claim/{token}. SENSIBLE — no seleccionar en queries públicas. NULL para usuarios normales. Limpiado (set NULL) después del claim.';
+  'Token secreto único para el link de activación: /claim/{token}. SENSIBLE — column-level GRANT revoca SELECT a anon/authenticated; solo service_role puede leer. NULL para usuarios normales. Limpiado (set NULL) después del claim.';
+
+-- ============================================================
+-- HARDENING column-level: bloquea SELECT de claim_token a roles públicos
+-- ============================================================
+-- profiles_read_all es USING (true) por diseño (perfiles públicos).
+-- Pero RLS opera a nivel de fila, no de columna — sin este REVOKE,
+-- cualquier user authenticated puede SELECT claim_token y robar
+-- tokens de claim pendientes.
+--
+-- service_role NO está afectado (bypasea GRANTs igual que RLS) —
+-- la edge function send-tournament-invitation y el server action
+-- /claim/[token] siguen leyendo el token sin problema.
+--
+-- Idempotente: REVOKE no falla si el privilegio ya no está concedido.
+-- ============================================================
+
+REVOKE SELECT (claim_token) ON public.profiles FROM anon, authenticated;
 
 COMMENT ON COLUMN public.profiles.claimed_at IS
   'Timestamp cuando el ghost user activó su cuenta via /claim/{token}. NULL si es un usuario normal o si el ghost aún no activó.';
@@ -107,4 +137,15 @@ COMMENT ON COLUMN public.profiles.ghost_created_by_tournament_id IS
 -- 5. Ghost profile no aparece en leaderboard:
 --    Un profile con is_ghost=true tiene 0 games → is_rated=false →
 --    no aparece en la query del leaderboard (filtra is_rated=true).
+--
+-- 6. claim_token NO es legible por anon/authenticated:
+--      SET ROLE authenticated;
+--      SELECT claim_token FROM public.profiles LIMIT 1;
+--    Esperado: ERROR "permission denied for column claim_token".
+--      SELECT id, username FROM public.profiles LIMIT 1;
+--    Esperado: ÉXITO (no toca la columna revocada).
+--    Como service_role:
+--      SET ROLE service_role;
+--      SELECT claim_token FROM public.profiles LIMIT 1;
+--    Esperado: ÉXITO (service_role bypasea GRANTs).
 -- ============================================================
