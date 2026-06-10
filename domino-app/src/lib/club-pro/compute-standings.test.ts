@@ -15,8 +15,9 @@ function makeMatch(
   homeScore: number | null,
   awayScore: number | null,
   status: Match['status'],
+  roundNumber: number = 1,
 ): Match {
-  return { id, pairHomeId, pairAwayId, pairHomeScore: homeScore, pairAwayScore: awayScore, status };
+  return { id, pairHomeId, pairAwayId, pairHomeScore: homeScore, pairAwayScore: awayScore, status, roundNumber };
 }
 
 // ─── computeStandings ─────────────────────────────────────────────────────────

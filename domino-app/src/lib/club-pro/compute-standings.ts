@@ -31,6 +31,7 @@ export function computeStandings(pairs: Pair[], matches: Match[]): PairStanding[
       marginOfVictory: 0,
       headToHeadResults: new Map(),
       hasHadBye: false,
+      lastByeRound: null,
       withdrawn: isWithdrawn,
     };
     statsMap.set(pair.id, standing);
@@ -45,6 +46,10 @@ export function computeStandings(pairs: Pair[], matches: Match[]): PairStanding[
         home.points += 3;
         home.wins += 1;
         home.hasHadBye = true;
+        // Track most recent bye round for strict-rotation fallback.
+        if (home.lastByeRound === null || match.roundNumber > home.lastByeRound) {
+          home.lastByeRound = match.roundNumber;
+        }
       }
       continue;
     }

@@ -178,7 +178,7 @@ export function generateSwissPairings(input: SwissPairingInput): RoundPairingRes
           return compareStandings(sa, sb, tiebreaker);
         });
 
-    // Walk from worst (last) to best (first) to find a pair without a prior bye.
+    // Primary: walk from worst (last) to best (first) to find a pair without a prior bye.
     let byeCandidate: Pair | null = null;
     for (let i = bestToWorst.length - 1; i >= 0; i--) {
       const candidate = bestToWorst[i];
@@ -189,8 +189,19 @@ export function generateSwissPairings(input: SwissPairingInput): RoundPairingRes
         break;
       }
     }
-    // Fallback: everyone has had a bye — assign to the lowest-ranked pair.
-    byeCandidate ??= bestToWorst[bestToWorst.length - 1];
+
+    // Fallback (strict rotation): every active pair has already had a bye.
+    // Pick the pair whose last bye was the OLDEST (lowest lastByeRound = most
+    // rounds since their last rest). Tie-break: pair.id ASC for determinism.
+    if (byeCandidate === null) {
+      const byOldestBye = [...bestToWorst].sort((a, b) => {
+        const la = standingMap.get(a.id)?.lastByeRound ?? Number.MIN_SAFE_INTEGER;
+        const lb = standingMap.get(b.id)?.lastByeRound ?? Number.MIN_SAFE_INTEGER;
+        if (la !== lb) return la - lb;
+        return a.id < b.id ? -1 : 1;
+      });
+      byeCandidate = byOldestBye[0];
+    }
 
     byePairId = byeCandidate.id;
     pairsForMatching = activePairs.filter((p) => p.id !== byePairId);

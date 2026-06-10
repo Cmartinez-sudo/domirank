@@ -14,6 +14,7 @@ function makeFinishedMatch(
   pairAwayId: string,
   homeScore: number,
   awayScore: number,
+  roundNumber: number = 1,
 ): Match {
   return {
     id,
@@ -22,10 +23,11 @@ function makeFinishedMatch(
     pairHomeScore: homeScore,
     pairAwayScore: awayScore,
     status: 'finished',
+    roundNumber,
   };
 }
 
-function makeByeMatch(id: string, pairHomeId: string): Match {
+function makeByeMatch(id: string, pairHomeId: string, roundNumber: number = 1): Match {
   return {
     id,
     pairHomeId,
@@ -33,6 +35,7 @@ function makeByeMatch(id: string, pairHomeId: string): Match {
     pairHomeScore: null,
     pairAwayScore: null,
     status: 'bye',
+    roundNumber,
   };
 }
 
@@ -294,20 +297,25 @@ describe('generateSwissPairings — bye handling', () => {
     expect(result.byePairId).toBe('p2');
   });
 
-  test('bye falls back to lowest-ranked when all active pairs have had byes', () => {
-    // 3 pairs, all have had a bye (contrived scenario)
+  test('strict rotation: when all pairs have had byes, oldest bye gets the next one', () => {
+    // 3 pairs, 5 rounds. Each pair has had exactly one bye in different rounds.
+    //   p1: bye in r1 (oldest)
+    //   p2: bye in r2
+    //   p3: bye in r3 (newest)
+    // Round 4 is odd again → bye must rotate to p1 (oldest lastByeRound = 1).
     const pairs = [
       makePair('p1', 1),
       makePair('p2', 2),
       makePair('p3', 3),
     ];
     const previousMatches: Match[] = [
-      makeByeMatch('bye1', 'p1'),
-      makeByeMatch('bye2', 'p2'),
-      makeByeMatch('bye3', 'p3'),
-      // Also need real matches to have occurred; we fake round histories
-      makeFinishedMatch('m1', 'p1', 'p2', 100, 90),
-      makeFinishedMatch('m2', 'p1', 'p3', 100, 85),
+      makeByeMatch('bye1', 'p1', 1),
+      makeByeMatch('bye2', 'p2', 2),
+      makeByeMatch('bye3', 'p3', 3),
+      // Real matches so standings aren't all identical.
+      makeFinishedMatch('m1', 'p2', 'p3', 100, 90, 1),  // round 1: p2 vs p3
+      makeFinishedMatch('m2', 'p1', 'p3', 100, 85, 2),  // round 2: p1 vs p3
+      makeFinishedMatch('m3', 'p1', 'p2', 100, 80, 3),  // round 3: p1 vs p2
     ];
     const input: SwissPairingInput = {
       pairs,
@@ -316,9 +324,40 @@ describe('generateSwissPairings — bye handling', () => {
       tiebreaker: 'margin_of_victory',
     };
     const result = generateSwissPairings(input);
-    // All have had byes — bye goes to lowest ranked (p2 or p3; both 0pts from real matches)
-    // p1: 6pts+bye, p2: 0pts+bye(3), p3: 0pts+bye(3) — after standings p2 tie p3
-    expect(result.byePairId).not.toBeNull();
+    // Strict rotation: p1 had the oldest bye (round 1) → p1 gets bye in round 4.
+    expect(result.byePairId).toBe('p1');
+    // The other two pair up.
+    expect(result.pairings).toHaveLength(1);
+    const remaining = new Set([result.pairings[0].pairHomeId, result.pairings[0].pairAwayId]);
+    expect(remaining).toEqual(new Set(['p2', 'p3']));
+  });
+
+  test('strict rotation: ties on lastByeRound broken by pair.id ASC', () => {
+    // 3 pairs. p1 and p2 BOTH had a bye in round 1 (contrived: imagine a
+    // larger tournament where this is plausible across many pairs). p3 had
+    // its bye in round 2. Round 3 fallback should pick the oldest, and with
+    // p1+p2 tied at lastByeRound=1, pair.id ASC → p1 wins the bye.
+    const pairs = [
+      makePair('p2', 1),  // intentionally swap names vs seeds to test id-based tie-break
+      makePair('p1', 2),
+      makePair('p3', 3),
+    ];
+    const previousMatches: Match[] = [
+      makeByeMatch('bye1', 'p1', 1),
+      makeByeMatch('bye2', 'p2', 1),
+      makeByeMatch('bye3', 'p3', 2),
+      makeFinishedMatch('m1', 'p1', 'p3', 100, 90, 1),
+      makeFinishedMatch('m2', 'p2', 'p3', 100, 80, 2),
+    ];
+    const input: SwissPairingInput = {
+      pairs,
+      previousMatches,
+      roundNumber: 3,
+      tiebreaker: 'margin_of_victory',
+    };
+    const result = generateSwissPairings(input);
+    // p1 and p2 both had bye in r1 (oldest). Tie-break by pair.id ASC → 'p1' < 'p2' → p1.
+    expect(result.byePairId).toBe('p1');
   });
 });
 

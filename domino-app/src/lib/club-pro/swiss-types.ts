@@ -26,6 +26,15 @@ export interface Match {
   pairAwayScore: number | null;
   /** 'finished' | 'bye' are the only statuses that contribute to standings */
   status: 'pending' | 'in_progress' | 'finished' | 'bye';
+  /**
+   * Round number (1-indexed) this match belongs to.
+   * Required so the engine can implement strict-rotation bye assignment:
+   * when all active pairs have already received a bye, the pair whose
+   * bye was the OLDEST (lowest roundNumber) receives the next one.
+   * Phase-3 callers must project `org_tournament_rounds.round_number`
+   * onto each Match before invoking the engine.
+   */
+  roundNumber: number;
 }
 
 // ─── Standings ─────────────────────────────────────────────────────────────────
@@ -41,6 +50,13 @@ export interface PairStanding {
   /** map of opponentPairId → 'win' | 'draw' | 'loss' for head-to-head tiebreak */
   headToHeadResults: Map<string, 'win' | 'draw' | 'loss'>;
   hasHadBye: boolean;
+  /**
+   * Highest roundNumber where this pair received a bye, or null if never.
+   * Drives the strict-rotation fallback in generateSwissPairings: when all
+   * active pairs have had a bye, the next bye goes to the one with the
+   * lowest lastByeRound (= oldest bye, most rounds since last rest).
+   */
+  lastByeRound: number | null;
   withdrawn: boolean;
 }
 
