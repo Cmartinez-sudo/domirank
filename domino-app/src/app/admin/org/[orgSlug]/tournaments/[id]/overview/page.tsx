@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { requireOrgMember } from '@/lib/club-pro/auth';
 import { supabaseServer } from '@/lib/supabase/server';
 import { StartTournamentButton, GenerateNextRoundButton } from './QuickActions';
+import { SendInvitationsButton } from './SendInvitationsButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +37,14 @@ export default async function OverviewPage({
     .select('id', { count: 'exact', head: true })
     .eq('tournament_id', tournament.id)
     .in('status', ['pending', 'in_progress']);
+
+  // Count invitations sent vs total players (active pairs × 2 players each).
+  const { count: invitedCount } = await supabase
+    .from('org_tournament_invitations')
+    .select('id', { count: 'exact', head: true })
+    .eq('tournament_id', tournament.id);
+  const totalPlayers = (pairCount ?? 0) * 2;
+  const pendingInvites = Math.max(0, totalPlayers - (invitedCount ?? 0));
 
   const canWrite = role === 'owner' || role === 'admin';
   const canStart =
@@ -103,6 +112,14 @@ export default async function OverviewPage({
       {canWrite && (
         <Card title="Acciones">
           <div className="flex flex-wrap gap-3">
+            {pendingInvites > 0 &&
+              (tournament.status === 'draft' || tournament.status === 'in_progress') && (
+                <SendInvitationsButton
+                  orgSlug={orgSlug}
+                  tournamentId={tournament.id}
+                  pendingCount={pendingInvites}
+                />
+              )}
             {canStart && (
               <StartTournamentButton orgSlug={orgSlug} tournamentId={tournament.id} />
             )}
@@ -123,6 +140,11 @@ export default async function OverviewPage({
             {tournament.status === 'draft' && (pairCount ?? 0) < 4 && (
               <p className="text-sm text-amber-700">
                 Mínimo 4 parejas para iniciar. Actualmente: {pairCount ?? 0}.
+              </p>
+            )}
+            {totalPlayers > 0 && pendingInvites === 0 && (
+              <p className="text-sm text-emerald-700">
+                ✓ Todas las invitaciones enviadas ({invitedCount}/{totalPlayers}).
               </p>
             )}
           </div>
