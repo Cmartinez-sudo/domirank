@@ -1013,7 +1013,7 @@ export type Database = {
           scheduled_start_at: string | null
           started_at: string | null
           status: string
-          tiebreaker: string
+          target_points: number
         }
         Insert: {
           created_at?: string
@@ -1031,7 +1031,7 @@ export type Database = {
           scheduled_start_at?: string | null
           started_at?: string | null
           status?: string
-          tiebreaker?: string
+          target_points?: number
         }
         Update: {
           created_at?: string
@@ -1049,7 +1049,7 @@ export type Database = {
           scheduled_start_at?: string | null
           started_at?: string | null
           status?: string
-          tiebreaker?: string
+          target_points?: number
         }
         Relationships: [
           {
@@ -1956,7 +1956,7 @@ export type Database = {
           rounds_count: number | null
           started_at: string | null
           status: string | null
-          tiebreaker: string | null
+          target_points: number | null
         }
         Relationships: []
       }
