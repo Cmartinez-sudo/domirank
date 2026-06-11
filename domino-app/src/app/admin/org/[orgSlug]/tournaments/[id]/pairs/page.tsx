@@ -40,6 +40,21 @@ export default async function PairsPage({
     .order('initial_seed', { ascending: true, nullsFirst: false });
 
   const pairs = (pairsRaw ?? []) as PairSummary[];
+
+  // Map invited emails to invitation status (sent_at, opened_at, claimed_at).
+  const { data: invitationsRaw } = await supabase
+    .from('org_tournament_invitations')
+    .select('email, sent_at, opened_at, claimed_at')
+    .eq('tournament_id', tournament.id);
+  const invitations = new Map<string, { sent_at: string; opened_at: string | null; claimed_at: string | null }>();
+  for (const inv of invitationsRaw ?? []) {
+    invitations.set(inv.email.toLowerCase(), {
+      sent_at: inv.sent_at,
+      opened_at: inv.opened_at,
+      claimed_at: inv.claimed_at,
+    });
+  }
+
   const canWrite = role === 'owner' || role === 'admin';
   const canWithdraw = canWrite && tournament.status === 'in_progress';
 
@@ -73,8 +88,15 @@ export default async function PairsPage({
                       </span>
                     )}
                   </div>
-                  <div className="mt-1 text-xs text-slate-500">
-                    {p.player_a_email} · {p.player_b_email}
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+                    <PlayerInviteStatus
+                      email={p.player_a_email}
+                      invitation={invitations.get(p.player_a_email.toLowerCase())}
+                    />
+                    <PlayerInviteStatus
+                      email={p.player_b_email}
+                      invitation={invitations.get(p.player_b_email.toLowerCase())}
+                    />
                   </div>
                   {isWithdrawn && p.withdrawn_reason && (
                     <div className="mt-1 text-xs italic text-slate-500">
@@ -97,5 +119,29 @@ export default async function PairsPage({
         </div>
       )}
     </div>
+  );
+}
+
+function PlayerInviteStatus({
+  email,
+  invitation,
+}: {
+  email: string;
+  invitation?: { sent_at: string; opened_at: string | null; claimed_at: string | null };
+}) {
+  let badge: React.ReactNode = null;
+  if (!invitation) {
+    badge = <span className="text-amber-700">⏳ sin invitación</span>;
+  } else if (invitation.claimed_at) {
+    badge = <span className="text-emerald-700">✓ activó</span>;
+  } else if (invitation.opened_at) {
+    badge = <span className="text-blue-700">✉ abierta</span>;
+  } else {
+    badge = <span className="text-slate-500">✉ enviada</span>;
+  }
+  return (
+    <span>
+      {email} {badge}
+    </span>
   );
 }
