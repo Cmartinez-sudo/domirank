@@ -1,13 +1,17 @@
 'use server';
 
+import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { supabaseServer } from '@/lib/supabase/server';
+import { getAppUrl } from '@/lib/email';
 import { requireOrgAdmin } from './auth';
 import { slugify, appendRandomSuffix } from './slug';
 import { generateSwissPairings } from './generate-pairings';
 import type { Pair, Match } from './swiss-types';
+import { sendClubProEmail } from './email';
+import { tournamentInvitationEmail } from './email-templates';
 
 // ─── Validation schemas ───────────────────────────────────────────────────────
 
@@ -562,4 +566,139 @@ export async function markPairWithdrawn(input: unknown): Promise<ActionResult> {
 
   revalidatePath(`/admin/org/${parsed.data.orgSlug}/tournaments/${pair.tournament_id}`);
   return { ok: true };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Invitations (Phase 3d)
+// ────────────────────────────────────────────────────────────────────────────
+
+const SendInvitationsSchema = z.object({
+  orgSlug: z.string().min(1),
+  tournamentId: z.string().uuid(),
+});
+
+export type SendInvitationsResult =
+  | { ok: true; sent: number; skipped: number; failed: number; failures: string[] }
+  | { ok: false; error: string };
+
+/**
+ * Sends invitation emails to every player of every (non-withdrawn) pair
+ * in the tournament. Idempotent at the (tournament_id, email) level —
+ * skips players that already have an invitation row.
+ *
+ * Per player:
+ *   1. Generate a 32-char URL-safe claim_token (UUID v4 stripped).
+ *   2. INSERT into org_tournament_invitations.
+ *      Conflict on (tournament_id, email) → skip (already invited).
+ *   3. Call sendClubProEmail with tournamentInvitationEmail template.
+ *      Failure does NOT undo the DB row — the admin can use "Resend"
+ *      from the Pairs tab (Phase 3e/future).
+ *
+ * Returns a summary: { sent, skipped, failed, failures: [emails…] }.
+ * The action never throws on per-player failure — it aggregates.
+ */
+export async function sendTournamentInvitations(input: unknown): Promise<SendInvitationsResult> {
+  const parsed = SendInvitationsSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: 'Input inválido' };
+
+  const { org } = await requireOrgAdmin(parsed.data.orgSlug);
+  const supabase = await supabaseServer();
+
+  const { data: tournament, error: tErr } = await supabase
+    .from('org_tournaments')
+    .select('id, name, scheduled_start_at, organization_id')
+    .eq('id', parsed.data.tournamentId)
+    .eq('organization_id', org.id)
+    .maybeSingle();
+  if (tErr || !tournament) return { ok: false, error: 'Torneo no encontrado' };
+
+  const { data: pairsRaw } = await supabase
+    .from('org_tournament_pairs')
+    .select(
+      'id, player_a_name, player_a_email, player_b_name, player_b_email, withdrawn_at',
+    )
+    .eq('tournament_id', tournament.id)
+    .is('withdrawn_at', null);
+
+  const pairs = pairsRaw ?? [];
+  if (pairs.length === 0) {
+    return { ok: false, error: 'No hay parejas activas para invitar' };
+  }
+
+  // Existing invitations — skip these emails (idempotency).
+  const { data: existingRaw } = await supabase
+    .from('org_tournament_invitations')
+    .select('email')
+    .eq('tournament_id', tournament.id);
+  const alreadyInvited = new Set((existingRaw ?? []).map((r) => r.email.toLowerCase()));
+
+  const appUrl = getAppUrl();
+
+  let sent = 0;
+  let skipped = 0;
+  let failed = 0;
+  const failures: string[] = [];
+
+  for (const pair of pairs) {
+    const players = [
+      { name: pair.player_a_name, email: pair.player_a_email, partner: pair.player_b_name },
+      { name: pair.player_b_name, email: pair.player_b_email, partner: pair.player_a_name },
+    ];
+
+    for (const player of players) {
+      const emailLower = player.email.toLowerCase();
+      if (alreadyInvited.has(emailLower)) {
+        skipped += 1;
+        continue;
+      }
+
+      const claimToken = randomUUID().replace(/-/g, '');
+
+      const { error: invErr } = await supabase.from('org_tournament_invitations').insert({
+        tournament_id: tournament.id,
+        pair_id: pair.id,
+        email: emailLower,
+        player_name: player.name,
+        claim_token: claimToken,
+      });
+      if (invErr) {
+        // Most likely a race on the unique (tournament_id, email) constraint.
+        if (invErr.code === '23505') {
+          skipped += 1;
+          continue;
+        }
+        failed += 1;
+        failures.push(`${emailLower}: ${invErr.message}`);
+        continue;
+      }
+      alreadyInvited.add(emailLower);
+
+      const template = tournamentInvitationEmail({
+        recipientName: player.name,
+        tournamentName: tournament.name,
+        orgName: org.name,
+        orgLogoUrl: org.logo_url ?? undefined,
+        orgBrandColor: org.brand_primary_color ?? undefined,
+        scheduledStartAt: tournament.scheduled_start_at ?? new Date().toISOString(),
+        partnerName: player.partner,
+        claimUrl: `${appUrl}/claim/${claimToken}`,
+      });
+
+      const okSend = await sendClubProEmail({
+        to: emailLower,
+        template,
+        idempotencyKey: `tournament-invite:${tournament.id}:${emailLower}`,
+      });
+
+      if (okSend) {
+        sent += 1;
+      } else {
+        failed += 1;
+        failures.push(`${emailLower}: email send returned false`);
+      }
+    }
+  }
+
+  revalidatePath(`/admin/org/${parsed.data.orgSlug}/tournaments/${tournament.id}`);
+  return { ok: true, sent, skipped, failed, failures };
 }
