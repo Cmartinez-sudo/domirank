@@ -60,7 +60,15 @@ export async function sendClubProEmail(args: SendClubProEmailArgs): Promise<bool
 
 function buildFromHeader(from?: EmailFromOverride): string | undefined {
   if (!from?.fromEmail) return undefined;
-  if (from.fromName) return `${from.fromName} <${from.fromEmail}>`;
+  // Strip CR/LF to prevent SMTP header injection if fromName comes from
+  // untrusted input (e.g. an org admin sets brand name with embedded
+  // newlines). Resend likely sanitizes server-side too, but defense in
+  // depth — the client should not emit malformed headers either way.
+  // We also strip the angle brackets that would break the "Name <email>" format.
+  if (from.fromName) {
+    const safeName = from.fromName.replace(/[\r\n<>]/g, ' ').trim();
+    if (safeName) return `${safeName} <${from.fromEmail}>`;
+  }
   return from.fromEmail;
 }
 

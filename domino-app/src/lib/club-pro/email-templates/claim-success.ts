@@ -1,4 +1,4 @@
-import { escapeHtml } from './escape-html';
+import { escapeHtml, safeUrl } from './escape-html';
 import type { RenderedEmail } from './tournament-invitation';
 
 export type ClaimSuccessInput = {
@@ -13,7 +13,8 @@ export function claimSuccessEmail(input: ClaimSuccessInput): RenderedEmail {
   const safeName = escapeHtml(recipientName);
   const safeTournament = escapeHtml(tournamentName);
   const safeOrg = escapeHtml(orgName);
-  const safeUrl = escapeHtml(playerDashboardUrl);
+  // safeUrl validates http/https before injection — blocks javascript:/data: URIs.
+  const safeDashboardUrl = safeUrl(playerDashboardUrl);
 
   const subject = `Bienvenido a DomiRank, ${recipientName}`;
 
@@ -37,7 +38,7 @@ export function claimSuccessEmail(input: ClaimSuccessInput): RenderedEmail {
                 <strong>${safeTournament}</strong> organizado por ${safeOrg}.
               </p>
               <p style="margin:24px 0">
-                <a href="${safeUrl}"
+                <a href="${safeDashboardUrl}"
                    style="display:inline-block;padding:12px 24px;background-color:#0f172a;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;font-size:16px">
                   Ver mi próximo torneo
                 </a>

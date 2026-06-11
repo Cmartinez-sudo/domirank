@@ -1,4 +1,4 @@
-import { escapeHtml } from './escape-html';
+import { escapeHtml, safeUrl } from './escape-html';
 
 export type TournamentInvitationInput = {
   recipientName: string;
@@ -54,14 +54,19 @@ export function tournamentInvitationEmail(input: TournamentInvitationInput): Ren
   const safeOrg = escapeHtml(orgName);
   const safePartner = escapeHtml(partnerName);
   const safeVenue = venue ? escapeHtml(venue) : '';
-  const safeClaimUrl = escapeHtml(claimUrl);
+  // safeUrl validates protocol (http/https) before injecting into href/src —
+  // escapeHtml alone does NOT block `javascript:` since it has no HTML chars.
+  const safeClaimUrl = safeUrl(claimUrl);
+  const safeLogoUrl = orgLogoUrl ? safeUrl(orgLogoUrl) : '';
 
   const subject = `${orgName} — Invitación al torneo "${tournamentName}"`;
 
   const dateFormatted = formatDate(scheduledStartAt);
 
-  const headerInner = orgLogoUrl
-    ? `<img src="${escapeHtml(orgLogoUrl)}" alt="${safeOrg}" style="max-height:48px;display:block;margin:0 auto" />`
+  // If safeLogoUrl is '#' (invalid protocol or empty), fall back to text header
+  // instead of rendering a broken/exploitable <img>.
+  const headerInner = safeLogoUrl && safeLogoUrl !== '#'
+    ? `<img src="${safeLogoUrl}" alt="${safeOrg}" style="max-height:48px;display:block;margin:0 auto" />`
     : `<div style="font-size:24px;font-weight:700;color:#ffffff;text-align:center">${safeOrg}</div>`;
 
   const venueBlock = safeVenue

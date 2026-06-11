@@ -131,4 +131,44 @@ describe('sendClubProEmail', () => {
     expect(second).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(2); // retry happened
   });
+
+  test('fromName with CRLF is sanitized (SMTP header injection defense)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
+    global.fetch = fetchMock as typeof fetch;
+
+    await sendClubProEmail({
+      to: 'a@b.com',
+      template,
+      from: {
+        fromEmail: 'club@invedin.org',
+        fromName: 'Invedin\r\nBcc: attacker@evil.com',
+      },
+    });
+
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    // CRLF injection requires the line breaks themselves — without them, the
+    // "Bcc:" substring is harmless plain text in the From header. Stripping
+    // \r\n is the defense; we don't need to strip arbitrary header names.
+    expect(body.from).not.toContain('\r');
+    expect(body.from).not.toContain('\n');
+  });
+
+  test('fromName with angle brackets stripped (preserves From header format)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
+    global.fetch = fetchMock as typeof fetch;
+
+    await sendClubProEmail({
+      to: 'a@b.com',
+      template,
+      from: {
+        fromEmail: 'club@invedin.org',
+        fromName: 'Evil <attacker@evil.com>',
+      },
+    });
+
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string);
+    // Angle brackets stripped, content preserved without spoofing
+    expect(body.from).not.toContain('<attacker@evil.com>');
+    expect(body.from).toContain('<club@invedin.org>');
+  });
 });

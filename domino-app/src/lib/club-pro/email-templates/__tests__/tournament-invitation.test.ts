@@ -103,4 +103,40 @@ describe('tournamentInvitationEmail', () => {
     // Should fall back to the raw string instead of "Invalid Date"
     expect(email.html).toContain('not-a-date');
   });
+
+  test('claimUrl with javascript: protocol replaced by # (XSS defense)', () => {
+    const email = tournamentInvitationEmail({
+      ...baseInput,
+      claimUrl: 'javascript:alert(1)',
+    });
+    expect(email.html).not.toContain('javascript:');
+    expect(email.html).toMatch(/href="#"/);
+  });
+
+  test('claimUrl with data: protocol rejected', () => {
+    const email = tournamentInvitationEmail({
+      ...baseInput,
+      claimUrl: 'data:text/html,<script>alert(1)</script>',
+    });
+    expect(email.html).not.toMatch(/data:text\/html/);
+  });
+
+  test('orgLogoUrl with javascript: rejected, falls back to text header', () => {
+    const email = tournamentInvitationEmail({
+      ...baseInput,
+      orgLogoUrl: 'javascript:alert(1)',
+    });
+    expect(email.html).not.toContain('javascript:');
+    expect(email.html).not.toMatch(/<img src="javascript:/);
+    // Fall back to text header
+    expect(email.html).toMatch(/<div[^>]*>Invedin<\/div>/);
+  });
+
+  test('http (non-https) URLs are allowed for dev/localhost', () => {
+    const email = tournamentInvitationEmail({
+      ...baseInput,
+      claimUrl: 'http://localhost:3000/claim/xyz',
+    });
+    expect(email.html).toContain('http://localhost:3000/claim/xyz');
+  });
 });

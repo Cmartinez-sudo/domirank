@@ -32,4 +32,13 @@ describe('claimSuccessEmail', () => {
     expect(email.html).not.toMatch(/<script>alert/);
     expect(email.html).toContain('&lt;script&gt;');
   });
+
+  test('playerDashboardUrl with javascript: rejected', () => {
+    const email = claimSuccessEmail({
+      ...baseInput,
+      playerDashboardUrl: 'javascript:alert(1)',
+    });
+    expect(email.html).not.toContain('javascript:');
+    expect(email.html).toMatch(/href="#"/);
+  });
 });
