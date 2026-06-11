@@ -19,11 +19,17 @@ type SendEmailInput = {
   subject: string;
   html: string;
   text: string;
+  /**
+   * Optional sender override. Format: "Display Name <email@verified-domain>".
+   * The domain MUST be verified in Resend or the API will reject.
+   * If omitted, falls back to RESEND_FROM_EMAIL env var or "onboarding@resend.dev".
+   */
+  from?: string;
 };
 
-const FROM = process.env.RESEND_FROM_EMAIL ?? "DomiRank <onboarding@resend.dev>";
+const DEFAULT_FROM = process.env.RESEND_FROM_EMAIL ?? "DomiRank <onboarding@resend.dev>";
 
-export async function sendEmail({ to, subject, html, text }: SendEmailInput): Promise<boolean> {
+export async function sendEmail({ to, subject, html, text, from }: SendEmailInput): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.warn("[email] RESEND_API_KEY not set — skipping send to", to);
@@ -41,7 +47,7 @@ export async function sendEmail({ to, subject, html, text }: SendEmailInput): Pr
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type":  "application/json",
       },
-      body: JSON.stringify({ from: FROM, to, subject, html, text }),
+      body: JSON.stringify({ from: from ?? DEFAULT_FROM, to, subject, html, text }),
     });
 
     if (!res.ok) {
