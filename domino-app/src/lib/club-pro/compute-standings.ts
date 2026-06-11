@@ -81,6 +81,10 @@ export function computeStandings(
     const homeWon = homeScore > awayScore;
     const winnerScore = homeWon ? homeScore : awayScore;
     const loserScore = homeWon ? awayScore : homeScore;
+    // CE uses the capped loser score; pointsScored for the loser stays at the
+    // actual (uncapped) value. This is intentional: FMD scoring rewards
+    // dominance (CE penalty for losing badly) but tracks raw points across
+    // matches without re-capping the loser — only the winner stops at target.
     const cappedWinnerScore = Math.min(winnerScore, targetPoints);
     const cappedLoserScore = Math.min(loserScore, targetPoints);
     const ceDelta = 1 - cappedLoserScore / targetPoints;

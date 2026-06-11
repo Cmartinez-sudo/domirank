@@ -29,6 +29,19 @@ export interface Match {
    * Round number (1-indexed). Required so the engine can implement
    * strict-rotation bye assignment (oldest bye gets the next one when all
    * pairs have already had one).
+   *
+   * IMPORTANT for Phase-3 callers: this is NOT a column on
+   * `org_tournament_matches`. The DB stores `round_id` (FK to
+   * `org_tournament_rounds`). Callers MUST resolve via JOIN before
+   * projecting, e.g.:
+   *
+   *   SELECT m.*, r.round_number
+   *     FROM org_tournament_matches m
+   *     JOIN org_tournament_rounds r ON r.id = m.round_id
+   *
+   * Passing `roundNumber: 0` (default) silently breaks bye rotation —
+   * `lastByeRound` would never advance and the rotation fallback would
+   * always treat all byes as "round 0" (same era).
    */
   roundNumber: number;
 }

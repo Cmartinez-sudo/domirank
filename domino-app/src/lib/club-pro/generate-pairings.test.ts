@@ -144,29 +144,66 @@ describe('generateSwissPairings — tiebreak CE', () => {
 });
 
 describe('generateSwissPairings — head-to-head tiebreak', () => {
-  test('h2h winner ranks above when wins, CE, points all tie', () => {
-    // p1 and p2 only played each other (1 match). Both have identical scores
-    // except who won. p1 won 200-100. So p1: 1W/0L/CE+0.5, p2: 0W/1L/CE-0.5.
-    // They DON'T tie in wins, so h2h isn't tested here.
-    // To test h2h, need 4 pairs where p1 and p2 each won 1 and also played each other.
-    const pairs = [makePair('p1', 1), makePair('p2', 2), makePair('p3', 3), makePair('p4', 4)];
+  test('h2h tiebreak: direct match decides who is home in forced rematch', () => {
+    // Critical test for the h2h branch of compareStandings — required because
+    // when 2 pairs are tied on wins/CE/pointsScored AND they played directly,
+    // the most recent h2h result should rank one above the other (NOT pair.id
+    // ASC fallback).
+    //
+    // Setup: 2 pairs, 2 rounds. Symmetric scores ensure CE and pointsScored
+    // tie exactly.
+    //   R1: p1 wins 200-100 over p2 (CE +0.5 / -0.5, pts 200/100)
+    //   R2: p2 wins 200-100 over p1 (CE +0.5 / -0.5, pts 200/100)
+    // Standings (both):
+    //   wins: 1, losses: 1
+    //   CE: 0 (sum cancels)
+    //   pointsScored: 300 (winner cap + loser actual same both sides)
+    //   h2h: each pair's headToHeadResults.get(other) reflects the LAST match
+    //        — so p1 vs p2 = 'loss', p2 vs p1 = 'win'.
+    //
+    // Pair.id ASC would put p1 first (since 'p1' < 'p2'). But h2h says p2 won
+    // most recently → p2 should rank above p1. R3 forces a rematch (only 2
+    // pairs), so the home of table 1 reveals the standings order.
+    const pairs = [makePair('p1', 1), makePair('p2', 2)];
     const previousMatches = [
-      makeFinishedMatch('m1', 'p1', 'p2', 200, 100, 1), // p1 beats p2 (h2h)
-      makeFinishedMatch('m2', 'p3', 'p4', 200, 100, 1),
-      makeFinishedMatch('m3', 'p1', 'p3', 200, 100, 2), // p1 beats p3
-      makeFinishedMatch('m4', 'p2', 'p4', 200, 100, 2), // p2 beats p4
+      makeFinishedMatch('m1', 'p1', 'p2', 200, 100, 1),
+      makeFinishedMatch('m2', 'p1', 'p2', 100, 200, 2), // p2 wins rematch
     ];
-    // After R2: p1 has 2W (h2h beat p2), p2 has 1W, p3 has 1W, p4 has 0W.
-    // p2 and p3 tie at 1W. p2 has CE=+0.5−0.5=0, p3 has CE=−0.5+0.5=0.
-    // p2 and p3 didn't play each other directly. So h2h falls back to id ASC.
     const result = generateSwissPairings({
       pairs,
       previousMatches,
       roundNumber: 3,
       targetPoints: 200,
     });
-    // Standings should be: p1 (2W), then p2 or p3 (1W, tied), then p4 (0W).
-    // p1 already played both p2 and p3, so R3 forces rematch.
+    expect(result.pairings).toHaveLength(1);
+    expect(result.warnings.length).toBeGreaterThan(0); // forced rematch
+    // h2h winner (p2) ranks above → home of table 1.
+    // If the engine fell back to pair.id ASC, p1 would be home — that would
+    // mean the h2h branch in compareStandings is dead code.
+    expect(result.pairings[0].pairHomeId).toBe('p2');
+    expect(result.pairings[0].pairAwayId).toBe('p1');
+  });
+
+  test('h2h N/A when tied pairs never played each other → falls back to pair.id ASC', () => {
+    // 4 pairs. p2 and p3 tie at 1W after 2 rounds but never faced each other.
+    // h2h is N/A → fallback to pair.id ASC (p2 ranks above p3).
+    const pairs = [makePair('p1', 1), makePair('p2', 2), makePair('p3', 3), makePair('p4', 4)];
+    const previousMatches = [
+      makeFinishedMatch('m1', 'p1', 'p2', 200, 100, 1),
+      makeFinishedMatch('m2', 'p3', 'p4', 200, 100, 1),
+      makeFinishedMatch('m3', 'p1', 'p3', 200, 100, 2),
+      makeFinishedMatch('m4', 'p2', 'p4', 200, 100, 2),
+    ];
+    // p1: 2W. p2: 1W (lost R1 to p1, won R2 vs p4). p3: 1W (won R1, lost R2). p4: 0W.
+    // p2 and p3 tie at 1W. CE: p2 = -0.5+0.5 = 0; p3 = +0.5-0.5 = 0. Same.
+    // pointsScored: p2 = 100+200 = 300; p3 = 200+100 = 300. Same.
+    // They never played → h2h N/A → pair.id ASC: p2 < p3.
+    const result = generateSwissPairings({
+      pairs,
+      previousMatches,
+      roundNumber: 3,
+      targetPoints: 200,
+    });
     expect(result.pairings).toHaveLength(2);
   });
 });
