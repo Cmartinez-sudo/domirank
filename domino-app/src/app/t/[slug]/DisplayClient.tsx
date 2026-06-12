@@ -264,20 +264,20 @@ export function DisplayClient({
         </div>
       </header>
 
-      {/* Main fills available vertical space without overflow */}
-      <main className="grid min-h-0 flex-1 grid-cols-[40%_60%] gap-[2vw] px-[1vw] py-[2vh]">
+      {/* Main fills all available vertical/horizontal space */}
+      <main className="grid min-h-0 flex-1 grid-cols-[38%_62%] gap-[1vw] px-[1vw] py-[1vh]">
         {/* Standings */}
         <StandingsPanel standings={sortedStandings} pairById={pairById} />
 
         {/* Matches grid */}
-        <section className="flex min-h-0 flex-col gap-[1vh]">
-          <h2 className="text-[0.85vw] uppercase tracking-widest text-slate-400">
+        <section className="flex min-h-0 flex-col gap-[0.5vh]">
+          <h2 className="shrink-0 text-[0.85vw] uppercase tracking-widest text-slate-400">
             {isFinished
               ? 'Ronda final'
               : `Mesas — Ronda ${tournament.current_round_number ?? 0}`}
           </h2>
           {currentRoundMatches.length === 0 ? (
-            <div className="rounded-md border border-dashed border-slate-700 px-6 py-16 text-center text-[1.2vw] text-slate-400">
+            <div className="flex min-h-0 flex-1 items-center justify-center rounded-md border border-dashed border-slate-700 text-[1.5vw] text-slate-400">
               Esperando inicio de la ronda…
             </div>
           ) : (
@@ -290,12 +290,12 @@ export function DisplayClient({
                   return (
                     <div
                       key={m.id}
-                      className="flex flex-col justify-center rounded-lg border-2 border-amber-700 bg-amber-900/30 p-[1.2vw]"
+                      className="flex flex-col justify-center rounded-lg border-2 border-amber-700 bg-amber-900/30 p-[2vw]"
                     >
-                      <div className="text-[0.85vw] uppercase tracking-widest text-amber-400">
+                      <div className="text-[1vw] uppercase tracking-widest text-amber-400">
                         Mesa {m.table_number} — Bye
                       </div>
-                      <div className="mt-[0.5vh] truncate text-[1.3vw] font-semibold">
+                      <div className="mt-[1vh] truncate text-[1.8vw] font-semibold">
                         {home ? `${home.player_a_name} & ${home.player_b_name}` : '?'}
                       </div>
                     </div>
@@ -305,29 +305,31 @@ export function DisplayClient({
                 return (
                   <div
                     key={m.id}
-                    className={`flex flex-col justify-center rounded-lg border-2 p-[1.2vw] ${
+                    className={`flex flex-col justify-between rounded-lg border-2 p-[2vw] ${
                       isFinishedMatch ? 'border-slate-700 bg-slate-900' : 'border-slate-600 bg-slate-800'
                     }`}
                   >
-                    <div className="mb-[1vh] text-[0.85vw] uppercase tracking-widest text-slate-400">
+                    <div className="text-[1vw] uppercase tracking-widest text-slate-400">
                       Mesa {m.table_number}
                     </div>
-                    <PlayerRow
-                      name={home ? `${home.player_a_name} & ${home.player_b_name}` : '?'}
-                      score={m.pair_home_score}
-                      winner={
-                        isFinishedMatch &&
-                        (m.pair_home_score ?? 0) > (m.pair_away_score ?? 0)
-                      }
-                    />
-                    <PlayerRow
-                      name={away ? `${away.player_a_name} & ${away.player_b_name}` : '?'}
-                      score={m.pair_away_score}
-                      winner={
-                        isFinishedMatch &&
-                        (m.pair_away_score ?? 0) > (m.pair_home_score ?? 0)
-                      }
-                    />
+                    <div className="flex flex-col gap-[1.5vh]">
+                      <PlayerRow
+                        name={home ? `${home.player_a_name} & ${home.player_b_name}` : '?'}
+                        score={m.pair_home_score}
+                        winner={
+                          isFinishedMatch &&
+                          (m.pair_home_score ?? 0) > (m.pair_away_score ?? 0)
+                        }
+                      />
+                      <PlayerRow
+                        name={away ? `${away.player_a_name} & ${away.player_b_name}` : '?'}
+                        score={m.pair_away_score}
+                        winner={
+                          isFinishedMatch &&
+                          (m.pair_away_score ?? 0) > (m.pair_home_score ?? 0)
+                        }
+                      />
+                    </div>
                   </div>
                 );
               })}
@@ -380,12 +382,14 @@ function PlayerRow({
 }) {
   return (
     <div
-      className={`flex items-baseline justify-between gap-[1vw] py-[0.4vh] ${
+      className={`flex items-baseline justify-between gap-[1vw] ${
         winner ? 'text-emerald-400' : ''
       }`}
     >
-      <span className="truncate text-[1.2vw] font-semibold">{name}</span>
-      <span className="font-mono text-[2.2vw] font-bold tabular-nums">{score ?? '—'}</span>
+      <span className="truncate text-[1.6vw] font-semibold">{name}</span>
+      <span className="font-mono text-[3.5vw] font-bold leading-none tabular-nums">
+        {score ?? '—'}
+      </span>
     </div>
   );
 }

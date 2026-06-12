@@ -74,7 +74,7 @@ export function StandingsPanel({
         <span className="w-[3vw] text-right" title="Puntos en contra">PC</span>
       </div>
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-hidden">
-        <ol className="space-y-[0.6vh]">
+        <ol className="space-y-[0.8vh]">
           {standings.map((s, idx) => {
             const p = pairById.get(s.pairId);
             const name = p ? `${p.player_a_name} & ${p.player_b_name}` : '?';
@@ -82,28 +82,28 @@ export function StandingsPanel({
             return (
               <li
                 key={s.pairId}
-                className={`flex items-center gap-[0.6vw] rounded-md px-[1vw] py-[1vh] ${
+                className={`flex items-center gap-[0.8vw] rounded-md px-[1vw] py-[1.5vh] ${
                   idx < 3 ? 'bg-slate-800' : 'bg-slate-900'
                 } ${s.withdrawn ? 'opacity-40' : ''}`}
               >
-                <span className="w-[2vw] text-right font-mono text-[0.9vw] text-slate-400">
+                <span className="w-[2vw] text-right font-mono text-[1.1vw] text-slate-400">
                   {idx + 1}
                 </span>
-                <span className="w-[2vw] text-[1.4vw]">{medal}</span>
-                <span className="flex-1 truncate text-[1.05vw] font-semibold">{name}</span>
-                <span className="w-[2.5vw] text-center font-mono text-[1.1vw] font-bold tabular-nums">
+                <span className="w-[2.2vw] text-[1.8vw]">{medal}</span>
+                <span className="flex-1 truncate text-[1.3vw] font-semibold">{name}</span>
+                <span className="w-[2.5vw] text-center font-mono text-[1.4vw] font-bold tabular-nums">
                   {s.wins}
                 </span>
-                <span className="w-[2.5vw] text-center font-mono text-[0.95vw] tabular-nums text-slate-400">
+                <span className="w-[2.5vw] text-center font-mono text-[1.2vw] tabular-nums text-slate-400">
                   {s.losses}
                 </span>
-                <span className="w-[3vw] text-right font-mono text-[0.85vw] tabular-nums text-slate-400">
+                <span className="w-[3vw] text-right font-mono text-[1vw] tabular-nums text-slate-400">
                   {s.effectivenessCoefficient.toFixed(2)}
                 </span>
-                <span className="w-[3vw] text-right font-mono text-[0.95vw] font-semibold tabular-nums text-emerald-400">
+                <span className="w-[3vw] text-right font-mono text-[1.2vw] font-semibold tabular-nums text-emerald-400">
                   {s.pointsScored}
                 </span>
-                <span className="w-[3vw] text-right font-mono text-[0.95vw] tabular-nums text-red-400">
+                <span className="w-[3vw] text-right font-mono text-[1.2vw] tabular-nums text-red-400">
                   {s.pointsConceded}
                 </span>
               </li>
