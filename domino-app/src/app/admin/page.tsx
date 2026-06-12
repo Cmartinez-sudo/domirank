@@ -6,30 +6,45 @@ export const dynamic = 'force-dynamic';
 
 export const metadata = { title: 'Admin · DomiRank' };
 
-type OrgMembershipRow = {
+type OrgListItem = {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
   role: string;
-  organizations: {
-    id: string;
-    name: string;
-    slug: string;
-    logo_url: string | null;
-  } | null;
 };
 
 export default async function AdminLanding() {
   const user = await requireUser();
   const supabase = await supabaseServer();
 
-  // Orgs where the user is a member (any role).
-  const { data: rawMemberships } = await supabase
+  // Two-step lookup to avoid RLS interaction with embedded JOINs:
+  // 1. Read the user's memberships (RLS: user_id = auth.uid() → permitted).
+  // 2. Read the orgs by id (RLS: EXISTS membership → permitted because step 1
+  //    proved the user IS a member).
+  //
+  // The embedded form `.select('role, organizations(...)')` was returning
+  // organizations = null silently when the inner SELECT couldn't resolve
+  // against the org RLS within the JOIN context. Separating fixes it.
+  const { data: memberships } = await supabase
     .from('organization_members')
-    .select('role, organizations(id, name, slug, logo_url)')
+    .select('role, organization_id')
     .eq('user_id', user.id);
 
-  const memberships = (rawMemberships ?? []) as unknown as OrgMembershipRow[];
-  const orgs = memberships
-    .filter((m): m is OrgMembershipRow & { organizations: NonNullable<OrgMembershipRow['organizations']> } => m.organizations !== null)
-    .map((m) => ({ ...m.organizations, role: m.role }));
+  let orgs: OrgListItem[] = [];
+  if (memberships && memberships.length > 0) {
+    const orgIds = memberships.map((m) => m.organization_id);
+    const { data: orgRows } = await supabase
+      .from('organizations')
+      .select('id, name, slug, logo_url')
+      .in('id', orgIds);
+
+    const roleByOrg = new Map(memberships.map((m) => [m.organization_id, m.role]));
+    orgs = (orgRows ?? []).map((o) => ({
+      ...o,
+      role: roleByOrg.get(o.id) ?? 'staff',
+    }));
+  }
 
   // Global admin role (separate concept from org membership).
   const { data: profile } = await supabase
