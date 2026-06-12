@@ -18,7 +18,7 @@ export const metadata: Metadata = {
  */
 export default function PublicDisplayLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="h-screen overflow-hidden bg-slate-950 text-white">
       {children}
     </div>
   );
