@@ -219,33 +219,33 @@ export function DisplayClient({
     <div className="flex min-h-screen flex-col">
       {/* Header */}
       <header
-        className="flex items-center justify-between border-b border-slate-800 px-8 py-4"
+        className="flex items-center justify-between border-b-2 px-12 py-6"
         style={{ borderBottomColor: brandColor }}
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
           {(tournament.tournament_logo_url || tournament.organization_logo_url) && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={tournament.tournament_logo_url || tournament.organization_logo_url || ''}
               alt={tournament.name}
-              className="h-16 max-w-[160px] object-contain"
+              className="h-24 max-w-[220px] object-contain"
             />
           )}
           <div>
-            <div className="text-xs uppercase tracking-widest text-slate-400">
+            <div className="text-sm uppercase tracking-widest text-slate-400">
               {tournament.organization_name}
             </div>
-            <h1 className="text-2xl font-bold leading-none">{tournament.name}</h1>
+            <h1 className="mt-1 text-4xl font-bold leading-tight">{tournament.name}</h1>
           </div>
         </div>
-        <div className="flex items-center gap-6 text-right">
+        <div className="flex items-center gap-10 text-right">
           <div>
-            <div className="text-xs uppercase tracking-widest text-slate-400">
+            <div className="text-sm uppercase tracking-widest text-slate-400">
               Ronda
             </div>
-            <div className="text-3xl font-bold">
+            <div className="text-5xl font-bold leading-none">
               {tournament.current_round_number ?? 0}
-              <span className="text-base text-slate-400"> / {tournament.rounds_count}</span>
+              <span className="text-2xl text-slate-400"> / {tournament.rounds_count}</span>
             </div>
           </div>
           {!isFinished && currentRound?.started_at && (
@@ -255,7 +255,7 @@ export function DisplayClient({
             />
           )}
           <div
-            className={`rounded-full px-4 py-2 text-sm font-bold uppercase tracking-widest ${
+            className={`rounded-full px-6 py-3 text-lg font-bold uppercase tracking-widest ${
               isFinished ? 'bg-amber-500 text-slate-900' : 'animate-pulse bg-red-600'
             }`}
           >
@@ -264,24 +264,24 @@ export function DisplayClient({
         </div>
       </header>
 
-      <main className="grid flex-1 gap-6 p-8 lg:grid-cols-[640px_1fr]">
+      <main className="grid min-h-0 flex-1 gap-10 px-12 py-8 lg:grid-cols-[780px_1fr]">
         {/* Standings */}
         <StandingsPanel standings={sortedStandings} pairById={pairById} />
 
 
         {/* Matches grid */}
-        <section className="space-y-2">
-          <h2 className="text-xs uppercase tracking-widest text-slate-400">
+        <section className="flex min-h-0 flex-col gap-3">
+          <h2 className="text-sm uppercase tracking-widest text-slate-400">
             {isFinished
               ? 'Ronda final'
               : `Mesas — Ronda ${tournament.current_round_number ?? 0}`}
           </h2>
           {currentRoundMatches.length === 0 ? (
-            <div className="rounded-md border border-dashed border-slate-700 px-6 py-12 text-center text-slate-400">
+            <div className="rounded-md border border-dashed border-slate-700 px-6 py-16 text-center text-lg text-slate-400">
               Esperando inicio de la ronda…
             </div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {currentRoundMatches.map((m) => {
                 const home = pairById.get(m.pair_home_id);
                 const away = m.pair_away_id ? pairById.get(m.pair_away_id) : null;
@@ -290,12 +290,12 @@ export function DisplayClient({
                   return (
                     <div
                       key={m.id}
-                      className="rounded-md border border-amber-700 bg-amber-900/30 p-3"
+                      className="rounded-lg border-2 border-amber-700 bg-amber-900/30 p-5"
                     >
-                      <div className="text-xs uppercase tracking-widest text-amber-400">
+                      <div className="text-sm uppercase tracking-widest text-amber-400">
                         Mesa {m.table_number} — Bye
                       </div>
-                      <div className="mt-1 truncate font-semibold">
+                      <div className="mt-2 truncate text-xl font-semibold">
                         {home ? `${home.player_a_name} & ${home.player_b_name}` : '?'}
                       </div>
                     </div>
@@ -305,11 +305,11 @@ export function DisplayClient({
                 return (
                   <div
                     key={m.id}
-                    className={`rounded-md border p-3 ${
+                    className={`rounded-lg border-2 p-5 ${
                       isFinishedMatch ? 'border-slate-700 bg-slate-900' : 'border-slate-600 bg-slate-800'
                     }`}
                   >
-                    <div className="mb-1 text-xs uppercase tracking-widest text-slate-400">
+                    <div className="mb-3 text-sm uppercase tracking-widest text-slate-400">
                       Mesa {m.table_number}
                     </div>
                     <PlayerRow
@@ -337,13 +337,13 @@ export function DisplayClient({
       </main>
 
       <footer
-        className="flex items-center justify-between gap-6 border-t border-slate-800 px-8 py-3 text-xs text-slate-500"
+        className="flex items-center justify-between gap-6 border-t-2 px-12 py-5 text-sm text-slate-500"
         style={{ borderTopColor: brandColor }}
       >
-        <div>DomiRank · meta {tournament.target_points} tantos</div>
-        <div className="flex items-center gap-6">
+        <div className="text-base">DomiRank · meta {tournament.target_points} tantos</div>
+        <div className="flex items-center gap-8">
           {(tournament.sponsor_1_logo_url || tournament.sponsor_2_logo_url) && (
-            <span className="text-[10px] uppercase tracking-widest text-slate-500">
+            <span className="text-xs uppercase tracking-widest text-slate-500">
               Patrocinan
             </span>
           )}
@@ -352,7 +352,7 @@ export function DisplayClient({
             <img
               src={tournament.sponsor_1_logo_url}
               alt="Sponsor 1"
-              className="h-10 max-w-[140px] object-contain"
+              className="h-16 max-w-[200px] object-contain"
             />
           )}
           {tournament.sponsor_2_logo_url && (
@@ -360,7 +360,7 @@ export function DisplayClient({
             <img
               src={tournament.sponsor_2_logo_url}
               alt="Sponsor 2"
-              className="h-10 max-w-[140px] object-contain"
+              className="h-16 max-w-[200px] object-contain"
             />
           )}
         </div>
@@ -380,12 +380,12 @@ function PlayerRow({
 }) {
   return (
     <div
-      className={`flex items-baseline justify-between gap-2 py-1 ${
+      className={`flex items-baseline justify-between gap-3 py-1.5 ${
         winner ? 'text-emerald-400' : ''
       }`}
     >
-      <span className="truncate font-semibold">{name}</span>
-      <span className="font-mono text-2xl tabular-nums">{score ?? '—'}</span>
+      <span className="truncate text-lg font-semibold">{name}</span>
+      <span className="font-mono text-4xl font-bold tabular-nums">{score ?? '—'}</span>
     </div>
   );
 }
