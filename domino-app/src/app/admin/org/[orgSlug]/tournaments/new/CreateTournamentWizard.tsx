@@ -126,7 +126,16 @@ export function CreateTournamentWizard({ orgSlug, orgName }: { orgSlug: string; 
       });
 
       if (!result.ok) {
-        setGlobalError(result.error);
+        // Surface fieldErrors when present so users know which field is wrong.
+        const fieldErrors = 'fieldErrors' in result ? result.fieldErrors : undefined;
+        if (fieldErrors && Object.keys(fieldErrors).length > 0) {
+          const lines = Object.entries(fieldErrors).map(
+            ([field, messages]) => `${field}: ${messages.join(', ')}`,
+          );
+          setGlobalError(`${result.error}\n${lines.join('\n')}`);
+        } else {
+          setGlobalError(result.error);
+        }
         return;
       }
       // Redirect happens client-side — server action returns ok:true.
@@ -173,7 +182,7 @@ export function CreateTournamentWizard({ orgSlug, orgName }: { orgSlug: string; 
       </div>
 
       {globalError && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+        <div className="whitespace-pre-line rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
           {globalError}
         </div>
       )}
