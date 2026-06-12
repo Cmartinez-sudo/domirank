@@ -80,6 +80,20 @@ export function AppShell({
     );
   }
 
+  // Rutas standalone fullscreen — el display público de torneo (/t/[slug])
+  // se proyecta en TV y el ghost-claim flow (/claim/[token]) es público sin
+  // chrome. Ambos definen su propio layout completo en /app/t/[slug]/layout.tsx
+  // y /app/claim/[token]/page.tsx. AppShell se aparta — sin sidebar, sin
+  // bottom-nav, sin max-width container.
+  if (pathname.startsWith("/t/") || pathname.startsWith("/claim/")) {
+    return (
+      <>
+        <NavigationLoader />
+        {children}
+      </>
+    );
+  }
+
   const isActive = (href: string) => {
     if (href === "/matches/new") return pathname.startsWith("/matches");
     return pathname === href || pathname.startsWith(href + "/");
