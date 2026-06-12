@@ -59,26 +59,22 @@ export function StandingsPanel({
   }, [needsAutoScroll, standings.length]);
 
   return (
-    <section className="flex min-h-0 flex-col gap-2">
-      <h2 className="text-xs uppercase tracking-widest text-slate-400">
+    <section className="flex min-h-0 flex-col gap-3">
+      <h2 className="text-sm uppercase tracking-widest text-slate-400">
         Clasificación
       </h2>
-      <div className="flex items-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-        <span className="w-6 text-right">#</span>
-        <span className="w-6" /> {/* medal slot */}
+      <div className="flex items-center gap-3 rounded-md bg-slate-900 px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-400">
+        <span className="w-8 text-right">#</span>
+        <span className="w-8" /> {/* medal slot */}
         <span className="flex-1">Pareja</span>
-        <span className="w-10 text-center" title="Victorias">V</span>
-        <span className="w-10 text-center" title="Derrotas">D</span>
-        <span className="w-14 text-right" title="Coeficiente de Efectividad">CE</span>
-        <span className="w-14 text-right" title="Puntos a favor">PF</span>
-        <span className="w-14 text-right" title="Puntos en contra">PC</span>
+        <span className="w-12 text-center" title="Victorias">V</span>
+        <span className="w-12 text-center" title="Derrotas">D</span>
+        <span className="w-16 text-right" title="Coeficiente de Efectividad">CE</span>
+        <span className="w-16 text-right" title="Puntos a favor">PF</span>
+        <span className="w-16 text-right" title="Puntos en contra">PC</span>
       </div>
-      <div
-        ref={scrollRef}
-        className="overflow-hidden"
-        style={{ maxHeight: 'calc(100vh - 260px)' }}
-      >
-        <ol className="space-y-1.5">
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-hidden">
+        <ol className="space-y-2">
           {standings.map((s, idx) => {
             const p = pairById.get(s.pairId);
             const name = p ? `${p.player_a_name} & ${p.player_b_name}` : '?';
@@ -86,28 +82,28 @@ export function StandingsPanel({
             return (
               <li
                 key={s.pairId}
-                className={`flex items-center gap-2 rounded-md px-3 py-2 ${
+                className={`flex items-center gap-3 rounded-md px-4 py-3 ${
                   idx < 3 ? 'bg-slate-800' : 'bg-slate-900'
                 } ${s.withdrawn ? 'opacity-40' : ''}`}
               >
-                <span className="w-6 text-right font-mono text-sm text-slate-400">
+                <span className="w-8 text-right font-mono text-base text-slate-400">
                   {idx + 1}
                 </span>
-                <span className="w-6 text-lg">{medal}</span>
-                <span className="flex-1 truncate font-semibold">{name}</span>
-                <span className="w-10 text-center font-mono font-bold tabular-nums">
+                <span className="w-8 text-2xl">{medal}</span>
+                <span className="flex-1 truncate text-lg font-semibold">{name}</span>
+                <span className="w-12 text-center font-mono text-lg font-bold tabular-nums">
                   {s.wins}
                 </span>
-                <span className="w-10 text-center font-mono tabular-nums text-slate-400">
+                <span className="w-12 text-center font-mono tabular-nums text-slate-400">
                   {s.losses}
                 </span>
-                <span className="w-14 text-right font-mono text-xs tabular-nums text-slate-400">
+                <span className="w-16 text-right font-mono text-sm tabular-nums text-slate-400">
                   {s.effectivenessCoefficient.toFixed(2)}
                 </span>
-                <span className="w-14 text-right font-mono tabular-nums text-emerald-400">
+                <span className="w-16 text-right font-mono text-base font-semibold tabular-nums text-emerald-400">
                   {s.pointsScored}
                 </span>
-                <span className="w-14 text-right font-mono tabular-nums text-red-400">
+                <span className="w-16 text-right font-mono text-base tabular-nums text-red-400">
                   {s.pointsConceded}
                 </span>
               </li>
@@ -115,7 +111,7 @@ export function StandingsPanel({
           })}
         </ol>
       </div>
-      <div className="px-3 pt-1 text-[10px] uppercase tracking-wider text-slate-500">
+      <div className="px-4 pt-2 text-xs uppercase tracking-wider text-slate-500">
         V: victorias · D: derrotas · CE: coef. efectividad · PF: puntos a favor
         · PC: puntos en contra
       </div>
