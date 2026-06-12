@@ -118,7 +118,8 @@ export default async function StandingsPage({
             <th className="px-3 py-2 text-right">PG</th>
             <th className="px-3 py-2 text-right">PP</th>
             <th className="px-3 py-2 text-right">CE</th>
-            <th className="px-3 py-2 text-right">Tantos</th>
+            <th className="px-3 py-2 text-right">PF</th>
+            <th className="px-3 py-2 text-right">PC</th>
             <th className="px-3 py-2 text-right">Bye</th>
           </tr>
         </thead>
@@ -141,7 +142,8 @@ export default async function StandingsPage({
                 <td className="px-3 py-2 text-right font-mono">
                   {s.effectivenessCoefficient.toFixed(3)}
                 </td>
-                <td className="px-3 py-2 text-right">{s.pointsScored}</td>
+                <td className="px-3 py-2 text-right text-emerald-700">{s.pointsScored}</td>
+                <td className="px-3 py-2 text-right text-red-700">{s.pointsConceded}</td>
                 <td className="px-3 py-2 text-right text-xs text-slate-500">
                   {s.hasHadBye ? '✓' : '—'}
                 </td>
@@ -152,7 +154,8 @@ export default async function StandingsPage({
       </table>
       <div className="border-t border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
         <strong>PG</strong>: partidas ganadas · <strong>PP</strong>: partidas perdidas ·{' '}
-        <strong>CE</strong>: coeficiente de efectividad · <strong>Tantos</strong>: tantos acumulados (cap {tournament.target_points})
+        <strong>CE</strong>: coeficiente de efectividad ·{' '}
+        <strong>PF</strong>: puntos a favor · <strong>PC</strong>: puntos en contra
       </div>
     </div>
   );
