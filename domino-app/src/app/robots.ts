@@ -10,10 +10,13 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
         disallow: [
           "/api/",
+          "/admin",
           "/dashboard",
           "/profile/",
           "/matches/",
           "/tournaments/",
+          "/t/",
+          "/claim/",
           "/friends",
           "/settings",
           "/onboarding",
