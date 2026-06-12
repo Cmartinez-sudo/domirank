@@ -63,12 +63,13 @@ export interface PairStanding {
    */
   effectivenessCoefficient: number;
   /**
-   * Sum of points scored across finished matches. Winners are CAPPED at
-   * targetPoints (no "excedido", FMD style). Losers keep their real score.
-   * Byes contribute 0. Tertiary sort.
+   * Sum of points scored across finished matches. NO cap — winner score
+   * counts raw because the closing hand can carry the score past the
+   * target (e.g. 95 + 34 = 129 with target 100). Byes contribute 0.
+   * Tertiary sort.
    */
   pointsScored: number;
-  /** Sum of opponent points (with cap applied to winners). Informational only. */
+  /** Sum of opponent points scored against this pair. Tracked for display. */
   pointsConceded: number;
   /** Direct head-to-head result against each opponent. Quaternary sort. */
   headToHeadResults: Map<string, 'win' | 'loss'>;

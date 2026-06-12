@@ -79,24 +79,36 @@ describe('computeStandings — scoring with CE formula', () => {
   });
 });
 
-describe('computeStandings — score cap (sin excedido)', () => {
-  test('winner 380 with target=350 → pointsScored capped at 350', () => {
+describe('computeStandings — no score cap (winner score is raw)', () => {
+  test('winner 380 with target=350 → pointsScored is the raw 380, not capped', () => {
     const pairs = [makePair('p1'), makePair('p2')];
     const matches = [makeMatch('m1', 'p1', 'p2', 380, 280, 'finished')];
     const standings = computeStandings(pairs, matches, 350);
-    expect(standings.find((s) => s.pairId === 'p1')!.pointsScored).toBe(350);
-    // Loser keeps actual score
+    expect(standings.find((s) => s.pairId === 'p1')!.pointsScored).toBe(380);
     expect(standings.find((s) => s.pairId === 'p2')!.pointsScored).toBe(280);
-    // pointsConceded of loser uses the capped winner score
-    expect(standings.find((s) => s.pairId === 'p2')!.pointsConceded).toBe(350);
-    // CE uses capped loser score (280 < 350, so no cap on loser; ceDelta = 1 - 280/350)
-    expect(standings.find((s) => s.pairId === 'p1')!.effectivenessCoefficient).toBeCloseTo(1 - 280 / 350, 5);
+    // pointsConceded of loser is the raw winner score (380).
+    expect(standings.find((s) => s.pairId === 'p2')!.pointsConceded).toBe(380);
+    // CE uses loser score raw: 1 - 280/350.
+    expect(standings.find((s) => s.pairId === 'p1')!.effectivenessCoefficient).toBeCloseTo(
+      1 - 280 / 350,
+      5,
+    );
   });
 
-  test('cap does not affect under-target scores', () => {
+  test('classic 95→129 closing hand: winner pointsScored is 129', () => {
+    // Domino target 100: pair leads 95-94. Closing hand awards 34 → final 129.
+    const pairs = [makePair('p1'), makePair('p2')];
+    const matches = [makeMatch('m1', 'p1', 'p2', 129, 94, 'finished')];
+    const standings = computeStandings(pairs, matches, 100);
+    expect(standings.find((s) => s.pairId === 'p1')!.pointsScored).toBe(129);
+    expect(standings.find((s) => s.pairId === 'p2')!.pointsScored).toBe(94);
+    // CE: 1 - 94/100 = 0.06
+    expect(standings.find((s) => s.pairId === 'p1')!.effectivenessCoefficient).toBeCloseTo(0.06, 5);
+  });
+
+  test('under-target winner scores stay as-is', () => {
     const pairs = [makePair('p1'), makePair('p2')];
     const matches = [makeMatch('m1', 'p1', 'p2', 150, 80, 'finished')];
-    // target=200 — winner score 150 < 200, so no cap.
     const standings = computeStandings(pairs, matches, 200);
     expect(standings.find((s) => s.pairId === 'p1')!.pointsScored).toBe(150);
   });

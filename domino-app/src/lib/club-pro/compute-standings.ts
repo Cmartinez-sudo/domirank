@@ -3,7 +3,7 @@ import type { Pair, Match, PairStanding } from './swiss-types';
 /**
  * Derives standings from all pairs and all completed/bye matches.
  *
- * Scoring model (dominó federado — FMD/USA Domino Federation):
+ * Scoring model (DomiRank — no score cap):
  *   • wins: +1 per finished win, +1 per bye.
  *   • losses: +1 per finished loss. Byes do NOT count as losses.
  *   • effectivenessCoefficient (CE):
@@ -11,13 +11,11 @@ import type { Pair, Match, PairStanding } from './swiss-types';
  *       loser:  − (1 − loserScore / targetPoints)
  *       bye:    0 (neutral — no real opponent)
  *   • pointsScored:
- *       winner: min(winnerScore, targetPoints)   ← "sin excedido" cap
- *       loser:  loserScore                        ← actual partial score
- *       bye:    0                                 ← no points contribution
- *   • pointsConceded:
- *       winner: loserScore
- *       loser:  min(winnerScore, targetPoints)
+ *       winner: winnerScore (raw — may exceed targetPoints because the
+ *               closing hand can add many points; e.g. 95 + 34 = 129)
+ *       loser:  loserScore (by definition < targetPoints)
  *       bye:    0
+ *   • pointsConceded: opponent's pointsScored counterpart.
  *
  * Invariants enforced:
  *   • No draws in formal domino — throws if finished match has equal scores.
@@ -81,19 +79,21 @@ export function computeStandings(
     const homeWon = homeScore > awayScore;
     const winnerScore = homeWon ? homeScore : awayScore;
     const loserScore = homeWon ? awayScore : homeScore;
-    // CE uses the capped loser score; pointsScored for the loser stays at the
-    // actual (uncapped) value. This is intentional: FMD scoring rewards
-    // dominance (CE penalty for losing badly) but tracks raw points across
-    // matches without re-capping the loser — only the winner stops at target.
-    const cappedWinnerScore = Math.min(winnerScore, targetPoints);
-    const cappedLoserScore = Math.min(loserScore, targetPoints);
-    const ceDelta = 1 - cappedLoserScore / targetPoints;
+    // No score cap. In dominó the final hand can award points beyond the
+    // target (e.g. with target=100, winner can finish at 95 and the closing
+    // hand adds 34 points → final 129). Raw winner score counts both in
+    // pointsScored and as tiebreaker.
+    //
+    // CE = 1 - loserScore/target. Loser is by definition < target (didn't
+    // reach the goal), so CE is always in (0, 1] for the winner and (-1, 0]
+    // for the loser. No clamping needed.
+    const ceDelta = 1 - loserScore / targetPoints;
 
     if (homeWon) {
       if (home) {
         home.wins += 1;
         home.effectivenessCoefficient += ceDelta;
-        home.pointsScored += cappedWinnerScore;
+        home.pointsScored += winnerScore;
         home.pointsConceded += loserScore;
         if (match.pairAwayId) home.headToHeadResults.set(match.pairAwayId, 'win');
       }
@@ -101,14 +101,14 @@ export function computeStandings(
         away.losses += 1;
         away.effectivenessCoefficient -= ceDelta;
         away.pointsScored += loserScore;
-        away.pointsConceded += cappedWinnerScore;
+        away.pointsConceded += winnerScore;
         away.headToHeadResults.set(match.pairHomeId, 'loss');
       }
     } else {
       if (away) {
         away.wins += 1;
         away.effectivenessCoefficient += ceDelta;
-        away.pointsScored += cappedWinnerScore;
+        away.pointsScored += winnerScore;
         away.pointsConceded += loserScore;
         away.headToHeadResults.set(match.pairHomeId, 'win');
       }
@@ -116,7 +116,7 @@ export function computeStandings(
         home.losses += 1;
         home.effectivenessCoefficient -= ceDelta;
         home.pointsScored += loserScore;
-        home.pointsConceded += cappedWinnerScore;
+        home.pointsConceded += winnerScore;
         if (match.pairAwayId) home.headToHeadResults.set(match.pairAwayId, 'loss');
       }
     }

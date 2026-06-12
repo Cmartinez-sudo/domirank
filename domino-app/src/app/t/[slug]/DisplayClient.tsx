@@ -5,6 +5,7 @@ import { supabaseBrowser } from '@/lib/supabase/browser';
 import { computeStandings } from '@/lib/club-pro/compute-standings';
 import type { Pair, Match, PairStanding } from '@/lib/club-pro/swiss-types';
 import { RoundTimer } from './RoundTimer';
+import { StandingsPanel } from './StandingsPanel';
 
 type TournamentView = {
   id: string;
@@ -260,43 +261,10 @@ export function DisplayClient({
         </div>
       </header>
 
-      <main className="grid flex-1 gap-6 p-8 lg:grid-cols-[400px_1fr]">
+      <main className="grid flex-1 gap-6 p-8 lg:grid-cols-[640px_1fr]">
         {/* Standings */}
-        <section className="space-y-2">
-          <h2 className="text-xs uppercase tracking-widest text-slate-400">
-            Clasificación
-          </h2>
-          <ol className="space-y-1.5">
-            {sortedStandings.slice(0, 12).map((s, idx) => {
-              const p = pairById.get(s.pairId);
-              const name = p ? `${p.player_a_name} & ${p.player_b_name}` : '?';
-              const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '';
-              return (
-                <li
-                  key={s.pairId}
-                  className={`flex items-center gap-3 rounded-md px-3 py-2 ${
-                    idx < 3 ? 'bg-slate-800' : 'bg-slate-900'
-                  } ${s.withdrawn ? 'opacity-40' : ''}`}
-                >
-                  <span className="w-6 text-right font-mono text-sm text-slate-400">
-                    {idx + 1}
-                  </span>
-                  <span className="w-6 text-lg">{medal}</span>
-                  <span className="flex-1 truncate font-semibold">{name}</span>
-                  <span className="font-mono font-bold tabular-nums">{s.wins}</span>
-                  <span className="w-12 text-right font-mono text-xs text-slate-400 tabular-nums">
-                    {s.effectivenessCoefficient.toFixed(2)}
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
-          {sortedStandings.length > 12 && (
-            <div className="px-3 text-xs text-slate-500">
-              + {sortedStandings.length - 12} más
-            </div>
-          )}
-        </section>
+        <StandingsPanel standings={sortedStandings} pairById={pairById} />
+
 
         {/* Matches grid */}
         <section className="space-y-2">
