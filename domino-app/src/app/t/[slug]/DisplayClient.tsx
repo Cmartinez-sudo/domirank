@@ -216,36 +216,36 @@ export function DisplayClient({
       : '#2563eb';
 
   return (
-    <div className="flex min-h-screen flex-col">
-      {/* Header */}
+    <div className="flex h-screen flex-col overflow-hidden">
+      {/* Header — fixed height; typography scales fluidly with viewport */}
       <header
-        className="flex items-center justify-between border-b-2 px-12 py-6"
+        className="flex shrink-0 items-center justify-between border-b-2 px-[3vw] py-[1.5vh]"
         style={{ borderBottomColor: brandColor }}
       >
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-[1.5vw]">
           {(tournament.tournament_logo_url || tournament.organization_logo_url) && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={tournament.tournament_logo_url || tournament.organization_logo_url || ''}
               alt={tournament.name}
-              className="h-24 max-w-[220px] object-contain"
+              className="h-[7vh] max-h-20 object-contain"
             />
           )}
           <div>
-            <div className="text-sm uppercase tracking-widest text-slate-400">
+            <div className="text-[0.75vw] uppercase tracking-widest text-slate-400">
               {tournament.organization_name}
             </div>
-            <h1 className="mt-1 text-4xl font-bold leading-tight">{tournament.name}</h1>
+            <h1 className="text-[1.8vw] font-bold leading-tight">{tournament.name}</h1>
           </div>
         </div>
-        <div className="flex items-center gap-10 text-right">
+        <div className="flex items-center gap-[2vw] text-right">
           <div>
-            <div className="text-sm uppercase tracking-widest text-slate-400">
+            <div className="text-[0.75vw] uppercase tracking-widest text-slate-400">
               Ronda
             </div>
-            <div className="text-5xl font-bold leading-none">
+            <div className="text-[2.4vw] font-bold leading-none">
               {tournament.current_round_number ?? 0}
-              <span className="text-2xl text-slate-400"> / {tournament.rounds_count}</span>
+              <span className="text-[1.2vw] text-slate-400"> / {tournament.rounds_count}</span>
             </div>
           </div>
           {!isFinished && currentRound?.started_at && (
@@ -255,7 +255,7 @@ export function DisplayClient({
             />
           )}
           <div
-            className={`rounded-full px-6 py-3 text-lg font-bold uppercase tracking-widest ${
+            className={`rounded-full px-[1vw] py-[0.5vh] text-[0.9vw] font-bold uppercase tracking-widest ${
               isFinished ? 'bg-amber-500 text-slate-900' : 'animate-pulse bg-red-600'
             }`}
           >
@@ -264,24 +264,24 @@ export function DisplayClient({
         </div>
       </header>
 
-      <main className="grid min-h-0 flex-1 gap-10 px-12 py-8 lg:grid-cols-[780px_1fr]">
+      {/* Main fills available vertical space without overflow */}
+      <main className="grid min-h-0 flex-1 grid-cols-[40%_60%] gap-[2vw] px-[3vw] py-[2vh]">
         {/* Standings */}
         <StandingsPanel standings={sortedStandings} pairById={pairById} />
 
-
         {/* Matches grid */}
-        <section className="flex min-h-0 flex-col gap-3">
-          <h2 className="text-sm uppercase tracking-widest text-slate-400">
+        <section className="flex min-h-0 flex-col gap-[1vh]">
+          <h2 className="text-[0.85vw] uppercase tracking-widest text-slate-400">
             {isFinished
               ? 'Ronda final'
               : `Mesas — Ronda ${tournament.current_round_number ?? 0}`}
           </h2>
           {currentRoundMatches.length === 0 ? (
-            <div className="rounded-md border border-dashed border-slate-700 px-6 py-16 text-center text-lg text-slate-400">
+            <div className="rounded-md border border-dashed border-slate-700 px-6 py-16 text-center text-[1.2vw] text-slate-400">
               Esperando inicio de la ronda…
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-[1vw] overflow-hidden">
               {currentRoundMatches.map((m) => {
                 const home = pairById.get(m.pair_home_id);
                 const away = m.pair_away_id ? pairById.get(m.pair_away_id) : null;
@@ -290,12 +290,12 @@ export function DisplayClient({
                   return (
                     <div
                       key={m.id}
-                      className="rounded-lg border-2 border-amber-700 bg-amber-900/30 p-5"
+                      className="flex flex-col justify-center rounded-lg border-2 border-amber-700 bg-amber-900/30 p-[1.2vw]"
                     >
-                      <div className="text-sm uppercase tracking-widest text-amber-400">
+                      <div className="text-[0.85vw] uppercase tracking-widest text-amber-400">
                         Mesa {m.table_number} — Bye
                       </div>
-                      <div className="mt-2 truncate text-xl font-semibold">
+                      <div className="mt-[0.5vh] truncate text-[1.3vw] font-semibold">
                         {home ? `${home.player_a_name} & ${home.player_b_name}` : '?'}
                       </div>
                     </div>
@@ -305,11 +305,11 @@ export function DisplayClient({
                 return (
                   <div
                     key={m.id}
-                    className={`rounded-lg border-2 p-5 ${
+                    className={`flex flex-col justify-center rounded-lg border-2 p-[1.2vw] ${
                       isFinishedMatch ? 'border-slate-700 bg-slate-900' : 'border-slate-600 bg-slate-800'
                     }`}
                   >
-                    <div className="mb-3 text-sm uppercase tracking-widest text-slate-400">
+                    <div className="mb-[1vh] text-[0.85vw] uppercase tracking-widest text-slate-400">
                       Mesa {m.table_number}
                     </div>
                     <PlayerRow
@@ -337,13 +337,13 @@ export function DisplayClient({
       </main>
 
       <footer
-        className="flex items-center justify-between gap-6 border-t-2 px-12 py-5 text-sm text-slate-500"
+        className="flex shrink-0 items-center justify-between gap-[2vw] border-t-2 px-[3vw] py-[1.5vh] text-slate-500"
         style={{ borderTopColor: brandColor }}
       >
-        <div className="text-base">DomiRank · meta {tournament.target_points} tantos</div>
-        <div className="flex items-center gap-8">
+        <div className="text-[0.9vw]">DomiRank · meta {tournament.target_points} tantos</div>
+        <div className="flex items-center gap-[2vw]">
           {(tournament.sponsor_1_logo_url || tournament.sponsor_2_logo_url) && (
-            <span className="text-xs uppercase tracking-widest text-slate-500">
+            <span className="text-[0.7vw] uppercase tracking-widest text-slate-500">
               Patrocinan
             </span>
           )}
@@ -352,7 +352,7 @@ export function DisplayClient({
             <img
               src={tournament.sponsor_1_logo_url}
               alt="Sponsor 1"
-              className="h-16 max-w-[200px] object-contain"
+              className="h-[10vh] max-h-28 object-contain"
             />
           )}
           {tournament.sponsor_2_logo_url && (
@@ -360,7 +360,7 @@ export function DisplayClient({
             <img
               src={tournament.sponsor_2_logo_url}
               alt="Sponsor 2"
-              className="h-16 max-w-[200px] object-contain"
+              className="h-[10vh] max-h-28 object-contain"
             />
           )}
         </div>
@@ -380,12 +380,12 @@ function PlayerRow({
 }) {
   return (
     <div
-      className={`flex items-baseline justify-between gap-3 py-1.5 ${
+      className={`flex items-baseline justify-between gap-[1vw] py-[0.4vh] ${
         winner ? 'text-emerald-400' : ''
       }`}
     >
-      <span className="truncate text-lg font-semibold">{name}</span>
-      <span className="font-mono text-4xl font-bold tabular-nums">{score ?? '—'}</span>
+      <span className="truncate text-[1.2vw] font-semibold">{name}</span>
+      <span className="font-mono text-[2.2vw] font-bold tabular-nums">{score ?? '—'}</span>
     </div>
   );
 }
