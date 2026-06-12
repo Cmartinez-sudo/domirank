@@ -219,7 +219,7 @@ export function DisplayClient({
     <div className="flex h-screen flex-col overflow-hidden">
       {/* Header — fixed height; typography scales fluidly with viewport */}
       <header
-        className="flex shrink-0 items-center justify-between border-b-2 px-[3vw] py-[1.5vh]"
+        className="flex shrink-0 items-center justify-between border-b-2 px-[1vw] py-[1.5vh]"
         style={{ borderBottomColor: brandColor }}
       >
         <div className="flex items-center gap-[1.5vw]">
@@ -265,7 +265,7 @@ export function DisplayClient({
       </header>
 
       {/* Main fills available vertical space without overflow */}
-      <main className="grid min-h-0 flex-1 grid-cols-[40%_60%] gap-[2vw] px-[3vw] py-[2vh]">
+      <main className="grid min-h-0 flex-1 grid-cols-[40%_60%] gap-[2vw] px-[1vw] py-[2vh]">
         {/* Standings */}
         <StandingsPanel standings={sortedStandings} pairById={pairById} />
 
@@ -337,7 +337,7 @@ export function DisplayClient({
       </main>
 
       <footer
-        className="flex shrink-0 items-center justify-between gap-[2vw] border-t-2 px-[3vw] py-[1.5vh] text-slate-500"
+        className="flex shrink-0 items-center justify-between gap-[2vw] border-t-2 px-[1vw] py-[1.5vh] text-slate-500"
         style={{ borderTopColor: brandColor }}
       >
         <div className="text-[0.9vw]">DomiRank · meta {tournament.target_points} tantos</div>
