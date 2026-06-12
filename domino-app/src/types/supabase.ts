@@ -1005,12 +1005,15 @@ export type Database = {
           finished_at: string | null
           format: string
           id: string
+          logo_url: string | null
           name: string
           organization_id: string
           prize_description: string | null
           round_duration_minutes: number
           rounds_count: number
           scheduled_start_at: string | null
+          sponsor_1_logo_url: string | null
+          sponsor_2_logo_url: string | null
           started_at: string | null
           status: string
           target_points: number
@@ -1023,12 +1026,15 @@ export type Database = {
           finished_at?: string | null
           format?: string
           id?: string
+          logo_url?: string | null
           name: string
           organization_id: string
           prize_description?: string | null
           round_duration_minutes: number
           rounds_count: number
           scheduled_start_at?: string | null
+          sponsor_1_logo_url?: string | null
+          sponsor_2_logo_url?: string | null
           started_at?: string | null
           status?: string
           target_points?: number
@@ -1041,12 +1047,15 @@ export type Database = {
           finished_at?: string | null
           format?: string
           id?: string
+          logo_url?: string | null
           name?: string
           organization_id?: string
           prize_description?: string | null
           round_duration_minutes?: number
           rounds_count?: number
           scheduled_start_at?: string | null
+          sponsor_1_logo_url?: string | null
+          sponsor_2_logo_url?: string | null
           started_at?: string | null
           status?: string
           target_points?: number
@@ -1954,9 +1963,12 @@ export type Database = {
           organization_slug: string | null
           round_duration_minutes: number | null
           rounds_count: number | null
+          sponsor_1_logo_url: string | null
+          sponsor_2_logo_url: string | null
           started_at: string | null
           status: string | null
           target_points: number | null
+          tournament_logo_url: string | null
         }
         Relationships: []
       }

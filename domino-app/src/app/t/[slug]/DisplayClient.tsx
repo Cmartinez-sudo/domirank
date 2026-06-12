@@ -21,6 +21,9 @@ type TournamentView = {
   organization_name: string;
   organization_logo_url: string | null;
   brand_primary_color: string | null;
+  tournament_logo_url: string | null;
+  sponsor_1_logo_url: string | null;
+  sponsor_2_logo_url: string | null;
 };
 
 type PairData = {
@@ -220,12 +223,12 @@ export function DisplayClient({
         style={{ borderBottomColor: brandColor }}
       >
         <div className="flex items-center gap-4">
-          {tournament.organization_logo_url && (
+          {(tournament.tournament_logo_url || tournament.organization_logo_url) && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={tournament.organization_logo_url}
-              alt={tournament.organization_name}
-              className="h-12 max-w-[120px] object-contain"
+              src={tournament.tournament_logo_url || tournament.organization_logo_url || ''}
+              alt={tournament.name}
+              className="h-16 max-w-[160px] object-contain"
             />
           )}
           <div>
@@ -333,8 +336,34 @@ export function DisplayClient({
         </section>
       </main>
 
-      <footer className="border-t border-slate-800 px-8 py-3 text-center text-xs text-slate-500">
-        DomiRank · meta {tournament.target_points} tantos
+      <footer
+        className="flex items-center justify-between gap-6 border-t border-slate-800 px-8 py-3 text-xs text-slate-500"
+        style={{ borderTopColor: brandColor }}
+      >
+        <div>DomiRank · meta {tournament.target_points} tantos</div>
+        <div className="flex items-center gap-6">
+          {(tournament.sponsor_1_logo_url || tournament.sponsor_2_logo_url) && (
+            <span className="text-[10px] uppercase tracking-widest text-slate-500">
+              Patrocinan
+            </span>
+          )}
+          {tournament.sponsor_1_logo_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={tournament.sponsor_1_logo_url}
+              alt="Sponsor 1"
+              className="h-10 max-w-[140px] object-contain"
+            />
+          )}
+          {tournament.sponsor_2_logo_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={tournament.sponsor_2_logo_url}
+              alt="Sponsor 2"
+              className="h-10 max-w-[140px] object-contain"
+            />
+          )}
+        </div>
       </footer>
     </div>
   );
