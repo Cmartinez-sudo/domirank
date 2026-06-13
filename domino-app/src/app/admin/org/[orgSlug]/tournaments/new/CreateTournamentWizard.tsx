@@ -313,7 +313,7 @@ function Step2Swiss({
       </Field>
       <Field
         label={`Meta de tantos: ${form.targetPoints}`}
-        hint="Entre 50 y 500. Estándar dominó: 100/200/300/350. La pareja que llega primero a este valor gana la partida."
+        hint="Entre 50 y 500. Estándar dominó: 100/200/300/350. La pareja que llega primero a este valor gana, o la que vaya liderando cuando se acabe el tiempo."
       >
         <input
           type="range"

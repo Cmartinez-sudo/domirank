@@ -496,14 +496,11 @@ export async function recordMatchScore(input: unknown): Promise<ActionResult> {
   if (match.status === 'bye') return { ok: false, error: 'No se ingresan scores en byes' };
 
   const tournament = (match as unknown as { org_tournaments: { target_points: number; rounds_count: number; current_round_number: number | null } }).org_tournaments;
-  const target = tournament.target_points;
-  const winnerScore = Math.max(parsed.data.pairHomeScore, parsed.data.pairAwayScore);
-  if (winnerScore < target) {
-    return {
-      ok: false,
-      error: `El ganador debe alcanzar la meta (${target} tantos). El máximo ingresado fue ${winnerScore}.`,
-    };
-  }
+  // Note: we don't enforce winnerScore >= target_points. A match ends
+  // when EITHER a pair reaches the goal OR the round-duration timer
+  // expires. If the clock runs out first, the leader at that moment wins
+  // (e.g. 75-46 in a target=100 match). The only score invariant is "no
+  // draws", which is enforced above.
 
   const { error: updErr } = await supabase
     .from('org_tournament_matches')

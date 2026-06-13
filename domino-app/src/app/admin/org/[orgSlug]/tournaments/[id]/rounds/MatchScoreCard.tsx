@@ -13,7 +13,6 @@ export function MatchScoreCard({
   awayName,
   homeScore,
   awayScore,
-  targetPoints,
   canWrite,
 }: {
   orgSlug: string;
@@ -24,7 +23,6 @@ export function MatchScoreCard({
   awayName: string | null;
   homeScore: number | null;
   awayScore: number | null;
-  targetPoints: number;
   canWrite: boolean;
 }) {
   const isBye = awayName === null;
@@ -118,7 +116,7 @@ export function MatchScoreCard({
             disabled={isPending}
             className="w-full rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-40"
           >
-            {isPending ? 'Guardando…' : `Guardar (meta ${targetPoints})`}
+            {isPending ? 'Guardando…' : 'Guardar partida'}
           </button>
         )}
         {isFinished && (
