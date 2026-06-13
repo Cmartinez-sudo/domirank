@@ -117,7 +117,6 @@ export default async function RoundsPage({
                     }
                     homeScore={m.pair_home_score}
                     awayScore={m.pair_away_score}
-                    targetPoints={tournament.target_points}
                     canWrite={canWrite}
                   />
                 );
