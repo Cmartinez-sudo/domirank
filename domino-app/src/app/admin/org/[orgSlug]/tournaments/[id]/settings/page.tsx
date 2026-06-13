@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { requireOrgMember } from '@/lib/club-pro/auth';
 import { supabaseServer } from '@/lib/supabase/server';
 import { AssetUploader } from './AssetUploader';
+import { EditForm } from './EditForm';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +19,7 @@ export default async function SettingsPage({
   const { data: tournament } = await supabase
     .from('org_tournaments')
     .select(
-      'id, name, description, display_slug, status, rounds_count, round_duration_minutes, target_points, scheduled_start_at, prize_description, logo_url, sponsor_1_logo_url, sponsor_2_logo_url',
+      'id, name, description, display_slug, status, rounds_count, current_round_number, round_duration_minutes, target_points, scheduled_start_at, prize_description, logo_url, sponsor_1_logo_url, sponsor_2_logo_url',
     )
     .eq('id', id)
     .eq('organization_id', org.id)
@@ -112,15 +113,31 @@ export default async function SettingsPage({
       )}
 
       {canWrite && (
-        <section className="rounded-md border border-amber-200 bg-amber-50 p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-amber-800">
-            Edición avanzada
+        <section className="rounded-md border border-slate-200 bg-white p-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
+            Edición
           </h2>
-          <p className="mt-2 text-sm text-amber-900">
-            La edición de nombre, descripción, parámetros y cancelación viene
-            en una sub-fase futura. Por ahora estos valores son los que
-            ingresaste en el wizard.
+          <p className="mt-1 text-xs text-slate-500">
+            Modifica los parámetros del torneo o cancelalo.
           </p>
+          <div className="mt-4">
+            <EditForm
+              orgSlug={org.slug}
+              tournamentId={tournament.id}
+              status={tournament.status as 'draft' | 'registration' | 'ready' | 'in_progress' | 'finished' | 'cancelled'}
+              currentRoundNumber={tournament.current_round_number}
+              initial={{
+                name: tournament.name,
+                description: tournament.description,
+                prizeDescription: tournament.prize_description,
+                scheduledStartAt: tournament.scheduled_start_at,
+                roundsCount: tournament.rounds_count,
+                roundDurationMinutes: tournament.round_duration_minutes,
+                targetPoints: tournament.target_points,
+                displaySlug: tournament.display_slug,
+              }}
+            />
+          </div>
         </section>
       )}
     </div>
