@@ -699,3 +699,181 @@ export async function sendTournamentInvitations(input: unknown): Promise<SendInv
   revalidatePath(`/admin/org/${parsed.data.orgSlug}/tournaments/${tournament.id}`);
   return { ok: true, sent, skipped, failed, failures };
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Edit / cancel (advanced settings)
+// ────────────────────────────────────────────────────────────────────────────
+
+const UpdateTournamentSchema = z.object({
+  orgSlug: z.string().min(1),
+  tournamentId: z.string().uuid(),
+  name: z.string().trim().min(3, 'El nombre debe tener al menos 3 caracteres').max(150),
+  description: z.string().trim().max(2000).optional().or(z.literal('')),
+  prizeDescription: z.string().trim().max(500).optional().or(z.literal('')),
+  scheduledStartAt: z
+    .string()
+    .refine((s) => !Number.isNaN(new Date(s).getTime()), 'Fecha inválida'),
+  roundsCount: z.coerce.number().int().min(2).max(12),
+  roundDurationMinutes: z.coerce.number().int().min(5).max(180),
+  targetPoints: z.coerce.number().int().min(50).max(500),
+  displaySlug: z
+    .string()
+    .trim()
+    .min(1)
+    .max(60)
+    .regex(/^[a-z0-9-]+$/, 'Solo letras minúsculas, números y guiones'),
+});
+
+export type UpdateTournamentResult =
+  | { ok: true }
+  | { ok: false; error: string; fieldErrors?: Record<string, string[]> };
+
+/**
+ * Edits a tournament. Some fields are locked once the tournament is
+ * in_progress to avoid corrupting active games:
+ *   • target_points → locked in_progress (would break ongoing matches).
+ *   • rounds_count → cannot drop below current_round_number when in_progress
+ *     (Q3 decision: admin can finish "now" by setting rounds_count =
+ *     current_round_number, but cannot demand more matches in past rounds).
+ *
+ * display_slug change is allowed but breaks any link people had to the
+ * old TV URL — surface a warning client-side.
+ */
+export async function updateTournament(input: unknown): Promise<UpdateTournamentResult> {
+  const parsed = UpdateTournamentSchema.safeParse(input);
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string[]> = {};
+    for (const issue of parsed.error.issues) {
+      const key = issue.path.join('.') || '_';
+      (fieldErrors[key] ??= []).push(issue.message);
+    }
+    return { ok: false, error: 'Datos inválidos. Revisá el formulario.', fieldErrors };
+  }
+  const data = parsed.data;
+
+  const { org } = await requireOrgAdmin(data.orgSlug);
+  const supabase = await supabaseServer();
+
+  const { data: current, error: curErr } = await supabase
+    .from('org_tournaments')
+    .select('id, status, current_round_number, target_points, display_slug')
+    .eq('id', data.tournamentId)
+    .eq('organization_id', org.id)
+    .maybeSingle();
+
+  if (curErr || !current) return { ok: false, error: 'Torneo no encontrado' };
+  if (current.status === 'finished' || current.status === 'cancelled') {
+    return { ok: false, error: `No se puede editar un torneo ${current.status}` };
+  }
+
+  // Rule: target_points locked once in_progress.
+  if (
+    current.status === 'in_progress' &&
+    data.targetPoints !== current.target_points
+  ) {
+    return {
+      ok: false,
+      error:
+        'No se puede cambiar la meta de tantos en un torneo en curso — afectaría partidas ya jugadas.',
+      fieldErrors: { targetPoints: ['Bloqueado: torneo en curso'] },
+    };
+  }
+
+  // Rule: rounds_count cannot drop below current_round_number when in_progress.
+  if (
+    current.status === 'in_progress' &&
+    data.roundsCount < (current.current_round_number ?? 0)
+  ) {
+    return {
+      ok: false,
+      error: `No se puede reducir rondas a ${data.roundsCount} — el torneo va en ronda ${current.current_round_number}.`,
+      fieldErrors: {
+        roundsCount: [`Mínimo: ${current.current_round_number} (ronda actual)`],
+      },
+    };
+  }
+
+  const { error: updErr } = await supabase
+    .from('org_tournaments')
+    .update({
+      name: data.name,
+      description: data.description || null,
+      prize_description: data.prizeDescription || null,
+      scheduled_start_at: data.scheduledStartAt,
+      rounds_count: data.roundsCount,
+      round_duration_minutes: data.roundDurationMinutes,
+      target_points: data.targetPoints,
+      display_slug: data.displaySlug,
+    })
+    .eq('id', data.tournamentId);
+
+  if (updErr) {
+    if (
+      updErr.code === '23505' &&
+      updErr.message.toLowerCase().includes('display_slug')
+    ) {
+      return {
+        ok: false,
+        error: 'Ese display slug ya está en uso por otro torneo.',
+        fieldErrors: { displaySlug: ['Ya en uso'] },
+      };
+    }
+    return { ok: false, error: updErr.message };
+  }
+
+  revalidatePath(`/admin/org/${data.orgSlug}/tournaments/${data.tournamentId}`);
+  revalidatePath(`/admin/org/${data.orgSlug}`);
+  return { ok: true };
+}
+
+const CancelTournamentSchema = z.object({
+  orgSlug: z.string().min(1),
+  tournamentId: z.string().uuid(),
+});
+
+/**
+ * Soft-cancels a tournament: sets status='cancelled' and finished_at=now().
+ * Past matches and standings are preserved (audit trail). Pending matches
+ * remain in the DB but are no longer surfaced because status='cancelled'
+ * removes the tournament from active lookups.
+ *
+ * Reversible at the DB level — an admin with service_role can flip
+ * status back to 'in_progress' if cancelled by mistake. No undo button
+ * in the UI by design (high-impact action, intentional friction).
+ */
+export async function cancelTournament(input: unknown): Promise<ActionResult> {
+  const parsed = CancelTournamentSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: 'Input inválido' };
+
+  const { org } = await requireOrgAdmin(parsed.data.orgSlug);
+  const supabase = await supabaseServer();
+
+  const { data: current } = await supabase
+    .from('org_tournaments')
+    .select('id, status')
+    .eq('id', parsed.data.tournamentId)
+    .eq('organization_id', org.id)
+    .maybeSingle();
+
+  if (!current) return { ok: false, error: 'Torneo no encontrado' };
+  if (current.status === 'cancelled') {
+    return { ok: false, error: 'El torneo ya está cancelado' };
+  }
+  if (current.status === 'finished') {
+    return { ok: false, error: 'No se puede cancelar un torneo ya finalizado' };
+  }
+
+  const { error: updErr } = await supabase
+    .from('org_tournaments')
+    .update({
+      status: 'cancelled',
+      finished_at: new Date().toISOString(),
+    })
+    .eq('id', parsed.data.tournamentId);
+
+  if (updErr) return { ok: false, error: updErr.message };
+
+  revalidatePath(`/admin/org/${parsed.data.orgSlug}/tournaments/${parsed.data.tournamentId}`);
+  revalidatePath(`/admin/org/${parsed.data.orgSlug}`);
+  return { ok: true };
+}
