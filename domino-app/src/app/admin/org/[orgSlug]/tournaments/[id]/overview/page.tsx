@@ -2,7 +2,11 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { requireOrgMember } from '@/lib/club-pro/auth';
 import { supabaseServer } from '@/lib/supabase/server';
-import { StartTournamentButton, GenerateNextRoundButton } from './QuickActions';
+import {
+  StartTournamentButton,
+  GenerateNextRoundButton,
+  StartRoundButton,
+} from './QuickActions';
 import { SendInvitationsButton } from './SendInvitationsButton';
 
 export const dynamic = 'force-dynamic';
@@ -37,6 +41,18 @@ export default async function OverviewPage({
     .select('id', { count: 'exact', head: true })
     .eq('tournament_id', tournament.id)
     .in('status', ['pending', 'in_progress']);
+
+  // Current round started_at — for the manual timer-start button.
+  const currentRoundNumber = tournament.current_round_number ?? 0;
+  const { data: currentRound } = currentRoundNumber > 0
+    ? await supabase
+        .from('org_tournament_rounds')
+        .select('started_at')
+        .eq('tournament_id', tournament.id)
+        .eq('round_number', currentRoundNumber)
+        .maybeSingle()
+    : { data: null };
+  const currentRoundStarted = Boolean(currentRound?.started_at);
 
   // Count invitations sent vs total players (active pairs × 2 players each).
   const { count: invitedCount } = await supabase
@@ -123,6 +139,15 @@ export default async function OverviewPage({
             {canStart && (
               <StartTournamentButton orgSlug={orgSlug} tournamentId={tournament.id} />
             )}
+            {tournament.status === 'in_progress' &&
+              currentRoundNumber > 0 &&
+              !currentRoundStarted && (
+                <StartRoundButton
+                  orgSlug={orgSlug}
+                  tournamentId={tournament.id}
+                  roundNumber={currentRoundNumber}
+                />
+              )}
             {canGenerateNext && (
               <GenerateNextRoundButton
                 orgSlug={orgSlug}
@@ -147,6 +172,15 @@ export default async function OverviewPage({
                 ✓ Todas las invitaciones enviadas ({invitedCount}/{totalPlayers}).
               </p>
             )}
+            {tournament.status === 'in_progress' &&
+              currentRoundNumber > 0 &&
+              !currentRoundStarted && (
+                <p className="w-full text-sm text-amber-700">
+                  ⏳ Ronda {currentRoundNumber} generada. El timer NO ha
+                  empezado — apretá &quot;Empezar Ronda&quot; cuando las
+                  parejas estén en su mesa.
+                </p>
+              )}
           </div>
         </Card>
       )}

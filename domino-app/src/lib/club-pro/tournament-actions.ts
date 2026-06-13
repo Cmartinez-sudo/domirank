@@ -304,12 +304,14 @@ async function persistRound(
   pairings: Array<{ tableNumber: number; pairHomeId: string; pairAwayId: string }>,
   byePairId: string | null,
 ): Promise<{ ok: true; roundId: string } | { ok: false; error: string }> {
+  // started_at intentionally left NULL — the round is generated but the
+  // timer doesn't tick until the admin presses "Empezar ronda" so players
+  // can find their tables before the clock starts.
   const { data: round, error: roundErr } = await supabase
     .from('org_tournament_rounds')
     .insert({
       tournament_id: tournamentId,
       round_number: roundNumber,
-      started_at: new Date().toISOString(),
     })
     .select('id')
     .single();
@@ -875,5 +877,71 @@ export async function cancelTournament(input: unknown): Promise<ActionResult> {
 
   revalidatePath(`/admin/org/${parsed.data.orgSlug}/tournaments/${parsed.data.tournamentId}`);
   revalidatePath(`/admin/org/${parsed.data.orgSlug}`);
+  return { ok: true };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Start round timer (manual)
+// ────────────────────────────────────────────────────────────────────────────
+
+const StartRoundSchema = z.object({
+  orgSlug: z.string().min(1),
+  tournamentId: z.string().uuid(),
+});
+
+/**
+ * Starts the timer for the current round of the tournament: sets
+ * org_tournament_rounds.started_at = now() for the round identified
+ * by tournament.current_round_number.
+ *
+ * Round creation (startTournament + generateNextRound) intentionally
+ * leaves started_at NULL so the admin can give players time to find
+ * their tables before the clock begins. The display TV only renders
+ * RoundTimer when started_at is set, so the timer simply waits.
+ *
+ * Idempotent: if started_at is already set, returns ok without
+ * re-stamping (the admin clicked twice).
+ */
+export async function startRound(input: unknown): Promise<ActionResult> {
+  const parsed = StartRoundSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: 'Input inválido' };
+
+  await requireOrgAdmin(parsed.data.orgSlug);
+  const supabase = await supabaseServer();
+
+  const { data: tournament, error: tErr } = await supabase
+    .from('org_tournaments')
+    .select('id, status, current_round_number')
+    .eq('id', parsed.data.tournamentId)
+    .maybeSingle();
+  if (tErr || !tournament) return { ok: false, error: 'Torneo no encontrado' };
+  if (tournament.status !== 'in_progress') {
+    return { ok: false, error: 'El torneo no está en curso' };
+  }
+  const roundNumber = tournament.current_round_number ?? 0;
+  if (roundNumber < 1) {
+    return { ok: false, error: 'Todavía no hay ronda generada' };
+  }
+
+  const { data: round, error: roundErr } = await supabase
+    .from('org_tournament_rounds')
+    .select('id, started_at')
+    .eq('tournament_id', parsed.data.tournamentId)
+    .eq('round_number', roundNumber)
+    .maybeSingle();
+  if (roundErr || !round) return { ok: false, error: 'Ronda actual no encontrada' };
+
+  // Already started — idempotent no-op.
+  if (round.started_at) {
+    return { ok: true };
+  }
+
+  const { error: updErr } = await supabase
+    .from('org_tournament_rounds')
+    .update({ started_at: new Date().toISOString() })
+    .eq('id', round.id);
+  if (updErr) return { ok: false, error: updErr.message };
+
+  revalidatePath(`/admin/org/${parsed.data.orgSlug}/tournaments/${parsed.data.tournamentId}`);
   return { ok: true };
 }
