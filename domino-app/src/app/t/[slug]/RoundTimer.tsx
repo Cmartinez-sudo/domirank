@@ -37,11 +37,11 @@ export function RoundTimer({
 
   return (
     <div className="text-right">
-      <div className="text-[0.75vw] uppercase tracking-widest text-slate-400">
+      <div className="text-sm font-medium uppercase tracking-wider text-slate-400">
         {isExpired ? 'Tiempo' : 'Tiempo restante'}
       </div>
       <div
-        className={`font-mono text-[2.4vw] font-bold leading-none tabular-nums ${
+        className={`font-mono text-[clamp(28px,3vw,48px)] font-bold leading-none tabular-nums ${
           isExpired
             ? 'text-red-500'
             : isWarning
