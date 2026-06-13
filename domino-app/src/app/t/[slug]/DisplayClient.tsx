@@ -219,21 +219,47 @@ export function DisplayClient({
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      {/* Header — DomiRank branding on the left, round/timer/status on the right. */}
+      {/* Header — DomiRank | Tournament branding | Round/Timer/Live */}
       <header
-        className="flex shrink-0 items-center justify-between border-b-2 px-6 py-4"
+        className="flex shrink-0 items-center gap-6 border-b-2 px-6 py-4"
         style={{ borderBottomColor: brandColor }}
       >
-        <Image
-          src="/branding/logo-square-tagline.svg"
-          alt="DomiRank"
-          width={180}
-          height={180}
-          priority
-          className="h-[clamp(96px,12vh,180px)] w-auto"
-        />
+        {/* Left — DomiRank brand */}
+        <div className="shrink-0 p-4">
+          <Image
+            src="/branding/logo-square-tagline.svg"
+            alt="DomiRank"
+            width={200}
+            height={200}
+            priority
+            className="h-auto w-[clamp(120px,10vw,200px)]"
+          />
+        </div>
 
-        <div className="flex items-center gap-[clamp(16px,2vw,40px)] text-right">
+        {/* Center — tournament co-branding (flex-1 to fill) */}
+        <div className="flex min-w-0 flex-1 items-center justify-center gap-4">
+          {tournament.organization_logo_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={tournament.organization_logo_url}
+              alt={tournament.organization_name}
+              className="h-[clamp(60px,6vw,100px)] w-auto shrink-0 object-contain"
+            />
+          )}
+          <div className="min-w-0 text-center">
+            <h1 className="truncate text-[clamp(20px,2.2vw,40px)] font-bold leading-tight text-white">
+              {tournament.name}
+            </h1>
+            {tournament.organization_name && (
+              <p className="mt-1 truncate text-xs uppercase tracking-wider text-slate-400">
+                {tournament.organization_name}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Right — Round / Timer / Live */}
+        <div className="flex shrink-0 items-center gap-[clamp(16px,2vw,40px)] text-right">
           <div>
             <div className="text-sm font-medium uppercase tracking-wider text-slate-400">
               Ronda
@@ -261,12 +287,12 @@ export function DisplayClient({
         </div>
       </header>
 
-      {/* Main fills all available vertical/horizontal space */}
-      <main className="grid min-h-0 flex-1 grid-cols-[38%_62%] gap-[1vw] px-[1vw] py-[1vh]">
+      {/* Main fills all available vertical/horizontal space — 60/40 split favoring standings */}
+      <main className="grid min-h-0 flex-1 grid-cols-[60%_40%] gap-[1vw] px-[1vw] py-[1vh]">
         {/* Standings */}
         <StandingsPanel standings={sortedStandings} pairById={pairById} />
 
-        {/* Matches grid */}
+        {/* Matches grid — compacter cards because column is narrower now */}
         <section className="flex min-h-0 flex-col gap-3">
           <h2 className="shrink-0 text-sm font-medium uppercase tracking-wider text-slate-400">
             {isFinished
@@ -278,7 +304,7 @@ export function DisplayClient({
               Esperando inicio de la ronda…
             </div>
           ) : (
-            <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-4 overflow-hidden">
+            <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-3 overflow-hidden">
               {currentRoundMatches.map((m) => {
                 const home = pairById.get(m.pair_home_id);
                 const away = m.pair_away_id ? pairById.get(m.pair_away_id) : null;
@@ -287,12 +313,12 @@ export function DisplayClient({
                   return (
                     <div
                       key={m.id}
-                      className="flex flex-col justify-center gap-2 rounded-xl border border-amber-700 bg-amber-900/30 p-6"
+                      className="flex flex-col justify-center gap-2 rounded-xl border border-amber-700 bg-amber-900/30 px-4 py-3"
                     >
                       <div className="text-xs font-medium uppercase tracking-wider text-amber-400">
                         Mesa {m.table_number} — Bye
                       </div>
-                      <div className="truncate text-[clamp(18px,1.6vw,28px)] font-medium">
+                      <div className="truncate text-[clamp(16px,1.4vw,24px)] font-medium">
                         {home ? `${home.player_a_name} & ${home.player_b_name}` : '?'}
                       </div>
                     </div>
@@ -302,14 +328,14 @@ export function DisplayClient({
                 return (
                   <div
                     key={m.id}
-                    className={`flex flex-col justify-between rounded-xl border p-6 ${
+                    className={`flex flex-col justify-between rounded-xl border px-4 py-3 ${
                       isFinishedMatch ? 'border-slate-700 bg-slate-900' : 'border-slate-600 bg-slate-800'
                     }`}
                   >
                     <div className="text-xs font-medium uppercase tracking-wider text-slate-400">
                       Mesa {m.table_number}
                     </div>
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-2">
                       <PlayerRow
                         name={home ? `${home.player_a_name} & ${home.player_b_name}` : '?'}
                         score={m.pair_home_score}
@@ -340,9 +366,7 @@ export function DisplayClient({
         style={{ borderTopColor: brandColor }}
       >
         <div className="text-sm">
-          <span className="font-medium text-slate-300">{tournament.organization_name}</span>
-          <span className="mx-2">·</span>
-          <span>meta {tournament.target_points} tantos</span>
+          Meta <span className="font-semibold text-slate-300">{tournament.target_points}</span> tantos
         </div>
         <div className="flex items-center gap-6">
           {(tournament.sponsor_1_logo_url || tournament.sponsor_2_logo_url) && (
@@ -383,12 +407,12 @@ function PlayerRow({
 }) {
   return (
     <div
-      className={`flex items-baseline justify-between gap-4 ${
+      className={`flex items-baseline justify-between gap-3 ${
         winner ? 'text-emerald-400' : ''
       }`}
     >
-      <span className="truncate text-[clamp(16px,1.4vw,22px)] font-medium">{name}</span>
-      <span className="shrink-0 font-mono text-[clamp(28px,2.4vw,40px)] font-bold leading-none tabular-nums">
+      <span className="min-w-0 truncate text-[clamp(14px,1.2vw,20px)] font-medium">{name}</span>
+      <span className="shrink-0 font-mono text-[clamp(22px,2vw,32px)] font-bold leading-none tabular-nums">
         {score ?? '—'}
       </span>
     </div>
