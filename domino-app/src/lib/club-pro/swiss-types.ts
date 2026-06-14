@@ -71,6 +71,12 @@ export interface PairStanding {
   pointsScored: number;
   /** Sum of opponent points scored against this pair. Tracked for display. */
   pointsConceded: number;
+  /**
+   * Effectiveness percentage = pointsScored / (pointsScored + pointsConceded) × 100.
+   * Display-only metric — does NOT affect ranking. Range [0, 100]; 0 when
+   * the pair has played zero finished matches (only byes or no matches yet).
+   */
+  effectivenessPercent: number;
   /** Direct head-to-head result against each opponent. Quaternary sort. */
   headToHeadResults: Map<string, 'win' | 'loss'>;
   hasHadBye: boolean;

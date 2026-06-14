@@ -40,6 +40,7 @@ export function computeStandings(
       effectivenessCoefficient: 0,
       pointsScored: 0,
       pointsConceded: 0,
+      effectivenessPercent: 0,
       headToHeadResults: new Map(),
       hasHadBye: false,
       lastByeRound: null,
@@ -120,6 +121,14 @@ export function computeStandings(
         if (match.pairAwayId) home.headToHeadResults.set(match.pairAwayId, 'loss');
       }
     }
+  }
+
+  // Compute effectivenessPercent after both pointsScored and pointsConceded
+  // are aggregated. Display-only metric; does NOT affect sort order.
+  for (const standing of statsMap.values()) {
+    const total = standing.pointsScored + standing.pointsConceded;
+    standing.effectivenessPercent =
+      total > 0 ? Math.round((standing.pointsScored / total) * 1000) / 10 : 0;
   }
 
   return Array.from(statsMap.values());
