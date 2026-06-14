@@ -605,7 +605,9 @@ export async function sendTournamentInvitations(input: unknown): Promise<SendInv
 
   const { data: tournament, error: tErr } = await supabase
     .from('org_tournaments')
-    .select('id, name, scheduled_start_at, organization_id')
+    .select(
+      'id, name, organization_id, target_points, rounds_count, round_duration_minutes, sponsor_1_logo_url, sponsor_2_logo_url',
+    )
     .eq('id', parsed.data.tournamentId)
     .eq('organization_id', org.id)
     .maybeSingle();
@@ -674,13 +676,16 @@ export async function sendTournamentInvitations(input: unknown): Promise<SendInv
 
       const template = tournamentInvitationEmail({
         recipientName: player.name,
+        partnerName: player.partner,
         tournamentName: tournament.name,
         orgName: org.name,
         orgLogoUrl: org.logo_url ?? undefined,
-        orgBrandColor: org.brand_primary_color ?? undefined,
-        scheduledStartAt: tournament.scheduled_start_at ?? new Date().toISOString(),
-        partnerName: player.partner,
-        claimUrl: `${appUrl}/claim/${claimToken}`,
+        targetPoints: tournament.target_points,
+        roundsCount: tournament.rounds_count,
+        roundDurationMinutes: tournament.round_duration_minutes,
+        sponsor1LogoUrl: tournament.sponsor_1_logo_url ?? undefined,
+        sponsor2LogoUrl: tournament.sponsor_2_logo_url ?? undefined,
+        waitlistUrl: appUrl,
       });
 
       const okSend = await sendClubProEmail({
