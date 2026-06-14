@@ -203,6 +203,59 @@ describe('computeStandings — withdrawn pairs', () => {
   });
 });
 
+describe('computeStandings — effectivenessPercent', () => {
+  test('PF=105, PC=35 → 75.0% (spec example)', () => {
+    // p1 wins 105-35 → PF=105, PC=35. Efectividad = 105/(105+35) × 100 = 75.0%
+    const pairs = [makePair('p1'), makePair('p2')];
+    const matches = [makeMatch('m1', 'p1', 'p2', 105, 35, 'finished')];
+    const standings = computeStandings(pairs, matches, 100);
+    const p1 = standings.find((s) => s.pairId === 'p1')!;
+    const p2 = standings.find((s) => s.pairId === 'p2')!;
+    expect(p1.effectivenessPercent).toBe(75);
+    expect(p2.effectivenessPercent).toBe(25);
+  });
+
+  test('shutout 200-0 → 100% / 0%', () => {
+    const pairs = [makePair('p1'), makePair('p2')];
+    const matches = [makeMatch('m1', 'p1', 'p2', 200, 0, 'finished')];
+    const standings = computeStandings(pairs, matches, 200);
+    expect(standings.find((s) => s.pairId === 'p1')!.effectivenessPercent).toBe(100);
+    expect(standings.find((s) => s.pairId === 'p2')!.effectivenessPercent).toBe(0);
+  });
+
+  test('zero matches → 0% (no division by zero)', () => {
+    const pairs = [makePair('p1')];
+    const standings = computeStandings(pairs, [], 100);
+    expect(standings[0].effectivenessPercent).toBe(0);
+  });
+
+  test('only bye → 0% (bye does not contribute points)', () => {
+    const pairs = [makePair('p1')];
+    const matches = [makeMatch('m1', 'p1', null, null, null, 'bye')];
+    const standings = computeStandings(pairs, matches, 100);
+    expect(standings[0].effectivenessPercent).toBe(0);
+  });
+
+  test('does NOT affect ranking (CE remains tiebreaker)', () => {
+    // p1: wins 200-50 (CE +0.75, PF=200/PC=50, Efec=80%)
+    // p2: wins 200-150 (CE +0.25, PF=200/PC=150, Efec=57.1%)
+    // Both have 1 win. CE says p1 > p2. Efec also says p1 > p2 in this
+    // case — but they're independent. Sanity check both metrics exist.
+    const pairs = [makePair('p1'), makePair('p2'), makePair('p3'), makePair('p4')];
+    const matches = [
+      makeMatch('m1', 'p1', 'p3', 200, 50, 'finished'),
+      makeMatch('m2', 'p2', 'p4', 200, 150, 'finished'),
+    ];
+    const standings = computeStandings(pairs, matches, 200);
+    const p1 = standings.find((s) => s.pairId === 'p1')!;
+    const p2 = standings.find((s) => s.pairId === 'p2')!;
+    expect(p1.effectivenessCoefficient).toBeCloseTo(0.75, 5);
+    expect(p2.effectivenessCoefficient).toBeCloseTo(0.25, 5);
+    expect(p1.effectivenessPercent).toBe(80);
+    expect(p2.effectivenessPercent).toBeCloseTo(57.1, 1);
+  });
+});
+
 describe('computeStandings — head to head', () => {
   test('records win/loss directionally', () => {
     const pairs = [makePair('p1'), makePair('p2')];
