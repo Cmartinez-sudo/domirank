@@ -97,7 +97,7 @@ export function StartRoundButton({
 
   const handleClick = () => {
     setError(null);
-    if (!confirm(`¿Empezar el timer de la Ronda ${roundNumber}? Asegurate que todas las parejas estén en su mesa.`)) return;
+    if (!confirm(`¿Empezar el timer de la Ronda ${roundNumber}? Asegúrate de que todas las parejas estén en su mesa.`)) return;
     startTransition(async () => {
       const result = await startRound({ orgSlug, tournamentId });
       if (!result.ok) {

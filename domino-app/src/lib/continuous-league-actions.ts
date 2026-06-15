@@ -64,7 +64,7 @@ export async function createNewMatchInContinuousLeague(
 
   // 3. Validar que el caller está en el roster
   if (!rosterIds.has(user.id)) {
-    return { ok: false, error: "No sos parte de esta polla." };
+    return { ok: false, error: "No eres parte de esta polla." };
   }
 
   // 3.5. Resolver orphan in_progress matches del caller
@@ -189,7 +189,7 @@ export async function startNewSeason(
   const { tournament_id, confirm_name } = parsed.data;
 
   if (confirm_name.trim().toLowerCase() !== "nueva temporada") {
-    return { ok: false, error: "Escribí exactamente 'nueva temporada' para confirmar." };
+    return { ok: false, error: "Escribe exactamente 'nueva temporada' para confirmar." };
   }
 
   const supabase = await supabaseServer();

@@ -180,7 +180,7 @@ export function Step3Form({ userId, currentUser }: Props) {
                   <span className="font-medium">
                     {currentUser.display_name ?? currentUser.username}
                   </span>
-                  <span className="text-text-mute"> (vos)</span>
+                  <span className="text-text-mute"> (tú)</span>
                 </span>
               </div>
               {participants.map((p) => (

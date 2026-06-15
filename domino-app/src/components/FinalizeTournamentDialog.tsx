@@ -75,7 +75,7 @@ export function FinalizeTournamentDialog({
             </p>
             <div className="space-y-2">
               <label htmlFor="finalize-confirm-input" className="block text-sm text-text-dim">
-                Para confirmar, escribí el nombre exacto del torneo:{" "}
+                Para confirmar, escribe el nombre exacto del torneo:{" "}
                 <strong className="text-text">{tournamentName}</strong>
               </label>
               <input

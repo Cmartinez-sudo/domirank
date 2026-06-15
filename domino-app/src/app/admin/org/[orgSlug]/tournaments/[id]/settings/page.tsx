@@ -118,7 +118,7 @@ export default async function SettingsPage({
             Edición
           </h2>
           <p className="mt-1 text-xs text-slate-500">
-            Modifica los parámetros del torneo o cancelalo.
+            Modifica los parámetros del torneo o cancélalo.
           </p>
           <div className="mt-4">
             <EditForm

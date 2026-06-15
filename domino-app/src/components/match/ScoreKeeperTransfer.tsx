@@ -71,7 +71,7 @@ export function ScoreKeeperTransfer({ matchId, currentKeeperId, candidates }: Pr
       {expanded && (
         <div className="card p-3 mt-1">
           <div className="text-xs text-text-mute mb-2">
-            Pasale el registro a:
+            Pásale el registro a:
           </div>
           <ul className="divide-y divide-border/40">
             {filtered.map((p) => (
@@ -111,7 +111,7 @@ export function ScoreKeeperTransfer({ matchId, currentKeeperId, candidates }: Pr
         open={picked !== null}
         title="¿Transferir el registro?"
         description={picked
-          ? `${picked.display_name ?? picked.username} podrá registrar manos. Vos perderás esa capacidad inmediatamente.`
+          ? `${picked.display_name ?? picked.username} podrá registrar manos. Tú perderás esa capacidad inmediatamente.`
           : ""}
         confirmLabel={pending ? "Transfiriendo…" : "Sí, transferir"}
         cancelLabel="Cancelar"

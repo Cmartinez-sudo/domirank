@@ -42,7 +42,7 @@ export function validateTournamentConfig(config: {
     switch (config.format) {
       case "round_robin":
         if (config.player_count % 2 !== 0) {
-          errors.player_count = `Round Robin de parejas requiere número par. Tenés ${config.player_count}, agregá o sacá uno.`;
+          errors.player_count = `Round Robin de parejas requiere número par. Tienes ${config.player_count}, agrega o quita uno.`;
         }
         break;
       case "single_elim": {

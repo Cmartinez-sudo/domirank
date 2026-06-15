@@ -82,7 +82,7 @@ export default async function PlayerTournamentPage({
           <h1 className="text-xl font-bold">No estás inscrito en este torneo</h1>
           <p className="mt-2 text-sm text-slate-600">
             Solo los jugadores invitados pueden ver esta página. Si esperabas
-            estar acá, contactá al organizador.
+            estar aquí, contacta al organizador.
           </p>
           <Link
             href="/dashboard"
@@ -232,7 +232,7 @@ export default async function PlayerTournamentPage({
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <h2 className="text-xs uppercase tracking-widest text-slate-500">Mi pareja</h2>
         <p className="mt-1 text-lg font-semibold">
-          Vos & {partnerName}
+          Tú & {partnerName}
         </p>
         {myStanding && (
           <p className="mt-1 text-sm text-slate-600">

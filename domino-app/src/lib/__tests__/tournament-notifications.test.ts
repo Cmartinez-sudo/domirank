@@ -35,7 +35,7 @@ function buildNotificationText(n: MockNotification): string {
   }
   if (n.type === 'tournament_finished') {
     const tName = String(n.payload.tournament_name ?? '');
-    return `El torneo ${tName} terminó. Mirá los resultados finales.`;
+    return `El torneo ${tName} terminó. Mira los resultados finales.`;
   }
   if (n.type === 'pair_invite_received') {
     const inviterName = String(n.payload.inviter_name ?? '');

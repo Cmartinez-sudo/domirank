@@ -243,8 +243,8 @@ export function Step2Form({ userId, currentUser, friends }: Props) {
               Otros jugadores de DomiRank
             </h2>
             <p className="text-text-mute text-xs mb-2">
-              Esta liga continua no requiere confirmación de partidas, así que podés invitar a cualquier
-              jugador registrado. Tené en cuenta que al cerrar la polla todos los participantes deberán ser
+              Esta liga continua no requiere confirmación de partidas, así que puedes invitar a cualquier
+              jugador registrado. Ten en cuenta que al cerrar la polla todos los participantes deberán ser
               tus amigos.
             </p>
             <UserSearch

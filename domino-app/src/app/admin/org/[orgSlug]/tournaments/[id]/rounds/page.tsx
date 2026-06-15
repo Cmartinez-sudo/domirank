@@ -73,7 +73,7 @@ export default async function RoundsPage({
   if (rounds.length === 0) {
     return (
       <div className="rounded-md border border-dashed border-slate-300 bg-white px-6 py-8 text-center text-sm text-slate-500">
-        No hay rondas todavía. {canWrite && 'Iniciá el torneo desde Resumen.'}
+        No hay rondas todavía. {canWrite && 'Inicia el torneo desde Resumen.'}
       </div>
     );
   }

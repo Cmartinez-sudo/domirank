@@ -153,7 +153,7 @@ export function Step1Form({ userId }: { userId: string }) {
           <FormatPickerCards value={format} onChange={setFormat} />
           {!format && (
             <p className="text-text-mute text-xs mt-2">
-              Elegí un formato para continuar.
+              Elige un formato para continuar.
             </p>
           )}
         </section>
