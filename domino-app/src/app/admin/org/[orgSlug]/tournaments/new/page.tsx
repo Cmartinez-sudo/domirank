@@ -40,8 +40,8 @@ export default async function NewTournamentPage({
       <div className="space-y-4">
         <h1 className="text-xl font-bold">No se puede crear torneo</h1>
         <p className="text-sm text-slate-600">
-          Ya hay un torneo en curso (<strong>{active.name}</strong>). Esperá a
-          que termine o cancelalo antes de crear uno nuevo.
+          Ya hay un torneo en curso (<strong>{active.name}</strong>). Espera a
+          que termine o cancélalo antes de crear uno nuevo.
         </p>
         <Link
           href={`/admin/org/${org.slug}/tournaments/${active.id}`}

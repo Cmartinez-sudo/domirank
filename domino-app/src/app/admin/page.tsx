@@ -72,7 +72,7 @@ export default async function AdminLanding() {
           <h1 className="text-2xl font-bold">Tus organizaciones</h1>
           {orgs.length === 0 ? (
             <div className="mt-4 rounded-md border border-dashed border-slate-300 bg-white px-6 py-8 text-center text-sm text-slate-500">
-              No sos miembro de ninguna organización todavía. Pediles a los
+              No eres miembro de ninguna organización todavía. Pídeles a los
               owners que te agreguen.
             </div>
           ) : (

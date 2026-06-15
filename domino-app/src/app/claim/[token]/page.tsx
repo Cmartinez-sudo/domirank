@@ -53,7 +53,7 @@ export default async function ClaimPage({
           <strong>{result.tournament.name}</strong>.
         </p>
         <p className="mt-1 text-sm text-slate-600">
-          Activá tu cuenta de DomiRank creando una contraseña.
+          Activa tu cuenta de DomiRank creando una contraseña.
         </p>
 
         <div className="mt-6">

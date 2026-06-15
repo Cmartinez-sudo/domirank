@@ -106,7 +106,7 @@ export function ClaimForm({
         {isPending ? 'Activando…' : 'Activar mi cuenta'}
       </button>
       <p className="text-center text-xs text-slate-500">
-        Al activar aceptás los{' '}
+        Al activar aceptas los{' '}
         <a href="/terms" className="underline">
           términos
         </a>{' '}

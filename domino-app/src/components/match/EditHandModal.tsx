@@ -92,10 +92,10 @@ export function EditHandModal({ open, hand, matchId, nameA, nameB, onClose }: Pr
       open={open}
       title={title}
       description={isProposal
-        ? "Pasaron más de 5 min y no sos el creador. Tu cambio necesita 1 confirmación más de otro jugador para aplicarse."
+        ? "Pasaron más de 5 min y no eres el creador. Tu cambio necesita 1 confirmación más de otro jugador para aplicarse."
         : isHost
         ? "Estás editando una mano de otro jugador. Quedará registro de quién editó."
-        : "Editás tu propia mano."}
+        : "Estás editando tu propia mano."}
       confirmLabel={isProposal ? "Enviar propuesta" : "Guardar"}
       cancelLabel="Cancelar"
       pending={pending}
