@@ -56,7 +56,7 @@ describe('tournamentInvitationEmail', () => {
       waitlistUrl: 'https://domirank.app',
     });
     expect(email.html).toMatch(/href="https:\/\/domirank\.app"/);
-    expect(email.html).toContain('Anotarme al waitlist');
+    expect(email.html).toContain('Apuntarme al waitlist');
   });
 
   test('renders DomiRank hero logo', () => {

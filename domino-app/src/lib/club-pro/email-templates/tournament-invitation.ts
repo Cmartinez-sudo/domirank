@@ -145,8 +145,8 @@ export function tournamentInvitationEmail(input: TournamentInvitationInput): Ren
                 ¡Bienvenido, ${safeName}!
               </h2>
               <p style="margin:0 0 16px 0;font-size:16px;line-height:1.6;color:${C.textDim};">
-                Vos y tu pareja <strong style="color:${C.text};">${safePartner}</strong> están confirmados.
-                Acá te contamos cómo va a funcionar el torneo y qué tenés que saber para llevarte la copa.
+                Tú y tu pareja <strong style="color:${C.text};">${safePartner}</strong> están confirmados.
+                Aquí te contamos cómo va a funcionar el torneo y qué necesitas saber para llevarte la copa.
               </p>
             </td>
           </tr>
@@ -257,7 +257,7 @@ export function tournamentInvitationEmail(input: TournamentInvitationInput): Ren
                   ¿Te gusta DomiRank?
                 </div>
                 <h3 style="margin:0 0 12px 0;font-size:24px;font-weight:800;color:${C.bg};line-height:1.3;">
-                  Sumate al waitlist
+                  Únete al waitlist
                 </h3>
                 <p style="margin:0 0 24px 0;font-size:15px;line-height:1.5;color:${C.bg};opacity:0.85;">
                   Sé de los primeros en usar DomiRank cuando lancemos al público.
@@ -265,7 +265,7 @@ export function tournamentInvitationEmail(input: TournamentInvitationInput): Ren
                 </p>
                 <a href="${safeWaitlistUrl}"
                    style="display:inline-block;padding:14px 32px;background:${C.bg};color:${C.primary};text-decoration:none;border-radius:10px;font-weight:800;font-size:16px;">
-                  Anotarme al waitlist →
+                  Apuntarme al waitlist →
                 </a>
               </div>
             </td>
@@ -294,7 +294,7 @@ export function tournamentInvitationEmail(input: TournamentInvitationInput): Ren
 
 ${orgName} te da la bienvenida al torneo "${tournamentName}".
 
-Vos y tu pareja ${partnerName} están confirmados.
+Tú y tu pareja ${partnerName} están confirmados.
 
 CÓMO FUNCIONA EL TORNEO
 - Meta por partida: ${targetPoints} tantos
@@ -312,10 +312,10 @@ CÓMO SE DEFINE AL CAMPEÓN
 3. Tantos acumulados — desempate final.
 
 ¿TE GUSTA DOMIRANK?
-Sumate al waitlist para ser de los primeros en usar la app cuando lancemos:
+Únete al waitlist para ser de los primeros en usar la app cuando lancemos:
 ${waitlistUrl}
 
-— ${orgName} via DomiRank`;
+— ${orgName} vía DomiRank`;
 
   return { subject, html, text };
 }
