@@ -7,6 +7,7 @@ import { computeStandings } from '@/lib/club-pro/compute-standings';
 import type { Pair, Match, PairStanding } from '@/lib/club-pro/swiss-types';
 import { RoundTimer } from './RoundTimer';
 import { StandingsPanel } from './StandingsPanel';
+import { OrgLogo } from './OrgLogo';
 
 type TournamentView = {
   id: string;
@@ -238,14 +239,10 @@ export function DisplayClient({
 
         {/* Center — tournament co-branding (flex-1 to fill) */}
         <div className="flex min-w-0 flex-1 items-center justify-center gap-4">
-          {tournament.organization_logo_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={tournament.organization_logo_url}
-              alt={tournament.organization_name}
-              className="h-[clamp(60px,6vw,100px)] w-auto shrink-0 object-contain"
-            />
-          )}
+          <OrgLogo
+            url={tournament.organization_logo_url}
+            name={tournament.organization_name}
+          />
           <div className="min-w-0 text-center">
             <h1 className="truncate text-[clamp(20px,2.2vw,40px)] font-bold leading-tight text-white">
               {tournament.name}
