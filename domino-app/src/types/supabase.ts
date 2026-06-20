@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       friend_requests: {
@@ -141,6 +116,205 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_invitations: {
+        Row: {
+          created_at: string
+          expires_at: string
+          group_id: string
+          id: string
+          invited_by_user_id: string
+          invited_user_id: string
+          notification_sent_at: string | null
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          group_id: string
+          id?: string
+          invited_by_user_id: string
+          invited_user_id: string
+          notification_sent_at?: string | null
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          group_id?: string
+          id?: string
+          invited_by_user_id?: string
+          invited_user_id?: string
+          notification_sent_at?: string | null
+          responded_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_invitations_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_match_attributions: {
+        Row: {
+          attributed_at: string
+          attribution_type: string
+          group_id: string
+          id: string
+          match_id: string
+        }
+        Insert: {
+          attributed_at?: string
+          attribution_type: string
+          group_id: string
+          id?: string
+          match_id: string
+        }
+        Update: {
+          attributed_at?: string
+          attribution_type?: string
+          group_id?: string
+          id?: string
+          match_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_match_attributions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_match_attributions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "active_matches_per_user"
+            referencedColumns: ["match_id"]
+          },
+          {
+            foreignKeyName: "group_match_attributions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "match_feed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_match_attributions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "match_live_state"
+            referencedColumns: ["match_id"]
+          },
+          {
+            foreignKeyName: "group_match_attributions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_members: {
+        Row: {
+          anonymized: boolean
+          group_id: string
+          id: string
+          invited_at: string
+          invited_by_user_id: string | null
+          joined_at: string | null
+          left_at: string | null
+          role: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          anonymized?: boolean
+          group_id: string
+          id?: string
+          invited_at?: string
+          invited_by_user_id?: string | null
+          joined_at?: string | null
+          left_at?: string | null
+          role?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          anonymized?: boolean
+          group_id?: string
+          id?: string
+          invited_at?: string
+          invited_by_user_id?: string | null
+          joined_at?: string | null
+          left_at?: string | null
+          role?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          allow_friendlies: boolean
+          created_at: string
+          created_by_user_id: string
+          description: string | null
+          id: string
+          is_active: boolean
+          migrated_from_tournament_id: string | null
+          name: string
+        }
+        Insert: {
+          allow_friendlies?: boolean
+          created_at?: string
+          created_by_user_id: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          migrated_from_tournament_id?: string | null
+          name: string
+        }
+        Update: {
+          allow_friendlies?: boolean
+          created_at?: string
+          created_by_user_id?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          migrated_from_tournament_id?: string | null
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "groups_migrated_from_tournament_id_fkey"
+            columns: ["migrated_from_tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_standings"
+            referencedColumns: ["tournament_id"]
+          },
+          {
+            foreignKeyName: "groups_migrated_from_tournament_id_fkey"
+            columns: ["migrated_from_tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
             referencedColumns: ["id"]
           },
         ]
@@ -1853,6 +2027,43 @@ export type Database = {
           },
         ]
       }
+      group_leaderboard: {
+        Row: {
+          diff: number | null
+          group_id: string | null
+          losses: number | null
+          matches_played: number | null
+          points_against: number | null
+          points_for: number | null
+          rank: number | null
+          user_id: string | null
+          win_rate: number | null
+          wins: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_match_attributions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_players_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profile_ratings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_players_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_feed: {
         Row: {
           created_at: string | null
@@ -2226,6 +2437,14 @@ export type Database = {
         }[]
       }
       increment_edit_count: { Args: { p_round_id: number }; Returns: undefined }
+      is_group_admin: {
+        Args: { p_group_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_group_member: {
+        Args: { p_group_id: string; p_user_id: string }
+        Returns: boolean
+      }
       link_match_to_pairing: {
         Args: { p_match_id: string; p_pairing_id: number }
         Returns: undefined
@@ -2419,9 +2638,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },
