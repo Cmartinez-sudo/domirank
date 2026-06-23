@@ -19,7 +19,6 @@ import { useCallback, useEffect, useState } from "react";
  *    al server action.
  */
 export type Format =
-  | "continuous_league"
   | "swiss"
   | "round_robin"
   | "single_elim";
@@ -56,7 +55,13 @@ export type TournamentDraftUI = {
   rated?: boolean;
   /** Minutos de tiempo límite, o null para "sin límite". */
   time_limit_minutes?: number | null;
-  /** Solo cuando modality='custom'. */
+  /** Rondas planificadas (solo aplica a format='swiss'). 2..12. */
+  rounds_count?: number | null;
+  /**
+   * Puntos objetivo de la partida. Fase B: editable siempre, prepoblado
+   * según modality. Persiste como `custom_goal` en el server action;
+   * `pointsToWin` lo prioriza sobre el default de modality.
+   */
   custom_goal?: number;
   custom_capicua?: number;
   /**
@@ -97,6 +102,12 @@ export function useTournamentDraft(userId: string | null) {
   const [draft, setDraft] = useState<TournamentDraftUI>({});
   const [hasDraft, setHasDraft] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  /**
+   * Flag para drafts viejos con format='continuous_league' (Fase 5).
+   * El caller puede leer este flag para mostrar un toast al usuario.
+   * Reset del field se hace inline: el draft se reescribe sin format.
+   */
+  const [legacyFormatReset, setLegacyFormatReset] = useState(false);
 
   // Cargar draft inicial desde localStorage
   useEffect(() => {
@@ -104,8 +115,16 @@ export function useTournamentDraft(userId: string | null) {
     try {
       const raw = localStorage.getItem(getKey(userId));
       if (raw) {
-        const parsed = JSON.parse(raw) as TournamentDraftUI;
-        setDraft(parsed);
+        const parsed = JSON.parse(raw) as Omit<TournamentDraftUI, "format"> & {
+          format?: string;
+        };
+        // Post-Fase-5: si el draft viejo tiene format='continuous_league',
+        // resetar el field y avisar al caller para que muestre toast.
+        if (parsed.format === "continuous_league") {
+          delete parsed.format;
+          setLegacyFormatReset(true);
+        }
+        setDraft(parsed as TournamentDraftUI);
         setHasDraft(true);
       }
     } catch {
@@ -173,5 +192,17 @@ export function useTournamentDraft(userId: string | null) {
     setHasDraft(false);
   }, [userId]);
 
-  return { draft, setField, saveDraft, clearDraft, hasDraft, initialized };
+  /** Reset del flag (el caller lo invoca después de mostrar el toast). */
+  const acknowledgeLegacyReset = useCallback(() => setLegacyFormatReset(false), []);
+
+  return {
+    draft,
+    setField,
+    saveDraft,
+    clearDraft,
+    hasDraft,
+    initialized,
+    legacyFormatReset,
+    acknowledgeLegacyReset,
+  };
 }

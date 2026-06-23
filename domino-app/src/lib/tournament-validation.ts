@@ -52,11 +52,6 @@ export function validateTournamentConfig(config: {
         }
         break;
       }
-      case "continuous_league":
-        // Sin restricción de paridad — puede ser cualquier número >= 4
-        // (decisión Carlos 2026-05-31). El cap absoluto de 4..64 ya está
-        // arriba.
-        break;
       case "swiss":
         if (config.player_count < 4) {
           errors.player_count = "Suizo requiere al menos 4 jugadores.";

@@ -17,6 +17,11 @@ import { FormatPickerCards } from "@/components/tournament-wizard/FormatPickerCa
 import { PlayersCountStepper } from "@/components/tournament-wizard/PlayersCountStepper";
 import { ModalityChips } from "@/components/tournament-wizard/ModalityChips";
 import { AdvancedOptions } from "@/components/tournament-wizard/AdvancedOptions";
+import {
+  GameConfigSection,
+  DEFAULT_ROUNDS,
+  defaultPointsForModality,
+} from "@/components/tournament-wizard/GameConfigSection";
 
 /**
  * Step 1 — Configuración combinada del torneo.
@@ -32,7 +37,8 @@ import { AdvancedOptions } from "@/components/tournament-wizard/AdvancedOptions"
  */
 export function Step1Form({ userId }: { userId: string }) {
   const router = useRouter();
-  const { draft, setField } = useTournamentDraft(userId);
+  const { draft, setField, legacyFormatReset, acknowledgeLegacyReset } =
+    useTournamentDraft(userId);
 
   // Placeholder dinámico estable durante el lifetime del componente
   const placeholder = useMemo(() => `Polla del ${diaDeSemanaEs()}`, []);
@@ -52,6 +58,12 @@ export function Step1Form({ userId }: { userId: string }) {
   const [rated, setRated] = useState<boolean>(draft.rated ?? true);
   const [timeLimitMinutes, setTimeLimitMinutes] = useState<number | null>(
     draft.time_limit_minutes ?? null,
+  );
+  const [roundsCount, setRoundsCount] = useState<number>(
+    draft.rounds_count ?? DEFAULT_ROUNDS,
+  );
+  const [pointsToWin, setPointsToWin] = useState<number>(
+    draft.custom_goal ?? defaultPointsForModality(draft.modality ?? "ven"),
   );
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -89,6 +101,19 @@ export function Step1Form({ userId }: { userId: string }) {
   const canContinue =
     !!format && nameValid && validation.valid;
 
+  /**
+   * Al cambiar de modalidad, si el valor actual de puntos coincide con el
+   * default conocido de ALGUNA modalidad (100 o 200), lo actualizamos al
+   * default de la nueva. Si el usuario ingresó un override (ej. 175), lo
+   * mantenemos.
+   */
+  function handleModalityChange(next: Modality) {
+    setModality(next);
+    if (pointsToWin === 100 || pointsToWin === 200) {
+      setPointsToWin(defaultPointsForModality(next));
+    }
+  }
+
   function handleContinue() {
     if (!canContinue || !format) return;
     // Si name está vacío, usar el placeholder como nombre
@@ -103,6 +128,12 @@ export function Step1Form({ userId }: { userId: string }) {
       requires_attestation: requiresAttestation,
       rated,
       time_limit_minutes: timeLimitMinutes,
+      // rounds_count solo persiste si el formato lo usa (Suizo). En los demás
+      // formatos pasamos null para que el motor decida.
+      rounds_count: format === "swiss" ? roundsCount : null,
+      // pointsToWin se mapea a `custom_goal`; el server action prioriza este
+      // sobre el default de modality (lógica `pointsToWin` en tournaments.ts).
+      custom_goal: pointsToWin,
       currentStep: 2,
     });
     router.push("/tournaments/new/step-2");
@@ -118,6 +149,26 @@ export function Step1Form({ userId }: { userId: string }) {
       }}
     >
       <div className="max-w-2xl mx-auto w-full px-4 pt-6 space-y-6">
+        {/* Aviso si el draft viejo tenía Liga continua (Fase 5) */}
+        {legacyFormatReset && (
+          <div className="p-3 rounded-xl border border-info/30 bg-info/10 text-info text-sm flex items-start justify-between gap-3">
+            <span>
+              El formato <strong>Liga continua</strong> ya no existe. Elegí
+              otro formato para continuar con este borrador. Usá{" "}
+              <a href="/groups" className="underline font-semibold">Grupos</a>{" "}
+              para organizar partidas recurrentes.
+            </span>
+            <button
+              type="button"
+              onClick={acknowledgeLegacyReset}
+              aria-label="Descartar aviso"
+              className="text-info hover:opacity-70 transition-opacity shrink-0"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Nombre */}
         <section>
           <label htmlFor="tournament-name" className="label block mb-2">
@@ -170,7 +221,22 @@ export function Step1Form({ userId }: { userId: string }) {
         {/* Modalidad */}
         <section>
           <label className="label block mb-2">Modalidad</label>
-          <ModalityChips value={modality} onChange={setModality} />
+          <ModalityChips value={modality} onChange={handleModalityChange} />
+        </section>
+
+        {/* Configuración de juego (Fase B) */}
+        <section>
+          <GameConfigSection
+            format={format}
+            modality={modality}
+            playerCount={playerCount}
+            roundsCount={roundsCount}
+            onRoundsCountChange={setRoundsCount}
+            timeLimitMinutes={timeLimitMinutes}
+            onTimeLimitMinutesChange={setTimeLimitMinutes}
+            pointsToWin={pointsToWin}
+            onPointsToWinChange={setPointsToWin}
+          />
         </section>
 
         {/* Opciones avanzadas (colapsadas por default) */}
@@ -186,8 +252,6 @@ export function Step1Form({ userId }: { userId: string }) {
             onRequiresAttestationChange={setRequiresAttestation}
             rated={rated}
             onRatedChange={setRated}
-            timeLimitMinutes={timeLimitMinutes}
-            onTimeLimitMinutesChange={setTimeLimitMinutes}
           />
         </section>
       </div>

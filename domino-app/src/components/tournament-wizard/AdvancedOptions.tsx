@@ -20,18 +20,7 @@ type Props = {
 
   rated: boolean;
   onRatedChange: (v: boolean) => void;
-
-  timeLimitMinutes: number | null;
-  onTimeLimitMinutesChange: (v: number | null) => void;
 };
-
-const TIME_PRESETS: Array<{ value: number | null; label: string }> = [
-  { value: null, label: "Sin límite" },
-  { value: 15, label: "15min" },
-  { value: 30, label: "30min" },
-  { value: 45, label: "45min" },
-  { value: 60, label: "60min" },
-];
 
 /**
  * Sección colapsable de opciones avanzadas.
@@ -42,7 +31,9 @@ const TIME_PRESETS: Array<{ value: number | null; label: string }> = [
  *  - Visibilidad (radios privada / por código)
  *  - Requiere confirmación (toggle) → escribe a `requires_attestation`
  *  - Afecta rating Elo (toggle) → escribe a `rated`
- *  - Tiempo límite (selector) → escribe a `time_limit_minutes`
+ *
+ * El campo "Tiempo por ronda" antes vivía aquí; en Fase B se movió a
+ * `GameConfigSection` (visible siempre, no más colapsado).
  */
 export function AdvancedOptions({
   numBoards,
@@ -55,8 +46,6 @@ export function AdvancedOptions({
   onRequiresAttestationChange,
   rated,
   onRatedChange,
-  timeLimitMinutes,
-  onTimeLimitMinutesChange,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
 
@@ -198,30 +187,6 @@ export function AdvancedOptions({
             checked={rated}
             onChange={onRatedChange}
           />
-
-          {/* Time limit */}
-          <div>
-            <label className="label block mb-2">Tiempo límite por partida</label>
-            <div className="grid grid-cols-5 gap-1.5">
-              {TIME_PRESETS.map((p) => {
-                const selected = timeLimitMinutes === p.value;
-                return (
-                  <button
-                    key={p.label}
-                    type="button"
-                    onClick={() => onTimeLimitMinutesChange(p.value)}
-                    className={`py-2.5 rounded-lg border text-xs font-semibold transition-all ${
-                      selected
-                        ? "bg-primary/10 border-primary/50 text-primary"
-                        : "bg-surface border-border text-text-mute hover:border-border-strong"
-                    }`}
-                  >
-                    {p.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
         </div>
       )}
     </div>

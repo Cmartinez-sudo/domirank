@@ -13,9 +13,9 @@ import { describe, it, expect } from "vitest";
 import { validateTournamentConfig, diaDeSemanaEs } from "../tournament-validation";
 
 describe("validateTournamentConfig — happy paths", () => {
-  it("continuous_league con 4 jugadores y 1 mesa: válido", () => {
+  it("swiss con 4 jugadores y 1 mesa: válido", () => {
     const res = validateTournamentConfig({
-      format: "continuous_league",
+      format: "swiss",
       player_count: 4,
       num_boards: 1,
     });
@@ -23,9 +23,9 @@ describe("validateTournamentConfig — happy paths", () => {
     expect(res.errors).toEqual({});
   });
 
-  it("continuous_league con 8 jugadores y 2 mesas: válido", () => {
+  it("swiss con 8 jugadores y 2 mesas: válido", () => {
     const res = validateTournamentConfig({
-      format: "continuous_league",
+      format: "swiss",
       player_count: 8,
       num_boards: 2,
     });
@@ -132,41 +132,41 @@ describe("validateTournamentConfig — reglas por formato", () => {
     expect(res.errors.player_count).toMatch(/4, 8, 16, 32 o 64/);
   });
 
-  it("continuous_league con 6 jugadores → válido (acepta cualquier ≥ 4)", () => {
+  it("swiss con 6 jugadores → válido (acepta cualquier ≥ 4)", () => {
     const res = validateTournamentConfig({
-      format: "continuous_league",
+      format: "swiss",
       player_count: 6,
       num_boards: 1,
     });
     expect(res.valid).toBe(true);
   });
 
-  it("continuous_league con 5 jugadores (impar) → válido", () => {
+  it("swiss con 5 jugadores (impar) → válido", () => {
     const res = validateTournamentConfig({
-      format: "continuous_league",
+      format: "swiss",
       player_count: 5,
       num_boards: 1,
     });
     expect(res.valid).toBe(true);
   });
 
-  it("continuous_league con 16 jugadores → válido", () => {
+  it("swiss con 16 jugadores → válido", () => {
     const res = validateTournamentConfig({
-      format: "continuous_league",
+      format: "swiss",
       player_count: 16,
       num_boards: 4,
     });
     expect(res.valid).toBe(true);
   });
 
-  it("continuous_league con 3 jugadores → error (cap mínimo 4)", () => {
+  it("swiss con 3 jugadores → error (cap mínimo 4)", () => {
     const res = validateTournamentConfig({
-      format: "continuous_league",
+      format: "swiss",
       player_count: 3,
       num_boards: 1,
     });
     expect(res.valid).toBe(false);
-    expect(res.errors.player_count).toMatch(/Mínimo 4/);
+    expect(res.errors.player_count).toMatch(/Mínimo 4|al menos 4/);
   });
 
   it("single_elim con 32 jugadores → válido (potencia de 2)", () => {
@@ -203,7 +203,7 @@ describe("validateTournamentConfig — num_boards", () => {
   it("num_boards = 3 con player_count = 8 → error (máximo 2 mesas)", () => {
     // floor(8/4) = 2, num_boards=3 excede
     const res = validateTournamentConfig({
-      format: "continuous_league",
+      format: "swiss",
       player_count: 8,
       num_boards: 3,
     });
@@ -213,7 +213,7 @@ describe("validateTournamentConfig — num_boards", () => {
 
   it("num_boards = 1 con player_count = 4 → válido (1 mesa = 1 match)", () => {
     const res = validateTournamentConfig({
-      format: "continuous_league",
+      format: "swiss",
       player_count: 4,
       num_boards: 1,
     });
