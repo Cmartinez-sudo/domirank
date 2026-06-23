@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       friend_requests: {
@@ -1376,14 +1401,6 @@ export type Database = {
           d9_doubles_points_won: number
           d9_doubles_sigma: number
           d9_doubles_wins: number
-          d9_singles_elo: number
-          d9_singles_games: number
-          d9_singles_losses: number
-          d9_singles_mu: number
-          d9_singles_points_lost: number
-          d9_singles_points_won: number
-          d9_singles_sigma: number
-          d9_singles_wins: number
           date_of_birth: string | null
           default_modality: string | null
           display_name: string | null
@@ -1413,14 +1430,6 @@ export type Database = {
           reliability_volume: number
           role: string
           signup_method: string | null
-          singles_elo: number
-          singles_games: number
-          singles_losses: number
-          singles_mu: number
-          singles_points_lost: number
-          singles_points_won: number
-          singles_sigma: number
-          singles_wins: number
           terms_accepted_at: string | null
           updated_at: string
           username: string
@@ -1440,14 +1449,6 @@ export type Database = {
           d9_doubles_points_won?: number
           d9_doubles_sigma?: number
           d9_doubles_wins?: number
-          d9_singles_elo?: number
-          d9_singles_games?: number
-          d9_singles_losses?: number
-          d9_singles_mu?: number
-          d9_singles_points_lost?: number
-          d9_singles_points_won?: number
-          d9_singles_sigma?: number
-          d9_singles_wins?: number
           date_of_birth?: string | null
           default_modality?: string | null
           display_name?: string | null
@@ -1477,14 +1478,6 @@ export type Database = {
           reliability_volume?: number
           role?: string
           signup_method?: string | null
-          singles_elo?: number
-          singles_games?: number
-          singles_losses?: number
-          singles_mu?: number
-          singles_points_lost?: number
-          singles_points_won?: number
-          singles_sigma?: number
-          singles_wins?: number
           terms_accepted_at?: string | null
           updated_at?: string
           username: string
@@ -1504,14 +1497,6 @@ export type Database = {
           d9_doubles_points_won?: number
           d9_doubles_sigma?: number
           d9_doubles_wins?: number
-          d9_singles_elo?: number
-          d9_singles_games?: number
-          d9_singles_losses?: number
-          d9_singles_mu?: number
-          d9_singles_points_lost?: number
-          d9_singles_points_won?: number
-          d9_singles_sigma?: number
-          d9_singles_wins?: number
           date_of_birth?: string | null
           default_modality?: string | null
           display_name?: string | null
@@ -1541,14 +1526,6 @@ export type Database = {
           reliability_volume?: number
           role?: string
           signup_method?: string | null
-          singles_elo?: number
-          singles_games?: number
-          singles_losses?: number
-          singles_mu?: number
-          singles_points_lost?: number
-          singles_points_won?: number
-          singles_sigma?: number
-          singles_wins?: number
           terms_accepted_at?: string | null
           updated_at?: string
           username?: string
@@ -1829,6 +1806,7 @@ export type Database = {
           rated: boolean
           requires_attestation: boolean
           rounds: number
+          rounds_count: number | null
           session_started_at: string | null
           status: string
           tables_count: number
@@ -1857,6 +1835,7 @@ export type Database = {
           rated?: boolean
           requires_attestation?: boolean
           rounds?: number
+          rounds_count?: number | null
           session_started_at?: string | null
           status?: string
           tables_count?: number
@@ -1885,6 +1864,7 @@ export type Database = {
           rated?: boolean
           requires_attestation?: boolean
           rounds?: number
+          rounds_count?: number | null
           session_started_at?: string | null
           status?: string
           tables_count?: number
@@ -2030,6 +2010,8 @@ export type Database = {
       group_leaderboard: {
         Row: {
           diff: number | null
+          effectiveness_coefficient: number | null
+          effectiveness_percent: number | null
           group_id: string | null
           losses: number | null
           matches_played: number | null
@@ -2104,17 +2086,6 @@ export type Database = {
           d6_doubles_points_won: number | null
           d6_doubles_sigma: number | null
           d6_doubles_wins: number | null
-          d6_singles_display: number | null
-          d6_singles_display_legacy: number | null
-          d6_singles_elo: number | null
-          d6_singles_games: number | null
-          d6_singles_losses: number | null
-          d6_singles_mu: number | null
-          d6_singles_ordinal: number | null
-          d6_singles_points_lost: number | null
-          d6_singles_points_won: number | null
-          d6_singles_sigma: number | null
-          d6_singles_wins: number | null
           d9_doubles_display: number | null
           d9_doubles_elo: number | null
           d9_doubles_games: number | null
@@ -2125,16 +2096,6 @@ export type Database = {
           d9_doubles_points_won: number | null
           d9_doubles_sigma: number | null
           d9_doubles_wins: number | null
-          d9_singles_display: number | null
-          d9_singles_elo: number | null
-          d9_singles_games: number | null
-          d9_singles_losses: number | null
-          d9_singles_mu: number | null
-          d9_singles_ordinal: number | null
-          d9_singles_points_lost: number | null
-          d9_singles_points_won: number | null
-          d9_singles_sigma: number | null
-          d9_singles_wins: number | null
           default_modality: string | null
           display_name: string | null
           global_display: number | null
@@ -2231,6 +2192,10 @@ export type Database = {
         Args: { p_action: string; p_comment?: string; p_match_id: string }
         Returns: string
       }
+      attribute_match_to_groups: {
+        Args: { p_attribution_type?: string; p_match_id: string }
+        Returns: number
+      }
       auto_confirm_stale_matches: { Args: never; Returns: string[] }
       calc_day_streak: {
         Args: {
@@ -2252,12 +2217,6 @@ export type Database = {
           d9_games: number
           d9_mu: number
           d9_sigma: number
-          s6_games: number
-          s6_mu: number
-          s6_sigma: number
-          s9_games: number
-          s9_mu: number
-          s9_sigma: number
         }
         Returns: number
       }
@@ -2499,6 +2458,10 @@ export type Database = {
       }
       to_display_rating: { Args: { ordinal: number }; Returns: number }
       to_display_rating_elo: { Args: { p_elo: number }; Returns: number }
+      transfer_group_admin: {
+        Args: { p_group_id: string; p_new_admin_id: string }
+        Returns: undefined
+      }
       transfer_score_keeper: {
         Args: { p_match_id: string; p_new_keeper_user_id: string }
         Returns: undefined
@@ -2638,6 +2601,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
