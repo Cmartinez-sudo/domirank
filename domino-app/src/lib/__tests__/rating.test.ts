@@ -267,13 +267,11 @@ describe("toDisplayRating", () => {
 
 describe("globalRating", () => {
   it("weighted average of two active buckets", () => {
-    // d6_singles: elo=1600, games=20; d6_doubles: elo=1700, games=30
-    // weighted = (1600*20 + 1700*30) / 50 = (32000 + 51000) / 50 = 83000/50 = 1660
+    // d6_doubles: elo=1600, games=20; d9_doubles: elo=1700, games=30
+    // weighted = (1600*20 + 1700*30) / 50 = 83000/50 = 1660
     const result = globalRating({
-      d6_singles: { elo: 1600, games_played: 20 },
-      d6_doubles: { elo: 1700, games_played: 30 },
-      d9_singles: { elo: DEFAULT_ELO, games_played: 0 },
-      d9_doubles: { elo: DEFAULT_ELO, games_played: 0 },
+      d6_doubles: { elo: 1600, games_played: 20 },
+      d9_doubles: { elo: 1700, games_played: 30 },
     });
     expect(result.elo).toBe(1660);
     expect(result.games_played).toBe(50);
@@ -282,9 +280,7 @@ describe("globalRating", () => {
 
   it("no buckets played → display is null", () => {
     const result = globalRating({
-      d6_singles: { elo: DEFAULT_ELO, games_played: 0 },
       d6_doubles: { elo: DEFAULT_ELO, games_played: 0 },
-      d9_singles: { elo: DEFAULT_ELO, games_played: 0 },
       d9_doubles: { elo: DEFAULT_ELO, games_played: 0 },
     });
     expect(result.display).toBeNull();
@@ -293,9 +289,7 @@ describe("globalRating", () => {
 
   it("total games < DOMIRANK_MIN_GAMES → display is null", () => {
     const result = globalRating({
-      d6_singles: { elo: 1600, games_played: 3 },
-      d6_doubles: { elo: DEFAULT_ELO, games_played: 0 },
-      d9_singles: { elo: DEFAULT_ELO, games_played: 0 },
+      d6_doubles: { elo: 1600, games_played: 3 },
       d9_doubles: { elo: DEFAULT_ELO, games_played: 0 },
     });
     expect(result.games_played).toBe(3);
@@ -305,9 +299,7 @@ describe("globalRating", () => {
 
   it("total games >= DOMIRANK_MIN_GAMES → display is a number", () => {
     const result = globalRating({
-      d6_singles: { elo: 1600, games_played: 5 },
-      d6_doubles: { elo: DEFAULT_ELO, games_played: 0 },
-      d9_singles: { elo: DEFAULT_ELO, games_played: 0 },
+      d6_doubles: { elo: 1600, games_played: 5 },
       d9_doubles: { elo: DEFAULT_ELO, games_played: 0 },
     });
     expect(result.display).not.toBeNull();

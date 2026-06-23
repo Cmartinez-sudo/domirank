@@ -14,7 +14,7 @@ import { sendEmail } from "@/lib/email";
 
 export type MatchEmailMeta = {
   matchId:     string;
-  format:      "singles" | "doubles";
+  format:      "doubles";
   setSize:     "d6" | "d9";
   scoreTeam1:  number;
   scoreTeam2:  number;
@@ -80,7 +80,7 @@ export async function buildMatchEmailMeta(
 
   return {
     matchId:    match.id,
-    format:     (match.format ?? "doubles") as "singles" | "doubles",
+    format:     "doubles",
     setSize:    (match.set_size ?? "d6") as "d6" | "d9",
     scoreTeam1: scores[1] ?? 0,
     scoreTeam2: scores[2] ?? 0,

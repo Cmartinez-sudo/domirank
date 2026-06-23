@@ -153,11 +153,10 @@ export function ColHeader({
 }
 
 /**
- * Tooltip explicando las columnas del Ranking. Variantes por tab:
- *   - global  → S/P = "partidas singles · partidas parejas"
- *   - singles/doubles → W% = "porcentaje de partidas ganadas"
+ * Tooltip explicando las columnas del Ranking.
+ * Post-Fase-A: solo DomiRank Global (sin tabs).
  */
-export function LeaderboardColumnsInfo({ tab }: { tab: "global" | "singles" | "doubles" }) {
+export function LeaderboardColumnsInfo() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -179,20 +178,11 @@ export function LeaderboardColumnsInfo({ tab }: { tab: "global" | "singles" | "d
     { k: "Jugador", t: "Username y display name. Click para ir al perfil." },
     {
       k: "DomiRank",
-      t: tab === "global"
-        ? "Tu rating visible (1-20). Promedio ponderado por partidas de tus buckets activos. Elo 1000 → 1.0, Elo 2200 → 20.0."
-        : "Tu rating visible (1-20) en este formato. = to_display(Elo): 1 + ((elo-1000)/1200)×19.",
+      t: "Tu rating visible (1-20). Promedio ponderado por partidas de tus buckets activos (d6 + d9 parejas). Elo 1000 → 1.0, Elo 2200 → 20.0.",
     },
     { k: "Elo", t: "Rating Elo interno. Empieza en 1500. Sube al ganar, baja al perder. Primeras 10 partidas son Provisional (K=40, se mueve rápido)." },
-    {
-      k: "Partidas",
-      t: tab === "global"
-        ? "Total de partidas confirmadas en TODOS los formatos. Mínimo 5 para aparecer en el global."
-        : "Partidas confirmadas en este formato específico.",
-    },
-    tab === "global"
-      ? { k: "S / P", t: "Partidas en singles · partidas en parejas (doble-6)." }
-      : { k: "W%", t: "Porcentaje de partidas ganadas en este formato." },
+    { k: "Partidas", t: "Total de partidas confirmadas (d6 + d9 parejas). Mínimo 5 para aparecer en el ranking." },
+    { k: "d6 / d9", t: "Partidas en doble-6 · partidas en doble-9 (ambas en parejas)." },
   ];
 
   return (
@@ -220,11 +210,9 @@ export function LeaderboardColumnsInfo({ tab }: { tab: "global" | "singles" | "d
               </div>
             ))}
           </dl>
-          {tab === "global" && (
-            <div className="mt-3 pt-3 border-t border-border/50 text-xs text-text-mute leading-relaxed">
-              <strong className="text-text-dim">Importante:</strong> si solo juegas un formato (e.g., solo parejas), tu DomiRank Global = tu rating Elo de parejas. Los formatos sin partidas no cuentan.
-            </div>
-          )}
+          <div className="mt-3 pt-3 border-t border-border/50 text-xs text-text-mute leading-relaxed">
+            <strong className="text-text-dim">Importante:</strong> si solo juegas un set (e.g., solo doble-6), tu DomiRank Global = tu Elo en ese set. Los sets sin partidas no cuentan.
+          </div>
         </div>
       )}
     </div>

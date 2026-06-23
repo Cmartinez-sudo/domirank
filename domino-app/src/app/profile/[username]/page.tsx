@@ -318,7 +318,7 @@ export default async function PublicProfile({
                     <div className="flex items-center gap-2 mt-1.5 text-xs text-text-mute">
                       <span>{new Date(r.created_at).toLocaleDateString("es", { day: "numeric", month: "short" })}</span>
                       <span className="opacity-50">·</span>
-                      <span>{r.matches?.format === "singles" ? "Singles" : "Parejas"} · {r.matches?.target_points} pts</span>
+                      <span>Parejas · {r.matches?.target_points} pts</span>
                       {isPending && <span className="badge bg-yellow-400/15 text-yellow-400 ml-auto">Pendiente</span>}
                       {isDisputed && <span className="badge bg-danger/15 text-danger ml-auto">Disputa</span>}
                       {isVoid && <span className="badge bg-surface-3 text-text-mute ml-auto">Anulada</span>}

@@ -24,13 +24,11 @@ type Props = {
  * is decided upstream via `shouldShowModality` in src/lib/profile.ts.
  */
 export function ModalityCard({ modality, isOwnView, variant = "compact" }: Props) {
-  const { title, display, elo, games, wins, losses, emptyCopy, ctaFormat, ctaSet } = modality;
+  const { title, display, elo, games, wins, losses, emptyCopy, ctaSet } = modality;
   const hasGames = games > 0;
 
   if (!hasGames && isOwnView) {
-    return (
-      <EmptyState title={title} emptyCopy={emptyCopy} ctaFormat={ctaFormat} ctaSet={ctaSet} />
-    );
+    return <EmptyState title={title} emptyCopy={emptyCopy} ctaSet={ctaSet} />;
   }
 
   if (variant === "detailed") {
@@ -106,15 +104,13 @@ function DetailedCard({ title, display, elo, games, wins, losses }: {
   );
 }
 
-function EmptyState({ title, emptyCopy, ctaFormat, ctaSet }: {
+function EmptyState({ title, emptyCopy, ctaSet }: {
   title: string;
   emptyCopy: string;
-  ctaFormat: "singles" | "doubles";
   ctaSet: "d6" | "d9";
 }) {
-  // Pre-select format + set via query params. The new-match wizard
-  // already supports these (TournamentWizardRefactor sprint).
-  const href = `/matches/new?format=${ctaFormat}&set=${ctaSet}`;
+  // Pre-select set via query param. Post-Fase-A: format siempre es 'doubles'.
+  const href = `/matches/new?set=${ctaSet}`;
   return (
     <div className="bg-surface-2 rounded-md p-4 border border-dashed border-border">
       <div className="text-text-mute text-sm">{title}</div>

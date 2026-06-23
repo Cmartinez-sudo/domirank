@@ -41,9 +41,10 @@ export async function generateInitialPairings(tournamentId: string): Promise<{ o
     const modality = t.modality ?? "ven";
     const numBoards: number = (t as Record<string, unknown>).num_boards as number ?? 1;
 
-    // Opción B: leer tournament_pairs para respetar las parejas ya armadas
-    // por el wizard. Si hay pairs definidos, cada par es un team.
-    // Si el torneo es 'singles' (1v1) o no hay pairs, cada jugador es su propio team.
+    // Leer tournament_pairs para respetar las parejas ya armadas por el wizard.
+    // Si hay pairs definidos, cada par es un team. Si no, fallback a buildTeams
+    // con teamSize=2 (post-Fase-A: no hay torneos singles).
+    void modality;
     const { data: dbPairs } = await supabase
       .from("tournament_pairs")
       .select("user_a_id, user_b_id")
@@ -52,15 +53,12 @@ export async function generateInitialPairings(tournamentId: string): Promise<{ o
     let teams: Team[];
 
     if (dbPairs && dbPairs.length > 0) {
-      // Formato con parejas preestablecidas: cada fila de tournament_pairs = un team
       teams = dbPairs.map((p: { user_a_id: string; user_b_id: string }, i: number) => ({
         userIds: [p.user_a_id, p.user_b_id],
         label: `Pareja ${i + 1}`,
       }));
     } else {
-      // Fallback: singles (teamSize=1) o torneo sin pairs definidos → buildTeams legacy
-      const teamSize = modality === "singles" ? 1 : 2;
-      teams = buildTeams(playerIds, teamSize);
+      teams = buildTeams(playerIds, 2);
     }
 
     if (teams.length < 2) return { ok: false, error: "Necesitas al menos 2 equipos" };

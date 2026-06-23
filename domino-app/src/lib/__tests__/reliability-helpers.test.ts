@@ -13,21 +13,21 @@ import {
 
 describe("isRated", () => {
   it("prefiere la columna is_rated del DB cuando viene definida", () => {
-    expect(isRated({ is_rated: true,  singles_games: 0 })).toBe(true);
-    expect(isRated({ is_rated: false, singles_games: 999 })).toBe(false);
+    expect(isRated({ is_rated: true,  doubles_games: 0 })).toBe(true);
+    expect(isRated({ is_rated: false, doubles_games: 999 })).toBe(false);
   });
 
-  it("suma los 4 buckets cuando is_rated no viene en el objeto", () => {
-    expect(isRated({ singles_games: 5 })).toBe(true);
-    expect(isRated({ singles_games: 4 })).toBe(false);
-    expect(isRated({ singles_games: 2, doubles_games: 3 })).toBe(true);
-    expect(isRated({ d9_singles_games: 3, d9_doubles_games: 2 })).toBe(true);
-    expect(isRated({ singles_games: 1, doubles_games: 1, d9_singles_games: 1, d9_doubles_games: 1 })).toBe(false);
-    expect(isRated({ singles_games: 1, doubles_games: 1, d9_singles_games: 1, d9_doubles_games: 2 })).toBe(true);
+  it("suma los 2 buckets doubles cuando is_rated no viene en el objeto", () => {
+    expect(isRated({ doubles_games: 5 })).toBe(true);
+    expect(isRated({ doubles_games: 4 })).toBe(false);
+    expect(isRated({ doubles_games: 2, d9_doubles_games: 3 })).toBe(true);
+    expect(isRated({ d9_doubles_games: 5 })).toBe(true);
+    expect(isRated({ doubles_games: 2, d9_doubles_games: 2 })).toBe(false);
+    expect(isRated({ doubles_games: 3, d9_doubles_games: 2 })).toBe(true);
   });
 
   it("trata nulls y undefined como 0", () => {
-    expect(isRated({ singles_games: null, doubles_games: 5 })).toBe(true);
+    expect(isRated({ doubles_games: null, d9_doubles_games: 5 })).toBe(true);
     expect(isRated({})).toBe(false);
   });
 
@@ -36,15 +36,15 @@ describe("isRated", () => {
   });
 
   it("boundary exacto: 4 partidas false, 5 partidas true", () => {
-    expect(isRated({ singles_games: 4 })).toBe(false);
-    expect(isRated({ singles_games: 5 })).toBe(true);
+    expect(isRated({ doubles_games: 4 })).toBe(false);
+    expect(isRated({ doubles_games: 5 })).toBe(true);
   });
 });
 
 describe("getDisplayRating", () => {
   it("retorna null cuando el player es NR (sin importar el elo)", () => {
     expect(getDisplayRating({ is_rated: false, global_elo: 1800 })).toBeNull();
-    expect(getDisplayRating({ singles_games: 4, global_elo: 1800 })).toBeNull();
+    expect(getDisplayRating({ doubles_games: 4, global_elo: 1800 })).toBeNull();
   });
 
   it("usa precomputedDisplay si viene, sin tocar global_elo", () => {

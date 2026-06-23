@@ -81,7 +81,7 @@ export default async function AdminDisputesPage() {
                       Match · {new Date(m.created_at).toLocaleString("es")}
                     </Link>
                     <div className="text-text-mute text-xs mt-1">
-                      {m.format === "singles" ? "Singles" : "Parejas"} · a {m.target_points} pts
+                      Parejas · a {m.target_points} pts
                     </div>
                   </div>
                   <AdminResolveButtons matchId={m.id} />
