@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { requireUser } from '@/lib/auth';
 import { supabaseServer } from '@/lib/supabase/server';
 import { computeStandings } from '@/lib/club-pro/compute-standings';
+import { formatPairName, isIndividualFormat } from '@/lib/club-pro/pair-display';
 import type { Pair, Match, PairStanding } from '@/lib/club-pro/swiss-types';
 
 export const dynamic = 'force-dynamic';
@@ -25,8 +26,8 @@ type PairData = {
   player_a_name: string;
   player_a_email: string;
   player_a_user_id: string | null;
-  player_b_name: string;
-  player_b_email: string;
+  player_b_name: string | null;
+  player_b_email: string | null;
   player_b_user_id: string | null;
   initial_seed: number | null;
   withdrawn_at: string | null;
@@ -56,7 +57,7 @@ export default async function PlayerTournamentPage({
   const { data: tournament } = await supabase
     .from('org_tournaments')
     .select(
-      'id, name, status, rounds_count, current_round_number, target_points, round_duration_minutes, display_slug, organization_id, organizations(name, logo_url, brand_primary_color)',
+      'id, name, status, format, rounds_count, current_round_number, target_points, round_duration_minutes, display_slug, organization_id, organizations(name, logo_url, brand_primary_color)',
     )
     .eq('id', id)
     .maybeSingle();
@@ -134,8 +135,12 @@ export default async function PlayerTournamentPage({
   })) as MatchData[];
 
   const pairById = new Map(pairs.map((p) => [p.id, p]));
-  const partnerName =
-    myPair.player_a_user_id === user.id ? myPair.player_b_name : myPair.player_a_name;
+  const isIndividual = isIndividualFormat(tournament.format);
+  const partnerName = isIndividual
+    ? null
+    : myPair.player_a_user_id === user.id
+      ? myPair.player_b_name
+      : myPair.player_a_name;
 
   // Compute standings.
   const enginePairs: Pair[] = pairs.map((p) => ({
@@ -230,9 +235,11 @@ export default async function PlayerTournamentPage({
 
       {/* My pair card */}
       <section className="rounded-lg border border-slate-200 bg-white p-4">
-        <h2 className="text-xs uppercase tracking-widest text-slate-500">Mi pareja</h2>
+        <h2 className="text-xs uppercase tracking-widest text-slate-500">
+          {isIndividual ? 'Mi participación' : 'Mi pareja'}
+        </h2>
         <p className="mt-1 text-lg font-semibold">
-          Tú & {partnerName}
+          {isIndividual ? 'Tú' : `Tú & ${partnerName}`}
         </p>
         {myStanding && (
           <p className="mt-1 text-sm text-slate-600">
@@ -244,7 +251,7 @@ export default async function PlayerTournamentPage({
         )}
         {myPair.withdrawn_at && (
           <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">
-            Esta pareja se retiró del torneo.
+            {isIndividual ? 'Te retiraste del torneo.' : 'Esta pareja se retiró del torneo.'}
           </p>
         )}
       </section>
@@ -279,7 +286,7 @@ export default async function PlayerTournamentPage({
                 Mesa {myCurrentMatch.table_number}
               </p>
               <p className="mt-1 text-sm text-slate-700">
-                vs <strong>{myOpponentPair ? `${myOpponentPair.player_a_name} & ${myOpponentPair.player_b_name}` : '?'}</strong>
+                vs <strong>{formatPairName(myOpponentPair)}</strong>
               </p>
               <p className="mt-1 text-xs text-slate-500">
                 Partida a {tournament.target_points} tantos.
@@ -319,9 +326,7 @@ export default async function PlayerTournamentPage({
                     <div className="truncate">
                       {isBye
                         ? 'Bye 🛌'
-                        : oppPair
-                          ? `vs ${oppPair.player_a_name} & ${oppPair.player_b_name}`
-                          : 'vs ?'}
+                        : `vs ${formatPairName(oppPair)}`}
                     </div>
                   </div>
                   <div className={`font-mono font-bold ${won ? 'text-emerald-700' : 'text-slate-500'}`}>
@@ -341,7 +346,7 @@ export default async function PlayerTournamentPage({
           <ol className="mt-2 space-y-1">
             {sorted.slice(0, 5).map((s, idx) => {
               const p = pairById.get(s.pairId);
-              const name = p ? `${p.player_a_name} & ${p.player_b_name}` : '?';
+              const name = formatPairName(p);
               const isMe = s.pairId === myPair.id;
               return (
                 <li
