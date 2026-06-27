@@ -39,13 +39,11 @@ export default async function PublicDisplayPage({
 
   if (!tournament) notFound();
 
-  // The DB view exposes `format` via migration 0097 but the generated types
-  // are regenerated in a later commit. Cast through unknown to access it
-  // safely until types catch up.
-  const tournamentWithFormat = tournament as typeof tournament & { format?: string | null };
+  // format is nullable in the view; fall back to swiss_pairs defensively
+  // (only matters if a torneo predates 0097 — backfill defaults it anyway).
   const initialTournament = {
     ...tournament,
-    format: tournamentWithFormat.format ?? 'swiss_pairs',
+    format: tournament.format ?? 'swiss_pairs',
   };
 
   return <DisplayClient slug={slug} initialTournament={initialTournament} />;

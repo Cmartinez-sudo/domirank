@@ -192,7 +192,10 @@ export async function claimInvitation(input: unknown): Promise<ClaimResult> {
     if (pair) {
       const update: Record<string, string> = {};
       if (pair.player_a_email.toLowerCase() === email) update.player_a_user_id = userId;
-      if (pair.player_b_email.toLowerCase() === email) update.player_b_user_id = userId;
+      // player_b_email is NULL when the tournament is individual (1v1).
+      if (pair.player_b_email && pair.player_b_email.toLowerCase() === email) {
+        update.player_b_user_id = userId;
+      }
       if (Object.keys(update).length > 0) {
         await service
           .from('org_tournament_pairs')

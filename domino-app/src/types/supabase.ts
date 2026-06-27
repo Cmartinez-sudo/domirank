@@ -1101,8 +1101,8 @@ export type Database = {
           player_a_email: string
           player_a_name: string
           player_a_user_id: string | null
-          player_b_email: string
-          player_b_name: string
+          player_b_email: string | null
+          player_b_name: string | null
           player_b_user_id: string | null
           tournament_id: string
           withdrawn_at: string | null
@@ -1115,8 +1115,8 @@ export type Database = {
           player_a_email: string
           player_a_name: string
           player_a_user_id?: string | null
-          player_b_email: string
-          player_b_name: string
+          player_b_email?: string | null
+          player_b_name?: string | null
           player_b_user_id?: string | null
           tournament_id: string
           withdrawn_at?: string | null
@@ -1129,8 +1129,8 @@ export type Database = {
           player_a_email?: string
           player_a_name?: string
           player_a_user_id?: string | null
-          player_b_email?: string
-          player_b_name?: string
+          player_b_email?: string | null
+          player_b_name?: string | null
           player_b_user_id?: string | null
           tournament_id?: string
           withdrawn_at?: string | null
@@ -2128,6 +2128,7 @@ export type Database = {
           current_round_number: number | null
           display_slug: string | null
           finished_at: string | null
+          format: string | null
           id: string | null
           name: string | null
           organization_logo_url: string | null
