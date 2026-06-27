@@ -122,6 +122,11 @@ CREATE TRIGGER trg_enforce_tournament_format_immutable
 -- ─── 6. View pública: exponer format ──────────────────────────
 -- El display público necesita saber el format para condicionar
 -- labels ("JUGADOR" vs "PAREJA") y nombres ("Pedro" vs "Pedro & X").
+--
+-- IMPORTANTE: CREATE OR REPLACE VIEW reemplaza la SELECT list completa.
+-- Esta definición DEBE incluir todas las columnas que estaban en 0084
+-- (target_points, tournament_logo_url, sponsor_1/2_logo_url) — omitirlas
+-- las haría desaparecer del display público (sponsors, meta de tantos).
 
 CREATE OR REPLACE VIEW public.tournament_public_display AS
 SELECT
@@ -133,9 +138,12 @@ SELECT
   t.current_round_number,
   t.rounds_count,
   t.round_duration_minutes,
-  t.tiebreaker,
+  t.target_points,
   t.started_at,
   t.finished_at,
+  t.logo_url             AS tournament_logo_url,
+  t.sponsor_1_logo_url,
+  t.sponsor_2_logo_url,
   o.name            AS organization_name,
   o.slug            AS organization_slug,
   o.logo_url        AS organization_logo_url,

@@ -19,7 +19,7 @@ BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
-SELECT plan(15);
+SELECT plan(19);
 
 -- ============================================================
 -- BLOQUE 1 — Schema
@@ -41,10 +41,28 @@ SELECT col_has_check(
   'CHECK constraint pair_consistency referencia player_b_name'
 );
 
--- 1.3 View tournament_public_display tiene columna format
+-- 1.3 View tournament_public_display tiene columna format + las preexistentes
+-- (regression guard: CREATE OR REPLACE VIEW en 0097 NO debe dropear columnas
+--  de migrations anteriores como sponsors o target_points).
 SELECT has_column(
   'public', 'tournament_public_display', 'format',
   'tournament_public_display expone format'
+);
+SELECT has_column(
+  'public', 'tournament_public_display', 'target_points',
+  'tournament_public_display preserva target_points (post-0081)'
+);
+SELECT has_column(
+  'public', 'tournament_public_display', 'tournament_logo_url',
+  'tournament_public_display preserva tournament_logo_url (post-0084)'
+);
+SELECT has_column(
+  'public', 'tournament_public_display', 'sponsor_1_logo_url',
+  'tournament_public_display preserva sponsor_1_logo_url (post-0084)'
+);
+SELECT has_column(
+  'public', 'tournament_public_display', 'sponsor_2_logo_url',
+  'tournament_public_display preserva sponsor_2_logo_url (post-0084)'
 );
 
 -- 1.4 Triggers existen

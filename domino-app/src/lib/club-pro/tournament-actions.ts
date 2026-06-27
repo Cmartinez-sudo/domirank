@@ -136,7 +136,7 @@ export async function createTournament(input: unknown): Promise<CreateTournament
     }
     return {
       ok: false,
-      error: 'Datos inválidos. Revisá el formulario.',
+      error: 'Datos inválidos. Revisa el formulario.',
       fieldErrors,
     };
   }
@@ -815,7 +815,7 @@ export async function updateTournament(input: unknown): Promise<UpdateTournament
       const key = issue.path.join('.') || '_';
       (fieldErrors[key] ??= []).push(issue.message);
     }
-    return { ok: false, error: 'Datos inválidos. Revisá el formulario.', fieldErrors };
+    return { ok: false, error: 'Datos inválidos. Revisa el formulario.', fieldErrors };
   }
   const data = parsed.data;
 
