@@ -658,12 +658,13 @@ export async function sendTournamentInvitations(input: unknown): Promise<SendInv
   const { data: tournament, error: tErr } = await supabase
     .from('org_tournaments')
     .select(
-      'id, name, organization_id, target_points, rounds_count, round_duration_minutes, sponsor_1_logo_url, sponsor_2_logo_url',
+      'id, name, format, organization_id, target_points, rounds_count, round_duration_minutes, sponsor_1_logo_url, sponsor_2_logo_url',
     )
     .eq('id', parsed.data.tournamentId)
     .eq('organization_id', org.id)
     .maybeSingle();
   if (tErr || !tournament) return { ok: false, error: 'Torneo no encontrado' };
+  const isIndividual = tournament.format === 'swiss_individual';
 
   const { data: pairsRaw } = await supabase
     .from('org_tournament_pairs')
@@ -693,10 +694,17 @@ export async function sendTournamentInvitations(input: unknown): Promise<SendInv
   const failures: string[] = [];
 
   for (const pair of pairs) {
-    const players = [
-      { name: pair.player_a_name, email: pair.player_a_email, partner: pair.player_b_name },
-      { name: pair.player_b_name, email: pair.player_b_email, partner: pair.player_a_name },
+    // For individual tournaments, player_b_* are NULL — only player A exists.
+    const players: Array<{ name: string; email: string; partner: string | null }> = [
+      { name: pair.player_a_name, email: pair.player_a_email, partner: isIndividual ? null : pair.player_b_name },
     ];
+    if (!isIndividual && pair.player_b_name && pair.player_b_email) {
+      players.push({
+        name: pair.player_b_name,
+        email: pair.player_b_email,
+        partner: pair.player_a_name,
+      });
+    }
 
     for (const player of players) {
       const emailLower = player.email.toLowerCase();
@@ -729,6 +737,7 @@ export async function sendTournamentInvitations(input: unknown): Promise<SendInv
       const template = tournamentInvitationEmail({
         recipientName: player.name,
         partnerName: player.partner,
+        isIndividual,
         tournamentName: tournament.name,
         orgName: org.name,
         orgLogoUrl: org.logo_url ?? undefined,
