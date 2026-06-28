@@ -1,11 +1,12 @@
 import { notFound } from 'next/navigation';
 import { requireOrgMember } from '@/lib/club-pro/auth';
 import { supabaseServer } from '@/lib/supabase/server';
+import { formatPairName } from '@/lib/club-pro/pair-display';
 import { MatchScoreCard } from './MatchScoreCard';
 
 export const dynamic = 'force-dynamic';
 
-type PairMini = { id: string; player_a_name: string; player_b_name: string };
+type PairMini = { id: string; player_a_name: string; player_b_name: string | null };
 
 type MatchRow = {
   id: string;
@@ -111,10 +112,8 @@ export default async function RoundsPage({
                     matchId={m.id}
                     tableNumber={m.table_number}
                     status={m.status}
-                    homeName={home ? `${home.player_a_name} & ${home.player_b_name}` : '?'}
-                    awayName={
-                      away ? `${away.player_a_name} & ${away.player_b_name}` : null
-                    }
+                    homeName={formatPairName(home)}
+                    awayName={away ? formatPairName(away) : null}
                     homeScore={m.pair_home_score}
                     awayScore={m.pair_away_score}
                     canWrite={canWrite}

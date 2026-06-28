@@ -2,6 +2,11 @@ import { notFound } from 'next/navigation';
 import { requireOrgMember } from '@/lib/club-pro/auth';
 import { supabaseServer } from '@/lib/supabase/server';
 import { computeStandings } from '@/lib/club-pro/compute-standings';
+import {
+  formatPairName,
+  isIndividualFormat,
+  labelsForFormat,
+} from '@/lib/club-pro/pair-display';
 import type { Pair, Match } from '@/lib/club-pro/swiss-types';
 
 export const dynamic = 'force-dynamic';
@@ -9,7 +14,7 @@ export const dynamic = 'force-dynamic';
 type PairFull = {
   id: string;
   player_a_name: string;
-  player_b_name: string;
+  player_b_name: string | null;
   initial_seed: number | null;
   withdrawn_at: string | null;
 };
@@ -35,11 +40,14 @@ export default async function StandingsPage({
 
   const { data: tournament } = await supabase
     .from('org_tournaments')
-    .select('id, target_points, status, current_round_number')
+    .select('id, target_points, status, current_round_number, format')
     .eq('id', id)
     .eq('organization_id', org.id)
     .maybeSingle();
   if (!tournament) notFound();
+
+  const labels = labelsForFormat(tournament.format);
+  const withdrawnLabel = isIndividualFormat(tournament.format) ? 'Retirado' : 'Retirada';
 
   const [{ data: pairsRaw }, { data: matchesRaw }] = await Promise.all([
     supabase
@@ -114,7 +122,7 @@ export default async function StandingsPage({
         <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
           <tr>
             <th className="px-3 py-2 text-left">#</th>
-            <th className="px-3 py-2 text-left">Pareja</th>
+            <th className="px-3 py-2 text-left">{labels.titleSingular}</th>
             <th className="px-3 py-2 text-right">PG</th>
             <th className="px-3 py-2 text-right">PP</th>
             <th className="px-3 py-2 text-right">CE</th>
@@ -131,10 +139,10 @@ export default async function StandingsPage({
                 <td className="px-3 py-2 font-mono text-xs">{idx + 1}</td>
                 <td className="px-3 py-2">
                   <div className="font-medium">
-                    {p ? `${p.player_a_name} & ${p.player_b_name}` : s.pairId}
+                    {p ? formatPairName(p) : s.pairId}
                   </div>
                   {s.withdrawn && (
-                    <span className="text-xs text-red-700">Retirada</span>
+                    <span className="text-xs text-red-700">{withdrawnLabel}</span>
                   )}
                 </td>
                 <td className="px-3 py-2 text-right font-semibold">{s.wins}</td>

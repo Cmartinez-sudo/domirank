@@ -4,6 +4,11 @@ import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import { computeStandings } from '@/lib/club-pro/compute-standings';
+import {
+  formatPairName,
+  isIndividualFormat,
+  labelsForFormat,
+} from '@/lib/club-pro/pair-display';
 import type { Pair, Match, PairStanding } from '@/lib/club-pro/swiss-types';
 import { RoundTimer } from './RoundTimer';
 import { StandingsPanel } from './StandingsPanel';
@@ -14,6 +19,7 @@ type TournamentView = {
   name: string;
   display_slug: string;
   status: string;
+  format: string;
   current_round_number: number | null;
   rounds_count: number;
   round_duration_minutes: number;
@@ -31,7 +37,7 @@ type TournamentView = {
 type PairData = {
   id: string;
   player_a_name: string;
-  player_b_name: string;
+  player_b_name: string | null;
   initial_seed: number | null;
   withdrawn_at: string | null;
 };
@@ -217,6 +223,8 @@ export function DisplayClient({
     tournament.brand_primary_color && /^#[0-9a-f]{6}$/i.test(tournament.brand_primary_color)
       ? tournament.brand_primary_color
       : '#2563eb';
+  const isIndividual = isIndividualFormat(tournament.format);
+  const formatLabels = labelsForFormat(tournament.format);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
@@ -244,9 +252,14 @@ export function DisplayClient({
             name={tournament.organization_name}
           />
           <div className="min-w-0 text-center">
-            <h1 className="truncate text-[clamp(20px,2.2vw,40px)] font-bold leading-tight text-white">
-              {tournament.name}
-            </h1>
+            <div className="flex items-center justify-center gap-2">
+              <h1 className="truncate text-[clamp(20px,2.2vw,40px)] font-bold leading-tight text-white">
+                {tournament.name}
+              </h1>
+              <span className="shrink-0 rounded-full border border-slate-600 px-2 py-0.5 text-[clamp(10px,0.9vw,14px)] font-semibold uppercase tracking-wider text-slate-300">
+                {formatLabels.badge}
+              </span>
+            </div>
             {tournament.organization_name && (
               <p className="mt-1 truncate text-xs uppercase tracking-wider text-slate-400">
                 {tournament.organization_name}
@@ -287,7 +300,11 @@ export function DisplayClient({
       {/* Main fills all available vertical/horizontal space — 60/40 split favoring standings */}
       <main className="grid min-h-0 flex-1 grid-cols-[60%_40%] gap-[1vw] px-[1vw] py-[1vh]">
         {/* Standings */}
-        <StandingsPanel standings={sortedStandings} pairById={pairById} />
+        <StandingsPanel
+          standings={sortedStandings}
+          pairById={pairById}
+          isIndividual={isIndividual}
+        />
 
         {/* Matches grid — compacter cards because column is narrower now */}
         <section className="flex min-h-0 flex-col gap-3">
@@ -316,7 +333,7 @@ export function DisplayClient({
                         Mesa {m.table_number} — Bye
                       </div>
                       <div className="truncate text-[clamp(16px,1.4vw,24px)] font-medium">
-                        {home ? `${home.player_a_name} & ${home.player_b_name}` : '?'}
+                        {formatPairName(home)}
                       </div>
                     </div>
                   );
@@ -334,7 +351,7 @@ export function DisplayClient({
                     </div>
                     <div className="flex flex-col gap-2">
                       <PlayerRow
-                        name={home ? `${home.player_a_name} & ${home.player_b_name}` : '?'}
+                        name={formatPairName(home)}
                         score={m.pair_home_score}
                         winner={
                           isFinishedMatch &&
@@ -342,7 +359,7 @@ export function DisplayClient({
                         }
                       />
                       <PlayerRow
-                        name={away ? `${away.player_a_name} & ${away.player_b_name}` : '?'}
+                        name={formatPairName(away)}
                         score={m.pair_away_score}
                         winner={
                           isFinishedMatch &&

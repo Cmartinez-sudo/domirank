@@ -2,8 +2,12 @@ import { escapeHtml, safeUrl } from './escape-html';
 
 export type TournamentInvitationInput = {
   recipientName: string;
-  partnerName: string;
+  /** Null when the tournament is individual (no pair partner). */
+  partnerName: string | null;
   tournamentName: string;
+  /** Whether the tournament is individual (1v1) or pairs (2v2). Controls
+   *  pair-vs-individual wording throughout the body. */
+  isIndividual?: boolean;
   orgName: string;
   orgLogoUrl?: string;
   /** Per-tournament metric — drives explanation text in the body. */
@@ -44,6 +48,7 @@ export function tournamentInvitationEmail(input: TournamentInvitationInput): Ren
     recipientName,
     partnerName,
     tournamentName,
+    isIndividual = false,
     orgName,
     orgLogoUrl,
     targetPoints,
@@ -54,8 +59,12 @@ export function tournamentInvitationEmail(input: TournamentInvitationInput): Ren
     waitlistUrl,
   } = input;
 
+  // Defensive: if caller forgot to pass isIndividual but partnerName is null,
+  // treat it as individual to avoid rendering "tu pareja null" in the body.
+  const effectiveIndividual = isIndividual || partnerName === null;
+
   const safeName = escapeHtml(recipientName);
-  const safePartner = escapeHtml(partnerName);
+  const safePartner = partnerName ? escapeHtml(partnerName) : '';
   const safeTournament = escapeHtml(tournamentName);
   const safeOrg = escapeHtml(orgName);
   const safeOrgLogoUrl = orgLogoUrl ? safeUrl(orgLogoUrl) : '';
@@ -63,7 +72,44 @@ export function tournamentInvitationEmail(input: TournamentInvitationInput): Ren
   const safeSponsor2Url = sponsor2LogoUrl ? safeUrl(sponsor2LogoUrl) : '';
   const safeWaitlistUrl = safeUrl(waitlistUrl);
 
-  const subject = `${orgName} te da la bienvenida a "${tournamentName}"`;
+  const subject = effectiveIndividual
+    ? `${orgName} te invita al torneo individual "${tournamentName}"`
+    : `${orgName} te da la bienvenida a "${tournamentName}"`;
+
+  // Per-format wording for the intro paragraph and footer text.
+  const introParagraph = effectiveIndividual
+    ? `Estás confirmado para competir en formato <strong style="color:${C.text};">Individual (1v1)</strong>.
+       Aquí te contamos cómo va a funcionar el torneo y qué necesitas saber para llevarte la copa.`
+    : `Tú y tu pareja <strong style="color:${C.text};">${safePartner}</strong> están confirmados.
+       Aquí te contamos cómo va a funcionar el torneo y qué necesitas saber para llevarte la copa.`;
+
+  const formatRowValue = effectiveIndividual
+    ? 'Sistema Suizo individual (1v1)'
+    : 'Sistema Suizo por parejas (2v2)';
+
+  const targetWinnerCopy = effectiveIndividual
+    ? `Cada partida termina cuando un jugador llega a <strong style="color:${C.primary};">${targetPoints} tantos</strong>,
+       o cuando se cumplen los <strong style="color:${C.primary};">${roundDurationMinutes} minutos</strong>. Si suena el reloj antes,
+       gana quien vaya liderando en ese momento.`
+    : `Cada partida termina cuando una pareja llega a <strong style="color:${C.primary};">${targetPoints} tantos</strong>,
+       o cuando se cumplen los <strong style="color:${C.primary};">${roundDurationMinutes} minutos</strong>. Si suena el reloj antes, gana la pareja
+       que vaya liderando en ese momento.`;
+
+  const championOrderingCopy = effectiveIndividual
+    ? `Al final del torneo, los jugadores se ordenan por <strong style="color:${C.text};">tres criterios en este orden</strong>:`
+    : `Al final del torneo, las parejas se ordenan por <strong style="color:${C.text};">tres criterios en este orden</strong>:`;
+
+  const winsCopy = effectiveIndividual
+    ? 'El jugador que gane más partidas durante el torneo lidera.'
+    : 'La pareja que gane más partidas durante el torneo lidera.';
+
+  const ceCopy = effectiveIndividual
+    ? 'Premia ganar contundente y perder ajustado. Un jugador que aplasta a sus rivales suma más que uno que apenas les gana.'
+    : 'Premia ganar contundente y perder ajustado. Una pareja que aplasta a sus rivales suma más que una que apenas les gana.';
+
+  const pointsCopy = effectiveIndividual
+    ? 'Si los jugadores siguen empatados, gana quien sumó más tantos en total a lo largo del torneo.'
+    : 'Si las parejas siguen empatadas, gana la que sumó más tantos en total a lo largo del torneo.';
 
   // Header with org logo. If org has no logo, fall back to name as text only.
   const orgHeader = safeOrgLogoUrl && safeOrgLogoUrl !== '#'
@@ -145,8 +191,7 @@ export function tournamentInvitationEmail(input: TournamentInvitationInput): Ren
                 ¡Bienvenido, ${safeName}!
               </h2>
               <p style="margin:0 0 16px 0;font-size:16px;line-height:1.6;color:${C.textDim};">
-                Tú y tu pareja <strong style="color:${C.text};">${safePartner}</strong> están confirmados.
-                Aquí te contamos cómo va a funcionar el torneo y qué necesitas saber para llevarte la copa.
+                ${introParagraph}
               </p>
             </td>
           </tr>
@@ -175,13 +220,11 @@ export function tournamentInvitationEmail(input: TournamentInvitationInput): Ren
                       </tr>
                       <tr>
                         <td style="padding:6px 0;font-size:14px;color:${C.textDim};">🤝 Formato</td>
-                        <td style="padding:6px 0;font-size:15px;color:${C.text};font-weight:600;">Sistema Suizo por parejas</td>
+                        <td style="padding:6px 0;font-size:15px;color:${C.text};font-weight:600;">${formatRowValue}</td>
                       </tr>
                     </table>
                     <p style="margin:16px 0 0 0;font-size:13px;line-height:1.5;color:${C.textDim};">
-                      Cada partida termina cuando una pareja llega a <strong style="color:${C.primary};">${targetPoints} tantos</strong>,
-                      o cuando se cumplen los <strong style="color:${C.primary};">${roundDurationMinutes} minutos</strong>. Si suena el reloj antes, gana la pareja
-                      que vaya liderando en ese momento.
+                      ${targetWinnerCopy}
                     </p>
                   </td>
                 </tr>
@@ -196,7 +239,7 @@ export function tournamentInvitationEmail(input: TournamentInvitationInput): Ren
                 Cómo se define al campeón
               </h3>
               <p style="margin:0 0 16px 0;font-size:14px;line-height:1.6;color:${C.textDim};">
-                Al final del torneo, las parejas se ordenan por <strong style="color:${C.text};">tres criterios en este orden</strong>:
+                ${championOrderingCopy}
               </p>
 
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
@@ -209,7 +252,7 @@ export function tournamentInvitationEmail(input: TournamentInvitationInput): Ren
                         </td>
                         <td style="padding:0 0 4px 12px;">
                           <div style="font-size:16px;font-weight:700;color:${C.text};">Partidas ganadas</div>
-                          <div style="font-size:13px;color:${C.textDim};line-height:1.5;">La pareja que gane más partidas durante el torneo lidera.</div>
+                          <div style="font-size:13px;color:${C.textDim};line-height:1.5;">${winsCopy}</div>
                         </td>
                       </tr>
                     </table>
@@ -224,7 +267,7 @@ export function tournamentInvitationEmail(input: TournamentInvitationInput): Ren
                         </td>
                         <td style="padding:0 0 4px 12px;">
                           <div style="font-size:16px;font-weight:700;color:${C.text};">Coeficiente de Efectividad</div>
-                          <div style="font-size:13px;color:${C.textDim};line-height:1.5;">Premia ganar contundente y perder ajustado. Una pareja que aplasta a sus rivales suma más que una que apenas les gana.</div>
+                          <div style="font-size:13px;color:${C.textDim};line-height:1.5;">${ceCopy}</div>
                         </td>
                       </tr>
                     </table>
@@ -239,7 +282,7 @@ export function tournamentInvitationEmail(input: TournamentInvitationInput): Ren
                         </td>
                         <td style="padding:0 0 4px 12px;">
                           <div style="font-size:16px;font-weight:700;color:${C.text};">Tantos acumulados</div>
-                          <div style="font-size:13px;color:${C.textDim};line-height:1.5;">Si las parejas siguen empatadas, gana la que sumó más tantos en total a lo largo del torneo.</div>
+                          <div style="font-size:13px;color:${C.textDim};line-height:1.5;">${pointsCopy}</div>
                         </td>
                       </tr>
                     </table>
@@ -290,26 +333,48 @@ export function tournamentInvitationEmail(input: TournamentInvitationInput): Ren
 </body>
 </html>`;
 
+  const textIntro = effectiveIndividual
+    ? `Estás confirmado para competir en formato Individual (1v1).`
+    : `Tú y tu pareja ${partnerName} están confirmados.`;
+
+  const textFormat = effectiveIndividual
+    ? 'Sistema Suizo individual (1v1)'
+    : 'Sistema Suizo por parejas (2v2)';
+
+  const textMatchEnd = effectiveIndividual
+    ? `Cada partida termina cuando un jugador llega a ${targetPoints} tantos,
+o cuando se cumplen los ${roundDurationMinutes} minutos. Si suena el reloj
+antes, gana quien vaya liderando en ese momento.`
+    : `Cada partida termina cuando una pareja llega a ${targetPoints} tantos,
+o cuando se cumplen los ${roundDurationMinutes} minutos. Si suena el reloj
+antes, gana la pareja que vaya liderando en ese momento.`;
+
+  const textWins = effectiveIndividual
+    ? '1. Partidas ganadas — el jugador que gane más partidas lidera.'
+    : '1. Partidas ganadas — la pareja que gane más partidas lidera.';
+
+  const textPoints = effectiveIndividual
+    ? '3. Tantos acumulados — desempate final entre jugadores.'
+    : '3. Tantos acumulados — desempate final.';
+
   const text = `¡Bienvenido, ${recipientName}!
 
 ${orgName} te da la bienvenida al torneo "${tournamentName}".
 
-Tú y tu pareja ${partnerName} están confirmados.
+${textIntro}
 
 CÓMO FUNCIONA EL TORNEO
 - Meta por partida: ${targetPoints} tantos
 - Rondas: ${roundsCount}
 - Tiempo por ronda: ${roundDurationMinutes} minutos
-- Formato: Sistema Suizo por parejas
+- Formato: ${textFormat}
 
-Cada partida termina cuando una pareja llega a ${targetPoints} tantos,
-o cuando se cumplen los ${roundDurationMinutes} minutos. Si suena el reloj
-antes, gana la pareja que vaya liderando en ese momento.
+${textMatchEnd}
 
 CÓMO SE DEFINE AL CAMPEÓN
-1. Partidas ganadas — la pareja que gane más partidas lidera.
+${textWins}
 2. Coeficiente de Efectividad — premia ganar contundente y perder ajustado.
-3. Tantos acumulados — desempate final.
+${textPoints}
 
 ¿TE GUSTA DOMIRANK?
 Únete al waitlist para ser de los primeros en usar la app cuando lancemos:

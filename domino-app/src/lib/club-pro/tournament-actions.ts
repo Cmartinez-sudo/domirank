@@ -15,26 +15,70 @@ import { tournamentInvitationEmail } from './email-templates';
 
 // ─── Validation schemas ───────────────────────────────────────────────────────
 
+export const TournamentFormatSchema = z.enum(['swiss_pairs', 'swiss_individual']);
+export type TournamentFormat = z.infer<typeof TournamentFormatSchema>;
+
 const PairInputSchema = z.object({
   playerAName: z.string().trim().min(1, 'Falta el nombre del jugador A').max(100),
   playerAEmail: z.string().trim().toLowerCase().email('Email A inválido'),
-  playerBName: z.string().trim().min(1, 'Falta el nombre del jugador B').max(100),
-  playerBEmail: z.string().trim().toLowerCase().email('Email B inválido'),
+  playerBName: z.string().trim().min(1).max(100).optional().or(z.literal('')),
+  playerBEmail: z.string().trim().toLowerCase().optional().or(z.literal('')),
 });
 
-const CreateTournamentInputSchema = z.object({
-  orgSlug: z.string().min(1),
-  name: z.string().trim().min(3, 'El nombre debe tener al menos 3 caracteres').max(150),
-  description: z.string().trim().max(2000).optional().or(z.literal('')),
-  prizeDescription: z.string().trim().max(500).optional().or(z.literal('')),
-  scheduledStartAt: z
-    .string()
-    .refine((s) => !Number.isNaN(new Date(s).getTime()), 'Fecha inválida'),
-  roundsCount: z.coerce.number().int().min(2).max(12),
-  roundDurationMinutes: z.coerce.number().int().min(5).max(180),
-  targetPoints: z.coerce.number().int().min(50).max(500),
-  pairs: z.array(PairInputSchema).min(4, 'Mínimo 4 parejas para arrancar un torneo'),
-});
+const CreateTournamentInputSchema = z
+  .object({
+    orgSlug: z.string().min(1),
+    name: z.string().trim().min(3, 'El nombre debe tener al menos 3 caracteres').max(150),
+    description: z.string().trim().max(2000).optional().or(z.literal('')),
+    prizeDescription: z.string().trim().max(500).optional().or(z.literal('')),
+    scheduledStartAt: z
+      .string()
+      .refine((s) => !Number.isNaN(new Date(s).getTime()), 'Fecha inválida'),
+    format: TournamentFormatSchema.default('swiss_pairs'),
+    roundsCount: z.coerce.number().int().min(2).max(12),
+    roundDurationMinutes: z.coerce.number().int().min(5).max(180),
+    targetPoints: z.coerce.number().int().min(50).max(500),
+    pairs: z.array(PairInputSchema).min(4, 'Mínimo 4 participantes para arrancar un torneo'),
+  })
+  .superRefine((data, ctx) => {
+    // Per-format validation of player_b fields. Done here (not in PairInputSchema)
+    // because the requirement depends on the parent `format`.
+    data.pairs.forEach((pair, index) => {
+      const hasBName = !!pair.playerBName && pair.playerBName.trim().length > 0;
+      const hasBEmail = !!pair.playerBEmail && pair.playerBEmail.trim().length > 0;
+
+      if (data.format === 'swiss_pairs') {
+        if (!hasBName) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['pairs', index, 'playerBName'],
+            message: 'Falta el nombre del jugador B',
+          });
+        }
+        if (!hasBEmail) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['pairs', index, 'playerBEmail'],
+            message: 'Falta el email del jugador B',
+          });
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pair.playerBEmail!)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['pairs', index, 'playerBEmail'],
+            message: 'Email B inválido',
+          });
+        }
+      } else if (data.format === 'swiss_individual') {
+        if (hasBName || hasBEmail) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['pairs', index, 'playerBName'],
+            message: 'En modalidad individual, player_b debe estar vacío',
+          });
+        }
+      }
+    });
+  });
 
 export type CreateTournamentInput = z.infer<typeof CreateTournamentInputSchema>;
 export type CreateTournamentResult =
@@ -48,11 +92,16 @@ const SLUG_RETRY_ATTEMPTS = 3;
 /**
  * Validates that no email appears twice across all pairs.
  * Returns null if OK, or a short error string.
+ * Ignores empty player_b emails (individual format).
  */
 function findDuplicateEmail(pairs: CreateTournamentInput['pairs']): string | null {
   const seen = new Set<string>();
   for (const pair of pairs) {
-    for (const email of [pair.playerAEmail, pair.playerBEmail]) {
+    const emails = [pair.playerAEmail];
+    if (pair.playerBEmail && pair.playerBEmail.trim().length > 0) {
+      emails.push(pair.playerBEmail);
+    }
+    for (const email of emails) {
       if (seen.has(email)) return email;
       seen.add(email);
     }
@@ -87,7 +136,7 @@ export async function createTournament(input: unknown): Promise<CreateTournament
     }
     return {
       ok: false,
-      error: 'Datos inválidos. Revisá el formulario.',
+      error: 'Datos inválidos. Revisa el formulario.',
       fieldErrors,
     };
   }
@@ -121,7 +170,7 @@ export async function createTournament(input: unknown): Promise<CreateTournament
         description: data.description || null,
         prize_description: data.prizeDescription || null,
         scheduled_start_at: data.scheduledStartAt,
-        format: 'swiss_pairs',
+        format: data.format,
         rounds_count: data.roundsCount,
         round_duration_minutes: data.roundDurationMinutes,
         target_points: data.targetPoints,
@@ -150,13 +199,16 @@ export async function createTournament(input: unknown): Promise<CreateTournament
     };
   }
 
-  // Insert pairs.
+  // Insert pairs. For individual format, player_b_* are saved as NULL.
+  // The DB trigger trg_enforce_pair_format_consistency provides a final
+  // safety net against any mismatch that slipped past Zod validation.
+  const isIndividual = data.format === 'swiss_individual';
   const pairRows = data.pairs.map((pair, index) => ({
     tournament_id: tournamentId!,
     player_a_name: pair.playerAName,
     player_a_email: pair.playerAEmail,
-    player_b_name: pair.playerBName,
-    player_b_email: pair.playerBEmail,
+    player_b_name: isIndividual ? null : pair.playerBName!,
+    player_b_email: isIndividual ? null : pair.playerBEmail!,
     initial_seed: index + 1,
   }));
 
@@ -606,12 +658,13 @@ export async function sendTournamentInvitations(input: unknown): Promise<SendInv
   const { data: tournament, error: tErr } = await supabase
     .from('org_tournaments')
     .select(
-      'id, name, organization_id, target_points, rounds_count, round_duration_minutes, sponsor_1_logo_url, sponsor_2_logo_url',
+      'id, name, format, organization_id, target_points, rounds_count, round_duration_minutes, sponsor_1_logo_url, sponsor_2_logo_url',
     )
     .eq('id', parsed.data.tournamentId)
     .eq('organization_id', org.id)
     .maybeSingle();
   if (tErr || !tournament) return { ok: false, error: 'Torneo no encontrado' };
+  const isIndividual = tournament.format === 'swiss_individual';
 
   const { data: pairsRaw } = await supabase
     .from('org_tournament_pairs')
@@ -641,10 +694,17 @@ export async function sendTournamentInvitations(input: unknown): Promise<SendInv
   const failures: string[] = [];
 
   for (const pair of pairs) {
-    const players = [
-      { name: pair.player_a_name, email: pair.player_a_email, partner: pair.player_b_name },
-      { name: pair.player_b_name, email: pair.player_b_email, partner: pair.player_a_name },
+    // For individual tournaments, player_b_* are NULL — only player A exists.
+    const players: Array<{ name: string; email: string; partner: string | null }> = [
+      { name: pair.player_a_name, email: pair.player_a_email, partner: isIndividual ? null : pair.player_b_name },
     ];
+    if (!isIndividual && pair.player_b_name && pair.player_b_email) {
+      players.push({
+        name: pair.player_b_name,
+        email: pair.player_b_email,
+        partner: pair.player_a_name,
+      });
+    }
 
     for (const player of players) {
       const emailLower = player.email.toLowerCase();
@@ -677,6 +737,7 @@ export async function sendTournamentInvitations(input: unknown): Promise<SendInv
       const template = tournamentInvitationEmail({
         recipientName: player.name,
         partnerName: player.partner,
+        isIndividual,
         tournamentName: tournament.name,
         orgName: org.name,
         orgLogoUrl: org.logo_url ?? undefined,
@@ -754,7 +815,7 @@ export async function updateTournament(input: unknown): Promise<UpdateTournament
       const key = issue.path.join('.') || '_';
       (fieldErrors[key] ??= []).push(issue.message);
     }
-    return { ok: false, error: 'Datos inválidos. Revisá el formulario.', fieldErrors };
+    return { ok: false, error: 'Datos inválidos. Revisa el formulario.', fieldErrors };
   }
   const data = parsed.data;
 

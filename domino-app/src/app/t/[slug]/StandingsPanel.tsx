@@ -2,8 +2,9 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { PairStanding } from '@/lib/club-pro/swiss-types';
+import { formatPairName } from '@/lib/club-pro/pair-display';
 
-type PairMini = { id: string; player_a_name: string; player_b_name: string };
+type PairMini = { id: string; player_a_name: string; player_b_name: string | null };
 
 /** Seconds each page stays visible before fading to the next. */
 const PAGE_DURATION_MS = 7_000;
@@ -29,9 +30,11 @@ const ROW_HEIGHT_FALLBACK = 56;
 export function StandingsPanel({
   standings,
   pairById,
+  isIndividual = false,
 }: {
   standings: PairStanding[];
   pairById: Map<string, PairMini>;
+  isIndividual?: boolean;
 }) {
   const listRef = useRef<HTMLDivElement>(null);
   const rowRef = useRef<HTMLLIElement>(null);
@@ -94,7 +97,7 @@ export function StandingsPanel({
       <div className="flex shrink-0 items-center gap-3 rounded-lg bg-slate-900/60 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
         <span className="w-10 text-right">#</span>
         <span className="w-8" /> {/* medal slot */}
-        <span className="flex-1">Pareja</span>
+        <span className="flex-1">{isIndividual ? 'Jugador' : 'Pareja'}</span>
         <span className="w-12 text-center" title="Victorias">V</span>
         <span className="w-12 text-center" title="Derrotas">D</span>
         <span className="w-14 text-right" title="Coeficiente de Efectividad">CE</span>
@@ -109,7 +112,7 @@ export function StandingsPanel({
         >
           {visible.map((s, idx) => {
             const p = pairById.get(s.pairId);
-            const name = p ? `${p.player_a_name} & ${p.player_b_name}` : '?';
+            const name = formatPairName(p);
             const absoluteRank = start + idx;
             const medal =
               absoluteRank === 0 ? '🥇' : absoluteRank === 1 ? '🥈' : absoluteRank === 2 ? '🥉' : '';
