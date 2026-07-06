@@ -2386,6 +2386,7 @@ export type Database = {
         }[]
       }
       get_user_email: { Args: { p_user_id: string }; Returns: string }
+      get_user_id_by_email: { Args: { p_email: string }; Returns: string }
       get_user_pending_tournaments: {
         Args: { p_user_id: string }
         Returns: {
