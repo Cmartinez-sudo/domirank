@@ -69,6 +69,17 @@ vi.mock("@/lib/supabase/server", () => ({
   })),
 }));
 
+// createGroup usa supabaseService() para el write path (RLS bypass tras
+// verificar auth con supabaseServer.getUser). El mock devuelve el mismo
+// query builder que supabaseServer para que los tests sigan funcionando
+// con la misma cola encolada.
+vi.mock("@/lib/supabase/service", () => ({
+  supabaseService: vi.fn(() => ({
+    from: mockFrom,
+    rpc: mockRpc,
+  })),
+}));
+
 vi.mock("@/lib/ratelimit", () => ({
   rl: { tournament: null },
   checkLimit: vi.fn(async () => ({ allowed: true })),
