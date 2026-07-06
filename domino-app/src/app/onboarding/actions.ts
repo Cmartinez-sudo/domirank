@@ -38,10 +38,8 @@ export async function saveOnboarding(formData: FormData) {
 
   if (useAssessment) {
     update.initial_skill_points = skillPoints;
-    // Apply initial Elo to all 4 buckets and global
-    update.singles_elo    = elo;
+    // Aplicar Elo inicial a ambos buckets doubles + global.
     update.doubles_elo    = elo;
-    update.d9_singles_elo = elo;
     update.d9_doubles_elo = elo;
     update.global_elo     = elo;
   }

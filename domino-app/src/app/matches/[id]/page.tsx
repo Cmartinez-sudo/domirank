@@ -96,7 +96,7 @@ export default async function MatchDetail({
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="text-text-mute text-sm">
-            {match.format === "singles" ? "Singles" : "Parejas"} · a {match.target_points} pts ·{" "}
+            Parejas · a {match.target_points} pts ·{" "}
             {new Date(match.created_at).toLocaleString("es")}
           </div>
         </div>

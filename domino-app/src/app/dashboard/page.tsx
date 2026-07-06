@@ -22,8 +22,7 @@ export default async function Dashboard() {
   // All display values come directly from profile_ratings view (single source of truth).
   // Never recompute from mu/sigma in TS — SQL is authoritative.
   const totalGames =
-    (profile.d6_singles_games || 0) + (profile.d6_doubles_games || 0) +
-    (profile.d9_singles_games || 0) + (profile.d9_doubles_games || 0);
+    (profile.d6_doubles_games || 0) + (profile.d9_doubles_games || 0);
   const rated = isRated(profile);
   const remainingToRated = Math.max(0, NR_THRESHOLD - totalGames);
 
@@ -176,7 +175,7 @@ export default async function Dashboard() {
                     <li key={`${r.match_id}-${r.team}`} className="py-3 flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <Link href={`/matches/${r.match_id}`} className="font-medium hover:text-primary truncate block">
-                          {r.matches?.format === "singles" ? "Singles" : "Parejas"} · {r.matches?.target_points} pts
+                          Parejas · {r.matches?.target_points} pts
                         </Link>
                         <div className="text-text-mute text-xs">
                           {new Date(r.created_at).toLocaleString("es")}

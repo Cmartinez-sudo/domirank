@@ -3,7 +3,9 @@
 import { useState, useTransition } from 'react';
 import { createTournament } from '@/lib/club-pro/tournament-actions';
 
-type Pair = {
+type TournamentFormat = 'swiss_pairs' | 'swiss_individual';
+
+type Participant = {
   playerAName: string;
   playerAEmail: string;
   playerBName: string;
@@ -15,13 +17,14 @@ type FormState = {
   description: string;
   prizeDescription: string;
   scheduledStartAt: string;
+  format: TournamentFormat;
   roundsCount: number;
   roundDurationMinutes: number;
   targetPoints: number;
-  pairs: Pair[];
+  pairs: Participant[];
 };
 
-const EMPTY_PAIR: Pair = {
+const EMPTY_PARTICIPANT: Participant = {
   playerAName: '',
   playerAEmail: '',
   playerBName: '',
@@ -33,23 +36,27 @@ const INITIAL_STATE: FormState = {
   description: '',
   prizeDescription: '',
   scheduledStartAt: '',
+  format: 'swiss_pairs',
   roundsCount: 5,
   roundDurationMinutes: 30,
   targetPoints: 200,
   pairs: [
-    { ...EMPTY_PAIR },
-    { ...EMPTY_PAIR },
-    { ...EMPTY_PAIR },
-    { ...EMPTY_PAIR },
+    { ...EMPTY_PARTICIPANT },
+    { ...EMPTY_PARTICIPANT },
+    { ...EMPTY_PARTICIPANT },
+    { ...EMPTY_PARTICIPANT },
   ],
 };
 
 const STEPS = [
   { id: 1, title: 'Info básica' },
-  { id: 2, title: 'Configuración Swiss' },
-  { id: 3, title: 'Parejas' },
-  { id: 4, title: 'Revisar y crear' },
+  { id: 2, title: 'Modalidad' },
+  { id: 3, title: 'Configuración Swiss' },
+  { id: 4, title: 'Participantes' },
+  { id: 5, title: 'Revisar y crear' },
 ] as const;
+
+const LAST_STEP = STEPS.length;
 
 export function CreateTournamentWizard({ orgSlug, orgName }: { orgSlug: string; orgName: string }) {
   const [step, setStep] = useState(1);
@@ -61,7 +68,7 @@ export function CreateTournamentWizard({ orgSlug, orgName }: { orgSlug: string; 
     setForm((s) => ({ ...s, [key]: value }));
   };
 
-  const updatePair = (index: number, key: keyof Pair, value: string) => {
+  const updatePair = (index: number, key: keyof Participant, value: string) => {
     setForm((s) => {
       const next = [...s.pairs];
       next[index] = { ...next[index], [key]: value };
@@ -70,18 +77,23 @@ export function CreateTournamentWizard({ orgSlug, orgName }: { orgSlug: string; 
   };
 
   const addPair = () => {
-    setForm((s) => ({ ...s, pairs: [...s.pairs, { ...EMPTY_PAIR }] }));
+    setForm((s) => ({ ...s, pairs: [...s.pairs, { ...EMPTY_PARTICIPANT }] }));
   };
 
   const removePair = (index: number) => {
     setForm((s) => ({ ...s, pairs: s.pairs.filter((_, i) => i !== index) }));
   };
 
+  const isIndividual = form.format === 'swiss_individual';
+
   const canAdvance = (() => {
     if (step === 1) {
       return form.name.trim().length >= 3 && form.scheduledStartAt.length > 0;
     }
     if (step === 2) {
+      return form.format === 'swiss_pairs' || form.format === 'swiss_individual';
+    }
+    if (step === 3) {
       return (
         form.roundsCount >= 2 &&
         form.roundsCount <= 12 &&
@@ -91,16 +103,14 @@ export function CreateTournamentWizard({ orgSlug, orgName }: { orgSlug: string; 
         form.targetPoints <= 500
       );
     }
-    if (step === 3) {
+    if (step === 4) {
       if (form.pairs.length < 4) return false;
-      // All pairs filled, all emails are non-empty (server validates format).
-      return form.pairs.every(
-        (p) =>
-          p.playerAName.trim().length > 0 &&
-          p.playerAEmail.trim().length > 0 &&
-          p.playerBName.trim().length > 0 &&
-          p.playerBEmail.trim().length > 0,
-      );
+      return form.pairs.every((p) => {
+        const aOk = p.playerAName.trim().length > 0 && p.playerAEmail.trim().length > 0;
+        if (!aOk) return false;
+        if (isIndividual) return true;
+        return p.playerBName.trim().length > 0 && p.playerBEmail.trim().length > 0;
+      });
     }
     return true;
   })();
@@ -114,19 +124,19 @@ export function CreateTournamentWizard({ orgSlug, orgName }: { orgSlug: string; 
         description: form.description.trim() || undefined,
         prizeDescription: form.prizeDescription.trim() || undefined,
         scheduledStartAt: new Date(form.scheduledStartAt).toISOString(),
+        format: form.format,
         roundsCount: form.roundsCount,
         roundDurationMinutes: form.roundDurationMinutes,
         targetPoints: form.targetPoints,
         pairs: form.pairs.map((p) => ({
           playerAName: p.playerAName.trim(),
           playerAEmail: p.playerAEmail.trim().toLowerCase(),
-          playerBName: p.playerBName.trim(),
-          playerBEmail: p.playerBEmail.trim().toLowerCase(),
+          playerBName: isIndividual ? '' : p.playerBName.trim(),
+          playerBEmail: isIndividual ? '' : p.playerBEmail.trim().toLowerCase(),
         })),
       });
 
       if (!result.ok) {
-        // Surface fieldErrors when present so users know which field is wrong.
         const fieldErrors = 'fieldErrors' in result ? result.fieldErrors : undefined;
         if (fieldErrors && Object.keys(fieldErrors).length > 0) {
           const lines = Object.entries(fieldErrors).map(
@@ -138,14 +148,13 @@ export function CreateTournamentWizard({ orgSlug, orgName }: { orgSlug: string; 
         }
         return;
       }
-      // Redirect happens client-side — server action returns ok:true.
       window.location.href = `/admin/org/${orgSlug}/tournaments/${result.tournamentId}`;
     });
   };
 
   return (
     <div className="space-y-6">
-      <ol className="flex items-center gap-2 text-sm">
+      <ol className="flex flex-wrap items-center gap-2 text-sm">
         {STEPS.map((s, idx) => (
           <li key={s.id} className="flex items-center gap-2">
             <span
@@ -169,16 +178,18 @@ export function CreateTournamentWizard({ orgSlug, orgName }: { orgSlug: string; 
 
       <div className="rounded-md border border-slate-200 bg-white p-6">
         {step === 1 && <Step1Info form={form} update={updateField} />}
-        {step === 2 && <Step2Swiss form={form} update={updateField} />}
-        {step === 3 && (
-          <Step3Pairs
+        {step === 2 && <Step2Format form={form} update={updateField} />}
+        {step === 3 && <Step3Swiss form={form} update={updateField} />}
+        {step === 4 && (
+          <Step4Participants
+            format={form.format}
             pairs={form.pairs}
             updatePair={updatePair}
             addPair={addPair}
             removePair={removePair}
           />
         )}
-        {step === 4 && <Step4Review form={form} orgName={orgName} />}
+        {step === 5 && <Step5Review form={form} orgName={orgName} />}
       </div>
 
       {globalError && (
@@ -196,10 +207,10 @@ export function CreateTournamentWizard({ orgSlug, orgName }: { orgSlug: string; 
         >
           ← Atrás
         </button>
-        {step < 4 ? (
+        {step < LAST_STEP ? (
           <button
             type="button"
-            onClick={() => setStep((s) => Math.min(4, s + 1))}
+            onClick={() => setStep((s) => Math.min(LAST_STEP, s + 1))}
             disabled={!canAdvance}
             className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-40"
           >
@@ -273,9 +284,93 @@ function Step1Info({
   );
 }
 
-// ─── Step 2: Configuración Swiss ──────────────────────────────────────────────
+// ─── Step 2: Modalidad ────────────────────────────────────────────────────────
 
-function Step2Swiss({
+function Step2Format({
+  form,
+  update,
+}: {
+  form: FormState;
+  update: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-sm font-semibold text-slate-900">Modalidad del torneo</h3>
+        <p className="mt-1 text-xs text-slate-500">
+          Esta configuración no se puede cambiar después de crear el torneo.
+        </p>
+      </div>
+
+      <fieldset className="space-y-3" aria-label="Modalidad del torneo">
+        <FormatRadio
+          name="format"
+          value="swiss_pairs"
+          checked={form.format === 'swiss_pairs'}
+          onChange={() => update('format', 'swiss_pairs')}
+          title="Parejas (2v2)"
+          description="Los jugadores forman duplas fijas durante todo el torneo."
+        />
+        <FormatRadio
+          name="format"
+          value="swiss_individual"
+          checked={form.format === 'swiss_individual'}
+          onChange={() => update('format', 'swiss_individual')}
+          title="Individual (1v1)"
+          description="Cada jugador compite solo — uno contra uno por mesa."
+        />
+      </fieldset>
+
+      <div className="rounded-md bg-slate-50 px-4 py-3 text-xs text-slate-600">
+        En ambos formatos el sistema Swiss calcula el ranking de la misma manera.
+        La única diferencia está en cómo registras a los participantes.
+      </div>
+    </div>
+  );
+}
+
+function FormatRadio({
+  name,
+  value,
+  checked,
+  onChange,
+  title,
+  description,
+}: {
+  name: string;
+  value: string;
+  checked: boolean;
+  onChange: () => void;
+  title: string;
+  description: string;
+}) {
+  return (
+    <label
+      className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 transition ${
+        checked
+          ? 'border-slate-900 bg-slate-50'
+          : 'border-slate-200 hover:border-slate-300'
+      }`}
+    >
+      <input
+        type="radio"
+        name={name}
+        value={value}
+        checked={checked}
+        onChange={onChange}
+        className="mt-0.5 h-4 w-4 border-slate-300 text-slate-900 focus:ring-slate-500"
+      />
+      <span className="flex flex-col gap-0.5">
+        <span className="text-sm font-medium text-slate-900">{title}</span>
+        <span className="text-xs text-slate-500">{description}</span>
+      </span>
+    </label>
+  );
+}
+
+// ─── Step 3: Configuración Swiss ──────────────────────────────────────────────
+
+function Step3Swiss({
   form,
   update,
 }: {
@@ -286,7 +381,7 @@ function Step2Swiss({
     <div className="space-y-4">
       <Field
         label={`Número de rondas: ${form.roundsCount}`}
-        hint="Entre 2 y 12. Sugerencia: log2(N_parejas) + 1 redondeado arriba."
+        hint="Entre 2 y 12. Sugerencia: log2(N_participantes) + 1 redondeado arriba."
       >
         <input
           type="range"
@@ -299,7 +394,7 @@ function Step2Swiss({
       </Field>
       <Field
         label={`Duración por ronda: ${form.roundDurationMinutes} minutos`}
-        hint="Entre 5 y 180 minutos. Típico para parejas: 30-45 min."
+        hint="Entre 5 y 180 minutos. Típico: 30-45 min."
       >
         <input
           type="range"
@@ -313,7 +408,7 @@ function Step2Swiss({
       </Field>
       <Field
         label={`Meta de tantos: ${form.targetPoints}`}
-        hint="Entre 50 y 500. Estándar dominó: 100/200/300/350. La pareja que llega primero a este valor gana, o la que vaya liderando cuando se acabe el tiempo."
+        hint="Entre 50 y 500. Estándar dominó: 100/200/300/350. Gana quien llegue primero o lidere al terminarse el tiempo."
       >
         <input
           type="range"
@@ -333,23 +428,30 @@ function Step2Swiss({
   );
 }
 
-// ─── Step 3: Parejas ──────────────────────────────────────────────────────────
+// ─── Step 4: Participantes ────────────────────────────────────────────────────
 
-function Step3Pairs({
+function Step4Participants({
+  format,
   pairs,
   updatePair,
   addPair,
   removePair,
 }: {
-  pairs: Pair[];
-  updatePair: (index: number, key: keyof Pair, value: string) => void;
+  format: TournamentFormat;
+  pairs: Participant[];
+  updatePair: (index: number, key: keyof Participant, value: string) => void;
   addPair: () => void;
   removePair: (index: number) => void;
 }) {
+  const isIndividual = format === 'swiss_individual';
+  const slotLabel = isIndividual ? 'Jugador' : 'Pareja';
+  const addLabel = isIndividual ? '+ Agregar jugador' : '+ Agregar pareja';
+  const minLabel = isIndividual ? 'Mínimo 4 jugadores' : 'Mínimo 4 parejas';
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-slate-600">
-        Mínimo 4 parejas. Cada jugador necesita un email único — vamos a mandar
+        {minLabel}. Cada jugador necesita un email único — vamos a mandar
         invitaciones para que activen su cuenta.
       </p>
       <ul className="space-y-3">
@@ -357,7 +459,7 @@ function Step3Pairs({
           <li key={i} className="rounded-md border border-slate-200 p-4">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Pareja {i + 1}
+                {slotLabel} {i + 1}
               </span>
               {pairs.length > 4 && (
                 <button
@@ -372,32 +474,36 @@ function Step3Pairs({
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <input
                 type="text"
-                placeholder="Nombre jugador A"
+                placeholder={isIndividual ? 'Nombre' : 'Nombre jugador A'}
                 value={pair.playerAName}
                 onChange={(e) => updatePair(i, 'playerAName', e.target.value)}
                 className="rounded-md border border-slate-300 px-3 py-2 text-sm"
               />
               <input
                 type="email"
-                placeholder="Email jugador A"
+                placeholder={isIndividual ? 'Email' : 'Email jugador A'}
                 value={pair.playerAEmail}
                 onChange={(e) => updatePair(i, 'playerAEmail', e.target.value)}
                 className="rounded-md border border-slate-300 px-3 py-2 text-sm"
               />
-              <input
-                type="text"
-                placeholder="Nombre jugador B"
-                value={pair.playerBName}
-                onChange={(e) => updatePair(i, 'playerBName', e.target.value)}
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-              />
-              <input
-                type="email"
-                placeholder="Email jugador B"
-                value={pair.playerBEmail}
-                onChange={(e) => updatePair(i, 'playerBEmail', e.target.value)}
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-              />
+              {!isIndividual && (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Nombre jugador B"
+                    value={pair.playerBName}
+                    onChange={(e) => updatePair(i, 'playerBName', e.target.value)}
+                    className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="email"
+                    placeholder="Email jugador B"
+                    value={pair.playerBEmail}
+                    onChange={(e) => updatePair(i, 'playerBEmail', e.target.value)}
+                    className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  />
+                </>
+              )}
             </div>
           </li>
         ))}
@@ -407,15 +513,19 @@ function Step3Pairs({
         onClick={addPair}
         className="rounded-md border border-dashed border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
       >
-        + Agregar pareja
+        {addLabel}
       </button>
     </div>
   );
 }
 
-// ─── Step 4: Review ───────────────────────────────────────────────────────────
+// ─── Step 5: Review ───────────────────────────────────────────────────────────
 
-function Step4Review({ form, orgName }: { form: FormState; orgName: string }) {
+function Step5Review({ form, orgName }: { form: FormState; orgName: string }) {
+  const isIndividual = form.format === 'swiss_individual';
+  const formatLabel = isIndividual ? 'Individual (1v1)' : 'Parejas (2v2)';
+  const slotsLabel = isIndividual ? 'Jugadores' : 'Parejas';
+
   return (
     <div className="space-y-4 text-sm">
       <h3 className="text-base font-semibold">Confirmar creación</h3>
@@ -424,6 +534,8 @@ function Step4Review({ form, orgName }: { form: FormState; orgName: string }) {
         <strong>{orgName}</strong>.
       </p>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-md bg-slate-50 px-4 py-3">
+        <dt className="text-slate-500">Modalidad:</dt>
+        <dd className="font-medium">{formatLabel}</dd>
         <dt className="text-slate-500">Inicio:</dt>
         <dd className="font-medium">
           {form.scheduledStartAt
@@ -442,7 +554,7 @@ function Step4Review({ form, orgName }: { form: FormState; orgName: string }) {
         <dd className="font-medium">{form.roundDurationMinutes} min</dd>
         <dt className="text-slate-500">Meta de tantos:</dt>
         <dd className="font-medium">{form.targetPoints}</dd>
-        <dt className="text-slate-500">Parejas:</dt>
+        <dt className="text-slate-500">{slotsLabel}:</dt>
         <dd className="font-medium">{form.pairs.length}</dd>
         {form.prizeDescription && (
           <>
@@ -453,7 +565,7 @@ function Step4Review({ form, orgName }: { form: FormState; orgName: string }) {
       </dl>
       <p className="text-xs text-slate-500">
         El torneo se creará en estado <strong>Borrador</strong>. Las invitaciones
-        a las parejas las podrás enviar desde la pantalla de gestión.
+        las podrás enviar desde la pantalla de gestión.
       </p>
     </div>
   );

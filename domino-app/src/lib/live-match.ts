@@ -15,12 +15,13 @@ import { matchAttestRequestedEmail } from "@/lib/email-templates";
 
 const StartSchema = z.object({
   modality: z.enum(["ven","dom","cub","pri","custom"]),
-  format: z.enum(["singles","doubles"]),
+  // Post-Fase-A: solo doubles. Mantenemos el campo para retrocompat.
+  format: z.literal("doubles").default("doubles"),
   set_size: z.enum(["d6","d9"]),
   target_points: z.number().int().min(50).max(500),
   capicua_bonus: z.number().int().min(0).max(100),
-  team_a_players: z.array(z.string().uuid()).min(1).max(2),
-  team_b_players: z.array(z.string().uuid()).min(1).max(2),
+  team_a_players: z.array(z.string().uuid()).length(2),
+  team_b_players: z.array(z.string().uuid()).length(2),
   tournament_id: z.string().uuid().nullable().optional(),
   /** Límite de tiempo en minutos (R6). null = sin límite. */
   time_limit_minutes: z.number().int().min(5).max(180).nullable().optional(),
@@ -35,9 +36,8 @@ export async function startLiveMatch(input: StartLiveMatchInput): Promise<{ ok: 
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
   const i = parsed.data;
 
-  const expectedSize = i.format === "singles" ? 1 : 2;
-  if (i.team_a_players.length !== expectedSize || i.team_b_players.length !== expectedSize) {
-    return { ok: false, error: `En ${i.format} cada equipo debe tener ${expectedSize} jugador(es).` };
+  if (i.team_a_players.length !== 2 || i.team_b_players.length !== 2) {
+    return { ok: false, error: "Cada equipo debe tener 2 jugadores." };
   }
   const all = [...i.team_a_players, ...i.team_b_players];
   if (new Set(all).size !== all.length) return { ok: false, error: "Un jugador no puede estar en dos equipos." };

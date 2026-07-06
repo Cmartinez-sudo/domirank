@@ -8,50 +8,21 @@ import { ReliabilityBadge } from "@/components/reliability/ReliabilityBadge";
 
 export const dynamic = "force-dynamic";
 
-export default async function Leaderboard({
-  searchParams,
-}: {
-  searchParams: Promise<{ tab?: string }>;
-}) {
-  const params = await searchParams;
-  const tab: "global" | "singles" | "doubles" =
-    params.tab === "singles" ? "singles" :
-    params.tab === "doubles" ? "doubles" : "global";
-
+export default async function Leaderboard() {
   const supabase = await supabaseServer();
 
-  let rows: any[] = [];
-  if (tab === "global") {
-    const { data } = await supabase
-      .from("profile_ratings")
-      .select("*")
-      .eq("is_rated", true)
-      .order("global_elo", { ascending: false })
-      .limit(100);
-    rows = data ?? [];
-  } else {
-    const orderCol = tab === "singles" ? "d6_singles_elo" : "d6_doubles_elo";
-    const gamesCol = tab === "singles" ? "d6_singles_games" : "d6_doubles_games";
-    const { data } = await supabase
-      .from("profile_ratings")
-      .select("*")
-      .gt(gamesCol, 0)
-      .order(orderCol, { ascending: false })
-      .limit(100);
-    rows = data ?? [];
-  }
+  const { data } = await supabase
+    .from("profile_ratings")
+    .select("*")
+    .eq("is_rated", true)
+    .order("global_elo", { ascending: false })
+    .limit(100);
+  const rows = data ?? [];
 
   return (
     <PageTransition>
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-3xl font-bold">Ranking</h1>
-        <div className="flex gap-1 bg-surface rounded-md p-1 border border-border">
-          <TabLink href="/leaderboard?tab=global"  active={tab === "global"}>DomiRank Global</TabLink>
-          <TabLink href="/leaderboard?tab=singles" active={tab === "singles"}>Singles</TabLink>
-          <TabLink href="/leaderboard?tab=doubles" active={tab === "doubles"}>Parejas</TabLink>
-        </div>
-      </div>
+      <h1 className="text-3xl font-bold">Ranking</h1>
 
       <div className="card overflow-x-auto p-0">
         <table className="w-full">
@@ -63,11 +34,7 @@ export default async function Leaderboard({
                 <ColHeader
                   label="DomiRank"
                   align="right"
-                  tooltip={
-                    tab === "global"
-                      ? "Tu rating visible (1-20). Promedio ponderado por partidas de tus buckets jugados. Si solo juegas un formato, esto = tu rating en ese formato."
-                      : "Tu rating visible (1-20) en este formato. Anchors: Elo 1000 → 1.0, Elo 2200 → 20.0."
-                  }
+                  tooltip="Tu rating visible (1-20). Promedio ponderado por partidas de tus buckets jugados (d6 + d9 parejas)."
                 />
               </th>
               <th className="px-4 py-3 text-right hidden md:table-cell">
@@ -81,66 +48,26 @@ export default async function Leaderboard({
                 <ColHeader
                   label="Partidas"
                   align="right"
-                  tooltip={
-                    tab === "global"
-                      ? `Total de partidas confirmadas en todos los formatos. Mínimo ${DOMIRANK_MIN_GAMES} para aparecer en el global.`
-                      : "Partidas confirmadas en este formato."
-                  }
+                  tooltip={`Total de partidas confirmadas (d6 + d9 parejas). Mínimo ${DOMIRANK_MIN_GAMES} para aparecer en el ranking.`}
                 />
               </th>
               <th className="px-4 py-3 text-right hidden sm:table-cell">
-                <ColHeader
-                  label="G"
-                  align="right"
-                  tooltip={
-                    tab === "global"
-                      ? "Partidas ganadas en todos los formatos."
-                      : "Partidas ganadas en este formato."
-                  }
-                />
+                <ColHeader label="G" align="right" tooltip="Partidas ganadas." />
               </th>
               <th className="px-4 py-3 text-right hidden sm:table-cell">
-                <ColHeader
-                  label="P"
-                  align="right"
-                  tooltip={
-                    tab === "global"
-                      ? "Partidas perdidas en todos los formatos."
-                      : "Partidas perdidas en este formato."
-                  }
-                />
+                <ColHeader label="P" align="right" tooltip="Partidas perdidas." />
               </th>
               <th className="px-4 py-3 text-right hidden lg:table-cell">
-                <ColHeader
-                  label="Pts+"
-                  align="right"
-                  tooltip={
-                    tab === "global"
-                      ? "Puntos anotados por tu equipo en todas tus partidas."
-                      : "Puntos anotados por tu equipo en este formato."
-                  }
-                />
+                <ColHeader label="Pts+" align="right" tooltip="Puntos anotados por tu equipo." />
               </th>
               <th className="px-4 py-3 text-right hidden lg:table-cell">
-                <ColHeader
-                  label="Pts−"
-                  align="right"
-                  tooltip={
-                    tab === "global"
-                      ? "Puntos anotados por el equipo contrario en todas tus partidas."
-                      : "Puntos anotados por el equipo contrario en este formato."
-                  }
-                />
+                <ColHeader label="Pts−" align="right" tooltip="Puntos anotados por el equipo contrario." />
               </th>
               <th className="px-4 py-3 text-right hidden sm:table-cell">
                 <ColHeader
-                  label={tab === "global" ? "S / P" : "W%"}
+                  label="d6 / d9"
                   align="right"
-                  tooltip={
-                    tab === "global"
-                      ? "Partidas en singles · partidas en parejas (doble-6)."
-                      : "Porcentaje de partidas ganadas en este formato."
-                  }
+                  tooltip="Partidas en doble-6 · partidas en doble-9 (ambas en parejas)."
                 />
               </th>
             </tr>
@@ -148,27 +75,16 @@ export default async function Leaderboard({
           <tbody>
             {rows.length === 0 ? (
               <tr><td colSpan={10} className="px-4 py-10 text-center text-text-mute">
-                {tab === "global"
-                  ? `Aún nadie tiene ${DOMIRANK_MIN_GAMES}+ partidas para entrar al ranking global.`
-                  : `Sin jugadores con partidas en ${tab === "singles" ? "singles" : "parejas"} todavía.`}
+                {`Aún nadie tiene ${DOMIRANK_MIN_GAMES}+ partidas para entrar al ranking.`}
               </td></tr>
             ) : rows.map((r, i) => {
-              const isGlobal = tab === "global";
-              const display = isGlobal ? r.global_display
-                : tab === "singles" ? r.d6_singles_display : r.d6_doubles_display;
-              const elo     = isGlobal ? r.global_elo
-                : tab === "singles" ? r.d6_singles_elo : r.d6_doubles_elo;
-              const games   = isGlobal ? r.total_games
-                : tab === "singles" ? r.d6_singles_games : r.d6_doubles_games;
-              const wins    = isGlobal ? (r.total_wins   ?? 0)
-                : tab === "singles" ? (r.d6_singles_wins   ?? 0) : (r.d6_doubles_wins   ?? 0);
-              const losses  = isGlobal ? (r.total_losses ?? 0)
-                : tab === "singles" ? (r.d6_singles_losses ?? 0) : (r.d6_doubles_losses ?? 0);
-              const ptsWon  = isGlobal ? (r.total_points_won  ?? 0)
-                : tab === "singles" ? (r.d6_singles_points_won  ?? 0) : (r.d6_doubles_points_won  ?? 0);
-              const ptsLost = isGlobal ? (r.total_points_lost ?? 0)
-                : tab === "singles" ? (r.d6_singles_points_lost ?? 0) : (r.d6_doubles_points_lost ?? 0);
-              const winRate = games > 0 ? Math.round((wins / games) * 100) : null;
+              const display = r.global_display;
+              const elo     = r.global_elo;
+              const games   = r.total_games;
+              const wins    = r.total_wins   ?? 0;
+              const losses  = r.total_losses ?? 0;
+              const ptsWon  = r.total_points_won  ?? 0;
+              const ptsLost = r.total_points_lost ?? 0;
 
               return (
                 <tr
@@ -193,7 +109,7 @@ export default async function Leaderboard({
                     <div className="flex flex-col items-end gap-1">
                       <span className="font-mono font-bold text-primary tabular-nums">{Number(display ?? 1).toFixed(1)}</span>
                       {display != null && <TierBadge display={Number(display)} size="xs" />}
-                      {isGlobal && r.reliability_score != null && (
+                      {r.reliability_score != null && (
                         <ReliabilityBadge
                           score={r.reliability_score}
                           size="xs"
@@ -210,11 +126,9 @@ export default async function Leaderboard({
                   <td className="px-4 py-3 text-right hidden lg:table-cell font-mono text-text-dim text-sm">{ptsWon}</td>
                   <td className="px-4 py-3 text-right hidden lg:table-cell font-mono text-text-dim text-sm">{ptsLost}</td>
                   <td className="px-4 py-3 text-right hidden sm:table-cell text-sm">
-                    {isGlobal
-                      ? <span className="text-text-dim">{r.d6_singles_games ?? 0} <span className="text-text-mute">·</span> {r.d6_doubles_games ?? 0}</span>
-                      : <span className={winRate !== null && winRate >= 50 ? "text-primary" : "text-text-dim"}>
-                          {winRate !== null ? `${winRate}%` : "—"}
-                        </span>}
+                    <span className="text-text-dim">
+                      {r.d6_doubles_games ?? 0} <span className="text-text-mute">·</span> {r.d9_doubles_games ?? 0}
+                    </span>
                   </td>
                 </tr>
               );
@@ -224,9 +138,7 @@ export default async function Leaderboard({
       </div>
 
       <p className="text-text-mute text-xs text-center">
-        {tab === "global"
-          ? `DomiRank Global = promedio ponderado por partidas de tus buckets activos. Mínimo ${DOMIRANK_MIN_GAMES} partidas totales para aparecer aquí.`
-          : "DomiRank = to_display(Elo): 1 + ((elo - 1000) / 1200) × 19. W% = partidas ganadas. Provisional = primeras 10 partidas en este formato."}
+        DomiRank Global = promedio ponderado por partidas de tus buckets activos (d6 + d9 parejas). Mínimo {DOMIRANK_MIN_GAMES} partidas para aparecer aquí.
       </p>
     </div>
     </PageTransition>
@@ -256,17 +168,4 @@ function RankCell({ rank }: { rank: number }) {
     );
   }
   return <span className="text-text-mute text-sm pl-1">{rank}</span>;
-}
-
-function TabLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      className={`px-4 py-1.5 rounded text-sm font-medium transition-colors ${
-        active ? "bg-primary/15 text-primary" : "text-text-dim hover:text-text"
-      }`}
-    >
-      {children}
-    </Link>
-  );
 }

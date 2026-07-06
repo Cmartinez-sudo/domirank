@@ -13,7 +13,7 @@ type FriendTemplateInput = {
 
 type MatchTemplateInput = {
   matchId:        string;
-  format:         "singles" | "doubles";
+  format:         "doubles";
   setSize:        "d6" | "d9";
   scoreTeam1:     number;
   scoreTeam2:     number;
@@ -147,10 +147,9 @@ export function friendAcceptedEmail(input: FriendTemplateInput) {
    MATCH HELPERS
    ============================================================ */
 
-function modalityLabel(format: "singles" | "doubles", setSize: "d6" | "d9"): string {
-  const f = format === "singles" ? "Individual" : "Pareja";
+function modalityLabel(_format: "doubles", setSize: "d6" | "d9"): string {
   const s = setSize === "d6" ? "Doble 6" : "Doble 9";
-  return `${f} · ${s}`;
+  return `Pareja · ${s}`;
 }
 
 function scoreLine(input: MatchTemplateInput): string {
@@ -311,5 +310,85 @@ export function matchDisputedEmail(input: MatchTemplateInput) {
       { label: "Ver disputa", href: url }
     ),
     text: `Tu partida en DomiRank entró en disputa.\n\n${input.team1Label} ${input.scoreTeam1} — ${input.scoreTeam2} ${input.team2Label}\nModalidad: ${modalityLabel(input.format, input.setSize)}\n\nVer disputa: ${url}`,
+  };
+}
+
+/* ============================================================
+   GROUP INVITATION RECEIVED (Fase C+D #6)
+   ============================================================
+   Diseño visual distinto del resto: tono social/casual, avatar
+   del invitador prominente. CTA a /groups (sin tokens) — el
+   invitado ve la invitación inline en la lista de Grupos.
+*/
+
+type GroupInvitationInput = {
+  inviterUsername: string;
+  inviterDisplayName: string | null;
+  inviterAvatarUrl: string | null;
+  groupName: string;
+  groupDescription: string | null;
+  activeMembersCount: number;
+};
+
+export function groupInvitationEmail(input: GroupInvitationInput) {
+  const {
+    inviterUsername,
+    inviterDisplayName,
+    inviterAvatarUrl,
+    groupName,
+    groupDescription,
+    activeMembersCount,
+  } = input;
+  const inviterName = inviterDisplayName || inviterUsername;
+  const url = `${getAppUrl()}/groups`;
+
+  // Card del invitador: avatar 64px + nombre + handle.
+  // Fallback si no hay avatar_url: iniciales sobre fondo verde.
+  const avatarBlock = inviterAvatarUrl
+    ? `<img src="${escapeAttr(inviterAvatarUrl)}" alt="" width="64" height="64" style="display:block;width:64px;height:64px;border-radius:32px;border:2px solid ${BRAND.border};object-fit:cover;" />`
+    : `<div style="width:64px;height:64px;border-radius:32px;background:${BRAND.primary};color:#000;font-weight:700;font-size:24px;display:inline-block;line-height:64px;text-align:center;">${escapeHtml(inviterName.slice(0, 1).toUpperCase())}</div>`;
+
+  const inviterCard = `
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 20px 0;">
+      <tr>
+        <td style="vertical-align:middle;padding-right:14px;">${avatarBlock}</td>
+        <td style="vertical-align:middle;">
+          <div style="font-size:16px;font-weight:700;color:${BRAND.text};">${escapeHtml(inviterName)}</div>
+          <div style="font-size:13px;color:${BRAND.primary};margin-top:2px;">@${escapeHtml(inviterUsername)}</div>
+        </td>
+      </tr>
+    </table>
+  `;
+
+  const descBlock = groupDescription
+    ? `<p style="margin:0 0 8px 0;color:${BRAND.textDim};font-size:14px;line-height:1.5;font-style:italic;">&ldquo;${escapeHtml(groupDescription)}&rdquo;</p>`
+    : "";
+
+  const membersLine = `<p style="margin:8px 0 0 0;color:${BRAND.textMute};font-size:13px;">${activeMembersCount} ${activeMembersCount === 1 ? "miembro" : "miembros"} activos.</p>`;
+
+  return {
+    subject: `${inviterName} te invitó al grupo ${groupName}`,
+    html: shell(
+      `Invitación a ${groupName}`,
+      `
+      <h1 style="margin:0 0 6px 0;font-size:22px;font-weight:700;color:${BRAND.text};">Te invitaron a un grupo</h1>
+      <p style="margin:0 0 12px 0;color:${BRAND.textDim};font-size:14px;">Te suma al crew para compartir partidas y leaderboard.</p>
+
+      ${inviterCard}
+
+      <div style="margin:0 0 4px 0;padding:16px;background:${BRAND.bg};border:1px solid ${BRAND.border};border-radius:12px;">
+        <div style="font-size:18px;font-weight:700;color:${BRAND.text};">${escapeHtml(groupName)}</div>
+        ${descBlock}
+        ${membersLine}
+      </div>
+
+      <p style="margin:18px 0 0 0;color:${BRAND.textDim};font-size:13px;line-height:1.5;">
+        Las partidas donde todos los jugadores sean miembros del grupo
+        se atribuyen automáticamente al leaderboard del grupo.
+      </p>
+      `,
+      { label: "Ver invitación", href: url }
+    ),
+    text: `${inviterName} (@${inviterUsername}) te invitó al grupo "${groupName}" en DomiRank.\n\n${groupDescription ? `"${groupDescription}"\n\n` : ""}${activeMembersCount} ${activeMembersCount === 1 ? "miembro" : "miembros"} activos.\n\nAceptá o rechazá la invitación: ${url}`,
   };
 }

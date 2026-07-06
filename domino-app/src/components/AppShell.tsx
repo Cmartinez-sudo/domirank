@@ -1,9 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Avatar } from "@/components/Avatar";
 import { NavigationLoader } from "@/components/NavigationLoader";
 import { RealtimeNotifications } from "@/components/RealtimeNotifications";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -12,6 +12,7 @@ import { ActiveMatchChip } from "@/components/match/ActiveMatchChip";
 import { FloatingActionStack } from "@/components/match/FloatingActionStack";
 import { PodiumIcon } from "@/components/icons/PodiumIcon";
 import { TrophyIcon } from "@/components/icons/TrophyIcon";
+import { HamburgerDrawer } from "@/components/HamburgerDrawer";
 
 type NavItem = { href: string; label: string; icon: React.ReactNode; isCenter?: boolean; beta?: boolean; badge?: number };
 
@@ -54,6 +55,9 @@ const ICON = {
   book: (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
   ),
+  menu: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  ),
 };
 
 export function AppShell({
@@ -68,6 +72,7 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // El landing en "/" renderiza su propio layout (Topnav + Footer). AppShell
   // se hace a un lado para no duplicar chrome.
@@ -105,7 +110,7 @@ export function AppShell({
     { href: "/leaderboard",  label: "Ranking",  icon: ICON.podium },
     { href: "/matches/new",  label: "Jugar",    icon: ICON.domino, isCenter: true },
     { href: "/tournaments",  label: "Torneos",  icon: ICON.trophy, beta: true },
-    { href: "/friends",      label: "Amigos",   icon: ICON.users },
+    { href: "/groups",       label: "Grupos",   icon: ICON.users },
   ];
 
   return (
@@ -165,27 +170,17 @@ export function AppShell({
                 </Link>
               );
             })}
-            <Link
-              href="/como-funciona"
-              className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors mt-1 ${
-                pathname === "/como-funciona"
-                  ? "bg-surface-2 text-text"
-                  : "text-text-dim hover:text-text hover:bg-surface-2"
-              }`}
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              aria-label="Abrir menú"
+              aria-expanded={drawerOpen}
+              className="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors mt-1 text-text-dim hover:text-text hover:bg-surface-2"
             >
-              <span className="opacity-50">{ICON.book}</span>
-              <span className="text-[14px]">Cómo funciona</span>
-            </Link>
+              <span className="opacity-50">{ICON.menu}</span>
+              <span className="text-[14px]">Menú</span>
+            </button>
           </nav>
-          {profile && (
-            <Link href="/settings" className="flex items-center gap-3 px-3 py-3.5 mx-3 mb-4 rounded-2xl hover:bg-surface-2 transition-colors border border-border">
-              <Avatar player={profile as any} size={38} />
-              <div className="min-w-0">
-                <div className="text-[13px] font-semibold truncate">{profile.display_name || profile.username}</div>
-                <div className="text-text-mute text-xs truncate">@{profile.username}</div>
-              </div>
-            </Link>
-          )}
         </aside>
       )}
 
@@ -213,13 +208,15 @@ export function AppShell({
             {user ? (
               <div className="flex items-center gap-2">
                 <NotificationBell userId={user.id} initialUnreadCount={unread} />
-                <Link
-                  href="/settings"
-                  aria-label="Ajustes de tu cuenta"
-                  className="flex items-center justify-center w-11 h-11 rounded-full active:opacity-70 hover:bg-surface-2 transition-opacity"
+                <button
+                  type="button"
+                  aria-label="Abrir menú"
+                  aria-expanded={drawerOpen}
+                  onClick={() => setDrawerOpen(true)}
+                  className="flex items-center justify-center w-11 h-11 rounded-full text-text-dim active:opacity-70 hover:bg-surface-2 hover:text-text transition-colors"
                 >
-                  {profile && <Avatar player={profile as any} size={36} />}
-                </Link>
+                  {ICON.menu}
+                </button>
               </div>
             ) : (
               <Link href="/login" className="btn-primary !min-h-0 !py-2 !px-4 text-sm">Entrar</Link>
@@ -338,6 +335,15 @@ export function AppShell({
             })}
           </div>
         </nav>
+      )}
+
+      {/* Drawer hamburger (mobile + desktop) */}
+      {user && (
+        <HamburgerDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          profile={profile}
+        />
       )}
     </div>
   );

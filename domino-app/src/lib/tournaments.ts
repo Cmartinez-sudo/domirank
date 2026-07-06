@@ -8,7 +8,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
 import { rl, checkLimit } from "@/lib/ratelimit";
-import { createTournamentSchema } from "./tournament-schema";
+import { createTournamentSchema, computePointsToWin } from "./tournament-schema";
 import type { CreateTournamentInput } from "./tournament-schema";
 import { generateInitialPairings } from "./tournament-formats-engine";
 
@@ -47,14 +47,12 @@ function canonicalPair(a: string, b: string): { user_a_id: string; user_b_id: st
  *
  * Cambios versus el wizard viejo:
  *  - Status inicial: 'in_progress' (skip 'open') — el casual host empieza a jugar inmediatamente.
- *  - `inscription_mode` se deriva del `format` (continuous_league → 'continuous_league',
- *    el resto → 'pre_formed').
+ *  - `inscription_mode` siempre es 'pre_formed' o 'individual_manual' (continuous_league
+ *    fue removido en Fase 5; los torneos viejos quedan en 'cancelled').
  *  - Acepta `player_count` (wizard nuevo) o `max_players` (legacy). El que esté presente
  *    determina el cupo; ambos terminan escritos a `tournaments.max_players`.
  *  - Para formatos pre_formed (Swiss / Round Robin / Single Elim): genera pairings
  *    iniciales (ronda 1) inmediatamente. F1.6 puede refinar la lógica.
- *  - Para continuous_league: NO genera pairings (las partidas se crean per-match
- *    desde el home page).
  *  - Si visibility === 'code': genera un join_code de 6 dígitos.
  *  - Inserta participantes (organizer auto-incluido).
  *  - Si hay pre_formed_pairs (input legacy): inserta en tournament_pairs canonical order.
@@ -66,25 +64,17 @@ export async function createTournament(input: CreateTournamentInput) {
   }
   const f = parsed.data;
 
-  // Derivar inscription_mode del format si no viene explícito (wizard nuevo).
-  // El wizard viejo lo enviaba explícito; aún se respeta si está presente y es válido.
-  const inscriptionMode: "pre_formed" | "individual_manual" | "continuous_league" =
-    f.inscription_mode ??
-    (f.format === "continuous_league" ? "continuous_league" : "pre_formed");
-
-  // Cross-field guard: format='continuous_league' iff inscription_mode='continuous_league'.
-  // Auto-corrige el caso de llamadas legacy con inscription_mode incoherente.
-  const isContinuousLeagueFormat = f.format === "continuous_league";
-  const isContinuousLeagueInscription = inscriptionMode === "continuous_league";
-  let finalInscriptionMode = inscriptionMode;
-  if (isContinuousLeagueFormat && !isContinuousLeagueInscription) {
-    finalInscriptionMode = "continuous_league";
-  } else if (!isContinuousLeagueFormat && isContinuousLeagueInscription) {
+  // Post-Fase-5: continuous_league fue removido del enum, así que el
+  // inscription_mode es siempre 'pre_formed' o 'individual_manual'. Si un
+  // caller legacy pasa 'continuous_league' explícito, rechazamos.
+  if (f.inscription_mode === "continuous_league") {
     return {
       ok: false as const,
-      error: "inscription_mode='continuous_league' sólo es válido para format='continuous_league'.",
+      error: "El formato Liga continua fue reemplazado por Grupos.",
     };
   }
+  const finalInscriptionMode: "pre_formed" | "individual_manual" =
+    f.inscription_mode ?? "pre_formed";
 
   // Resolver player_count vs max_players (uno de los dos es requerido — validado por schema).
   const maxPlayers = (f.player_count ?? f.max_players) as number;
@@ -103,8 +93,6 @@ export async function createTournament(input: CreateTournamentInput) {
       };
     }
   }
-  // Continuous league acepta cualquier número >= 4 (sin restricción de
-  // paridad). Decisión Carlos 2026-05-31.
   if (f.format === "swiss" && maxPlayers < 4) {
     return { ok: false as const, error: "Suizo requiere al menos 4 jugadores." };
   }
@@ -139,9 +127,7 @@ export async function createTournament(input: CreateTournamentInput) {
     joinCode = f.join_code ?? generateJoinCode();
   }
 
-  // Calcular points_to_win según modalidad
-  const GOALS: Record<string, number> = { ven: 100, dom: 200, cub: 200, pri: 200 };
-  const pointsToWin = f.modality === "custom" ? (f.custom_goal ?? 100) : (GOALS[f.modality] ?? 100);
+  const pointsToWin = computePointsToWin(f.modality, f.custom_goal);
 
   // Status inicial: el wizard nuevo (3 pasos) salta directo a 'in_progress'.
   // Los callers legacy del wizard viejo pueden necesitar 'open' aún; detectamos
@@ -159,6 +145,9 @@ export async function createTournament(input: CreateTournamentInput) {
     created_by: user.id,
     inscription_mode: finalInscriptionMode,
     time_limit_minutes: f.time_limit_minutes,
+    // rounds_count solo se persiste para Suizo; los demás formatos derivan
+    // sus rondas (RR=n-1, Single Elim=log2(n)).
+    rounds_count: f.format === "swiss" ? f.rounds_count ?? null : null,
     join_code: joinCode,
     description: f.description ?? null,
     max_players: maxPlayers,
@@ -216,10 +205,9 @@ export async function createTournament(input: CreateTournamentInput) {
     }
   }
 
-  // Generar pairings iniciales para formatos pre_formed (Swiss / RR / Single Elim).
-  // continuous_league: NO genera pairings (se crean per-match desde el home page).
-  // Solo se ejecuta cuando el wizard nuevo lo solicita (status='in_progress' directo).
-  if (initialStatus === "in_progress" && f.format !== "continuous_league") {
+  // Generar pairings iniciales para todos los formatos soportados
+  // (Swiss / RR / Single Elim). continuous_league fue removido en Fase 5.
+  if (initialStatus === "in_progress") {
     const pairingResult = await generateInitialPairings(tournamentId);
     if (!pairingResult.ok) {
       console.error("[createTournament] Error generando pairings iniciales:", pairingResult.error);
@@ -308,16 +296,11 @@ export async function startTournament(tournamentId: string) {
     .select("*", { count: "exact", head: true })
     .eq("tournament_id", tournamentId);
 
-  // Polla: roster lleno, no requiere parejas (se forman per partida).
-  // Otros formatos: requiere parejas pre-formadas.
-  if (t.inscription_mode === "continuous_league") {
-    if ((playerCount ?? 0) !== t.max_players) {
-      return {
-        ok: false as const,
-        error: `Faltan ${t.max_players - (playerCount ?? 0)} jugadores`,
-      };
-    }
-  } else {
+  // Post-Fase-5: continuous_league fue removido. Todos los torneos nuevos
+  // requieren parejas pre-formadas. Torneos viejos con
+  // inscription_mode='continuous_league' quedan en 'cancelled' (mig 0095) y
+  // no llegan acá.
+  {
     const { count: pairCount } = await supabase
       .from("tournament_pairs")
       .select("*", { count: "exact", head: true })

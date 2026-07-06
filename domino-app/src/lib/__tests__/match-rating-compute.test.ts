@@ -2,17 +2,16 @@ import { describe, it, expect } from "vitest";
 import { computeRatingPayload } from "../match-rating-compute";
 
 // Helper: build a profile row with the expected bucket columns.
-function profile(id: string, elo: number, games: number, format: "singles" | "doubles" = "singles", set: "d6" | "d9" = "d6") {
-  const base = set === "d6"
-    ? (format === "singles" ? "singles" : "doubles")
-    : (format === "singles" ? "d9_singles" : "d9_doubles");
+// Post-Fase-A: solo doubles. El set determina qué bucket de columnas se usa.
+function profile(id: string, elo: number, games: number, set: "d6" | "d9" = "d6") {
+  const base = set === "d6" ? "doubles" : "d9_doubles";
   return { id, [`${base}_elo`]: elo, [`${base}_games`]: games };
 }
 
 describe("computeRatingPayload — guard clauses", () => {
   it("returns no_players when matchPlayers is empty", () => {
     const r = computeRatingPayload({
-      format: "singles",
+      format: "doubles",
       setSize: "d6",
       matchPlayers: [],
       matchRounds: [],
@@ -24,11 +23,13 @@ describe("computeRatingPayload — guard clauses", () => {
 
   it("returns missing_profile when a player has no profile row", () => {
     const r = computeRatingPayload({
-      format: "singles",
+      format: "doubles",
       setSize: "d6",
       matchPlayers: [
         { user_id: "a", team: 1 },
-        { user_id: "b", team: 2 },
+        { user_id: "b", team: 1 },
+        { user_id: "c", team: 2 },
+        { user_id: "d", team: 2 },
       ],
       matchRounds: [
         { team: 1, points: 100 },
@@ -41,38 +42,16 @@ describe("computeRatingPayload — guard clauses", () => {
   });
 });
 
-describe("computeRatingPayload — singles 1v1 (d6)", () => {
-  it("ranks the higher-scoring team as 1, lower as 2", () => {
+describe("computeRatingPayload — doubles 2v2 (d9 bucket selection)", () => {
+  it("reads elo/games from d9_doubles when setSize=d9", () => {
     const r = computeRatingPayload({
-      format: "singles",
-      setSize: "d6",
-      matchPlayers: [
-        { user_id: "winner", team: 1 },
-        { user_id: "loser",  team: 2 },
-      ],
-      matchRounds: [
-        { team: 1, points: 100 },
-        { team: 2, points: 75 },
-      ],
-      profiles: [profile("winner", 1500, 20), profile("loser", 1500, 20)],
-    });
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    const winnerRow = r.payload.find((p) => p.user_id === "winner")!;
-    const loserRow  = r.payload.find((p) => p.user_id === "loser")!;
-    expect(winnerRow.rank).toBe(1);
-    expect(loserRow.rank).toBe(2);
-    expect(winnerRow.elo_after).toBeGreaterThan(winnerRow.elo_before);
-    expect(loserRow.elo_after).toBeLessThan(loserRow.elo_before);
-  });
-
-  it("reads elo/games from the correct bucket column (d9 singles)", () => {
-    const r = computeRatingPayload({
-      format: "singles",
+      format: "doubles",
       setSize: "d9",
       matchPlayers: [
         { user_id: "a", team: 1 },
-        { user_id: "b", team: 2 },
+        { user_id: "b", team: 1 },
+        { user_id: "c", team: 2 },
+        { user_id: "d", team: 2 },
       ],
       matchRounds: [
         { team: 1, points: 150 },
@@ -80,41 +59,19 @@ describe("computeRatingPayload — singles 1v1 (d6)", () => {
       ],
       profiles: [
         // d9 columns populated, d6 columns intentionally wrong to assert we
-        // read the right bucket. If the code reads `singles_elo` by mistake
-        // (the d6 column), the engine sees 9999 and the math breaks.
-        { id: "a", d9_singles_elo: 1500, d9_singles_games: 10, singles_elo: 9999, singles_games: 9999 },
-        { id: "b", d9_singles_elo: 1500, d9_singles_games: 10, singles_elo: 9999, singles_games: 9999 },
+        // read the right bucket. If the code reads `doubles_elo` (d6) por error,
+        // el engine ve 9999 y la matemática se rompe.
+        { id: "a", d9_doubles_elo: 1500, d9_doubles_games: 10, doubles_elo: 9999, doubles_games: 9999 },
+        { id: "b", d9_doubles_elo: 1500, d9_doubles_games: 10, doubles_elo: 9999, doubles_games: 9999 },
+        { id: "c", d9_doubles_elo: 1500, d9_doubles_games: 10, doubles_elo: 9999, doubles_games: 9999 },
+        { id: "d", d9_doubles_elo: 1500, d9_doubles_games: 10, doubles_elo: 9999, doubles_games: 9999 },
       ],
-      profiles2: [], // ignored
-    } as Parameters<typeof computeRatingPayload>[0]);
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    // Both starting at 1500; winner should be > 1500, loser < 1500.
-    const a = r.payload.find((p) => p.user_id === "a")!;
-    expect(a.elo_before).toBe(1500); // not 9999 (proves bucket selection works)
-    expect(a.elo_after).toBeGreaterThan(1500);
-  });
-
-  it("rank is 1 for both teams when scores tie", () => {
-    const r = computeRatingPayload({
-      format: "singles",
-      setSize: "d6",
-      matchPlayers: [
-        { user_id: "a", team: 1 },
-        { user_id: "b", team: 2 },
-      ],
-      matchRounds: [
-        { team: 1, points: 100 },
-        { team: 2, points: 100 },
-      ],
-      profiles: [profile("a", 1500, 20), profile("b", 1500, 20)],
     });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    // rank = 1 + count(teams with strictly higher score). Tied → both rank 1.
-    for (const item of r.payload) {
-      expect(item.rank).toBe(1);
-    }
+    const a = r.payload.find((p) => p.user_id === "a")!;
+    expect(a.elo_before).toBe(1500); // not 9999 (proves bucket selection works)
+    expect(a.elo_after).toBeGreaterThan(1500);
   });
 });
 
@@ -134,10 +91,10 @@ describe("computeRatingPayload — doubles 2v2", () => {
         { team: 2, points: 60 },
       ],
       profiles: [
-        profile("w1", 1500, 30, "doubles"),
-        profile("w2", 1500, 30, "doubles"),
-        profile("l1", 1500, 30, "doubles"),
-        profile("l2", 1500, 30, "doubles"),
+        profile("w1", 1500, 30),
+        profile("w2", 1500, 30),
+        profile("l1", 1500, 30),
+        profile("l2", 1500, 30),
       ],
     });
     expect(r.ok).toBe(true);
@@ -150,26 +107,62 @@ describe("computeRatingPayload — doubles 2v2", () => {
     expect(winners.every((p) => p.elo_after > p.elo_before)).toBe(true);
     expect(losers.every((p) => p.elo_after < p.elo_before)).toBe(true);
   });
+
+  it("rank is 1 for both teams when scores tie", () => {
+    const r = computeRatingPayload({
+      format: "doubles",
+      setSize: "d6",
+      matchPlayers: [
+        { user_id: "a", team: 1 },
+        { user_id: "b", team: 1 },
+        { user_id: "c", team: 2 },
+        { user_id: "d", team: 2 },
+      ],
+      matchRounds: [
+        { team: 1, points: 100 },
+        { team: 2, points: 100 },
+      ],
+      profiles: [
+        profile("a", 1500, 20),
+        profile("b", 1500, 20),
+        profile("c", 1500, 20),
+        profile("d", 1500, 20),
+      ],
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    // rank = 1 + count(teams with strictly higher score). Tied → both rank 1.
+    for (const item of r.payload) {
+      expect(item.rank).toBe(1);
+    }
+  });
 });
 
 describe("computeRatingPayload — payload shape contract", () => {
   it("emits exactly one payload item per match_players row", () => {
     const r = computeRatingPayload({
-      format: "singles",
+      format: "doubles",
       setSize: "d6",
       matchPlayers: [
         { user_id: "a", team: 1 },
-        { user_id: "b", team: 2 },
+        { user_id: "b", team: 1 },
+        { user_id: "c", team: 2 },
+        { user_id: "d", team: 2 },
       ],
       matchRounds: [
         { team: 1, points: 100 },
         { team: 2, points: 50 },
       ],
-      profiles: [profile("a", 1500, 5), profile("b", 1500, 5)],
+      profiles: [
+        profile("a", 1500, 5),
+        profile("b", 1500, 5),
+        profile("c", 1500, 5),
+        profile("d", 1500, 5),
+      ],
     });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.payload).toHaveLength(2);
+    expect(r.payload).toHaveLength(4);
     for (const item of r.payload) {
       expect(item).toHaveProperty("user_id");
       expect(item).toHaveProperty("rank");
@@ -183,14 +176,21 @@ describe("computeRatingPayload — payload shape contract", () => {
 
   it("treats missing rounds as zeros (does not crash, ranks by zeros)", () => {
     const r = computeRatingPayload({
-      format: "singles",
+      format: "doubles",
       setSize: "d6",
       matchPlayers: [
         { user_id: "a", team: 1 },
-        { user_id: "b", team: 2 },
+        { user_id: "b", team: 1 },
+        { user_id: "c", team: 2 },
+        { user_id: "d", team: 2 },
       ],
       matchRounds: [], // no rounds recorded
-      profiles: [profile("a", 1500, 5), profile("b", 1500, 5)],
+      profiles: [
+        profile("a", 1500, 5),
+        profile("b", 1500, 5),
+        profile("c", 1500, 5),
+        profile("d", 1500, 5),
+      ],
     });
     expect(r.ok).toBe(true);
     if (!r.ok) return;

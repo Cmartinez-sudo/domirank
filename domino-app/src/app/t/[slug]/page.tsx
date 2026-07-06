@@ -39,5 +39,12 @@ export default async function PublicDisplayPage({
 
   if (!tournament) notFound();
 
-  return <DisplayClient slug={slug} initialTournament={tournament} />;
+  // format is nullable in the view; fall back to swiss_pairs defensively
+  // (only matters if a torneo predates 0097 — backfill defaults it anyway).
+  const initialTournament = {
+    ...tournament,
+    format: tournament.format ?? 'swiss_pairs',
+  };
+
+  return <DisplayClient slug={slug} initialTournament={initialTournament} />;
 }

@@ -20,7 +20,6 @@ import {
   MODALIDADES,
   type ModalityCode,
   type SetCode,
-  type FormatCode,
 } from "@/lib/modalidades";
 import { startLiveMatch } from "@/lib/live-match";
 import { linkMatchToPairing } from "@/lib/tournament-pairing-link";
@@ -96,7 +95,6 @@ export function NewMatchForm({
   const m = MODALIDADES[modality];
   const isCustom = modality === "custom";
 
-  const [format, setFormat] = useState<FormatCode>(m.format);
   const [setSize, setSetSize] = useState<SetCode>(m.set);
   const [target, setTarget] = useState<number>(m.target);
   const [capicua, setCapicua] = useState<number>(m.capicua);
@@ -105,7 +103,8 @@ export function NewMatchForm({
   const [teamA, setTeamA] = useState<Player[]>([currentUser]);
   const [teamB, setTeamB] = useState<Player[]>([]);
 
-  const teamSize = format === "singles" ? 1 : 2;
+  // Post-Fase-A: toda partida es 2v2.
+  const teamSize = 2;
 
   // Toggle "amistosa" — la partida no afecta el Elo global
   const [friendly, setFriendly] = useState(false);
@@ -126,21 +125,12 @@ export function NewMatchForm({
     setModality(code);
     if (code !== "custom") {
       const x = MODALIDADES[code];
-      setFormat(x.format);
       setSetSize(x.set);
       setTarget(x.target);
       setCapicua(x.capicua);
-      const sz = x.format === "singles" ? 1 : 2;
-      setTeamA((cur) => cur.slice(0, sz));
-      setTeamB((cur) => cur.slice(0, sz));
+      setTeamA((cur) => cur.slice(0, 2));
+      setTeamB((cur) => cur.slice(0, 2));
     }
-  }
-
-  function applyFormat(f: FormatCode) {
-    setFormat(f);
-    const sz = f === "singles" ? 1 : 2;
-    setTeamA((cur) => cur.slice(0, sz));
-    setTeamB((cur) => cur.slice(0, sz));
   }
 
   async function handleModalityContinue() {
@@ -172,16 +162,14 @@ export function NewMatchForm({
     e.preventDefault();
     setError(null);
     if (teamA.length !== teamSize || teamB.length !== teamSize) {
-      setError(
-        `En ${format === "singles" ? "singles" : "parejas"} cada equipo debe tener ${teamSize} jugador(es).`,
-      );
+      setError(`Cada equipo debe tener ${teamSize} jugadores.`);
       return;
     }
     setPending(true);
     try {
       const res = await startLiveMatch({
         modality,
-        format,
+        format: "doubles",
         set_size: setSize,
         target_points: target,
         capicua_bonus: capicua,
@@ -200,7 +188,7 @@ export function NewMatchForm({
       }
 
       analytics.track("match_created", {
-        format,
+        format: "doubles",
         modality,
         tournament_id: presetTournamentId ?? null,
       });
@@ -277,25 +265,6 @@ export function NewMatchForm({
         {/* Parámetros */}
         <section className="card">
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="label">Formato</label>
-              <div className="flex bg-surface-2 rounded-md p-1 border border-border">
-                <button
-                  type="button"
-                  onClick={() => applyFormat("singles")}
-                  className={`flex-1 py-1.5 rounded text-sm ${format === "singles" ? "bg-surface-3" : "text-text-dim"}`}
-                >
-                  1v1
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyFormat("doubles")}
-                  className={`flex-1 py-1.5 rounded text-sm ${format === "doubles" ? "bg-surface-3" : "text-text-dim"}`}
-                >
-                  2v2
-                </button>
-              </div>
-            </div>
             <div>
               <label className="label">Set de fichas</label>
               <div className="flex bg-surface-2 rounded-md p-1 border border-border">
@@ -388,7 +357,7 @@ export function NewMatchForm({
       {/* Equipos */}
       <div className="grid md:grid-cols-2 gap-4">
         <TeamPicker
-          label={format === "singles" ? "Tú" : "Equipo A"}
+          label="Equipo A"
           colorClass="text-teamA"
           size={teamSize}
           players={teamA}
@@ -396,7 +365,7 @@ export function NewMatchForm({
           excludeIds={excludeIds}
         />
         <TeamPicker
-          label={format === "singles" ? "Oponente" : "Equipo B"}
+          label="Equipo B"
           colorClass="text-teamB"
           size={teamSize}
           players={teamB}

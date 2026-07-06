@@ -11,18 +11,6 @@ type FormatCard = {
 
 const FORMATS: FormatCard[] = [
   {
-    value: "continuous_league",
-    icon: "🔄",
-    label: "Liga continua",
-    desc: "4-8 amigos, partidas indefinidas",
-  },
-  {
-    value: "single_elim",
-    icon: "🎯",
-    label: "Eliminación directa",
-    desc: "Pierdes una, sales. Bracket.",
-  },
-  {
     value: "swiss",
     icon: "🏆",
     label: "Suizo",
@@ -34,6 +22,12 @@ const FORMATS: FormatCard[] = [
     label: "Round Robin parejas",
     desc: "Todas las parejas se enfrentan",
   },
+  {
+    value: "single_elim",
+    icon: "🎯",
+    label: "Eliminación directa",
+    desc: "Pierdes una, sales. Bracket.",
+  },
 ];
 
 type Props = {
@@ -42,12 +36,13 @@ type Props = {
 };
 
 /**
- * Grid 2x2 de cards de selección de formato.
- * Cumple spec F1.4 §Step 1.2: 4 cards con icono + label + descripción corta.
+ * Grid de cards de selección de formato.
+ * Post-Fase-5: 3 cards (Swiss / Round Robin / Single Elim). Liga continua
+ * fue reemplazada por Grupos.
  */
 export function FormatPickerCards({ value, onChange }: Props) {
   return (
-    <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Formato del torneo">
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3" role="radiogroup" aria-label="Formato del torneo">
       {FORMATS.map((f) => {
         const selected = value === f.value;
         return (

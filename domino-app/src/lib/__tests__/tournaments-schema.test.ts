@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { createTournamentSchema } from '../tournament-schema';
+import {
+  createTournamentSchema,
+  computePointsToWin,
+  MODALITY_DEFAULT_POINTS,
+} from '../tournament-schema';
 
 // UUIDs de ejemplo para los tests
 const UUID_A = '00000000-0000-0000-0000-000000000001';
@@ -54,6 +58,12 @@ describe('createTournamentSchema', () => {
     for (const f of ['rotation', 'double_elim', 'points_league']) {
       expect(createTournamentSchema.safeParse({ ...VALID_BASE, format: f }).success).toBe(false);
     }
+  });
+
+  it('rechaza continuous_league (Fase 5 — reemplazado por Grupos)', () => {
+    expect(
+      createTournamentSchema.safeParse({ ...VALID_BASE, format: 'continuous_league' }).success,
+    ).toBe(false);
   });
 
   // ── Modalidad ──────────────────────────────────────────────
@@ -190,20 +200,16 @@ describe('createTournamentSchema', () => {
     expect(createTournamentSchema.safeParse({ ...VALID_BASE, rated: 1 }).success).toBe(false);
   });
 
-  // ── Continuous league format ────────────────────────────────
-  it('acepta format=continuous_league', () => {
-    expect(createTournamentSchema.safeParse({ ...VALID_BASE, format: 'continuous_league' }).success).toBe(true);
-  });
-
+  // ── is_open_ended (legacy field, kept for backwards-compat) ──
   it('is_open_ended default false', () => {
-    const parsed = createTournamentSchema.safeParse({ ...VALID_BASE, format: 'continuous_league' });
+    const parsed = createTournamentSchema.safeParse(VALID_BASE);
     expect(parsed.success).toBe(true);
     if (parsed.success) expect(parsed.data.is_open_ended).toBe(false);
   });
 
   it('acepta is_open_ended true', () => {
     const parsed = createTournamentSchema.safeParse({
-      ...VALID_BASE, format: 'continuous_league', is_open_ended: true
+      ...VALID_BASE, is_open_ended: true,
     });
     expect(parsed.success).toBe(true);
     if (parsed.success) expect(parsed.data.is_open_ended).toBe(true);
@@ -211,25 +217,54 @@ describe('createTournamentSchema', () => {
 
   it('rechaza is_open_ended no-boolean', () => {
     expect(createTournamentSchema.safeParse({
-      ...VALID_BASE, format: 'continuous_league', is_open_ended: 'yes'
+      ...VALID_BASE, is_open_ended: 'yes',
     }).success).toBe(false);
   });
 
-  // ── Continuous league inscription_mode ─────────────────────
-  it("acepta inscription_mode='continuous_league' con format='continuous_league'", () => {
+  // ── inscription_mode (Fase 5: continuous_league removido) ──
+  it("acepta inscription_modes vigentes (pre_formed e individual_manual)", () => {
+    for (const m of ["pre_formed", "individual_manual"] as const) {
+      expect(createTournamentSchema.safeParse({ ...VALID_BASE, inscription_mode: m }).success).toBe(true);
+    }
+  });
+
+  it("acepta inscription_mode='continuous_league' en el schema (validación final vive en createTournament)", () => {
+    // El schema sigue aceptándolo porque la columna DB existe y hay torneos
+    // viejos con ese valor. El bloqueo es en `createTournament` action.
     const parsed = createTournamentSchema.safeParse({
       ...VALID_BASE,
-      format: "continuous_league",
       inscription_mode: "continuous_league",
     });
     expect(parsed.success).toBe(true);
-    if (parsed.success) expect(parsed.data.inscription_mode).toBe("continuous_league");
   });
 
-  it("acepta los 3 inscription_modes válidos", () => {
-    for (const m of ["pre_formed", "individual_manual", "continuous_league"] as const) {
-      expect(createTournamentSchema.safeParse({ ...VALID_BASE, inscription_mode: m }).success).toBe(true);
-    }
+  // ── rounds_count (Fase B) ──────────────────────────────────
+  it('acepta rounds_count omitido (NULL = motor decide)', () => {
+    const parsed = createTournamentSchema.safeParse(VALID_BASE);
+    expect(parsed.success).toBe(true);
+  });
+
+  it('acepta rounds_count null', () => {
+    expect(
+      createTournamentSchema.safeParse({ ...VALID_BASE, rounds_count: null }).success,
+    ).toBe(true);
+  });
+
+  it('acepta rounds_count en rango 2-12', () => {
+    expect(createTournamentSchema.safeParse({ ...VALID_BASE, rounds_count: 2 }).success).toBe(true);
+    expect(createTournamentSchema.safeParse({ ...VALID_BASE, rounds_count: 12 }).success).toBe(true);
+  });
+
+  it('rechaza rounds_count < 2', () => {
+    expect(createTournamentSchema.safeParse({ ...VALID_BASE, rounds_count: 1 }).success).toBe(false);
+  });
+
+  it('rechaza rounds_count > 12', () => {
+    expect(createTournamentSchema.safeParse({ ...VALID_BASE, rounds_count: 13 }).success).toBe(false);
+  });
+
+  it('rechaza rounds_count no-entero', () => {
+    expect(createTournamentSchema.safeParse({ ...VALID_BASE, rounds_count: 4.5 }).success).toBe(false);
   });
 
   // ── input completo válido ──────────────────────────────────
@@ -249,5 +284,39 @@ describe('createTournamentSchema', () => {
     };
     const result = createTournamentSchema.safeParse(full);
     expect(result.success).toBe(true);
+  });
+});
+
+describe('computePointsToWin (Fase B)', () => {
+  it('devuelve 100 para modality=ven sin custom_goal', () => {
+    expect(computePointsToWin('ven', undefined)).toBe(100);
+    expect(computePointsToWin('ven', null)).toBe(100);
+  });
+
+  it('devuelve 200 para dom/cub/pri sin custom_goal', () => {
+    expect(computePointsToWin('dom', undefined)).toBe(200);
+    expect(computePointsToWin('cub', undefined)).toBe(200);
+    expect(computePointsToWin('pri', undefined)).toBe(200);
+  });
+
+  it('custom_goal gana sobre el default de modality (override)', () => {
+    expect(computePointsToWin('ven', 150)).toBe(150);
+    expect(computePointsToWin('dom', 75)).toBe(75);
+    expect(computePointsToWin('cub', 300)).toBe(300);
+  });
+
+  it('devuelve 100 fallback para modality desconocido sin custom_goal', () => {
+    expect(computePointsToWin('xyz', undefined)).toBe(100);
+  });
+
+  it('custom_goal funciona también para modality=custom', () => {
+    expect(computePointsToWin('custom', 175)).toBe(175);
+  });
+
+  it('MODALITY_DEFAULT_POINTS expone los defaults canónicos', () => {
+    expect(MODALITY_DEFAULT_POINTS.ven).toBe(100);
+    expect(MODALITY_DEFAULT_POINTS.dom).toBe(200);
+    expect(MODALITY_DEFAULT_POINTS.cub).toBe(200);
+    expect(MODALITY_DEFAULT_POINTS.pri).toBe(200);
   });
 });

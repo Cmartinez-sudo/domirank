@@ -56,11 +56,11 @@ export default async function FriendsPage() {
   if (allIds.length > 0) {
     const { data: ratings } = await supabase
       .from("profile_ratings")
-      .select("id, global_display, total_games, d6_singles_wins, d6_singles_losses, d6_doubles_wins, d6_doubles_losses, d9_singles_wins, d9_singles_losses, d9_doubles_wins, d9_doubles_losses")
+      .select("id, global_display, total_games, total_wins, total_losses, d6_doubles_wins, d6_doubles_losses, d9_doubles_wins, d9_doubles_losses")
       .in("id", allIds);
     for (const r of (ratings ?? []) as any[]) {
-      const wins = (r.d6_singles_wins ?? 0) + (r.d6_doubles_wins ?? 0) + (r.d9_singles_wins ?? 0) + (r.d9_doubles_wins ?? 0);
-      const losses = (r.d6_singles_losses ?? 0) + (r.d6_doubles_losses ?? 0) + (r.d9_singles_losses ?? 0) + (r.d9_doubles_losses ?? 0);
+      const wins = r.total_wins ?? ((r.d6_doubles_wins ?? 0) + (r.d9_doubles_wins ?? 0));
+      const losses = r.total_losses ?? ((r.d6_doubles_losses ?? 0) + (r.d9_doubles_losses ?? 0));
       ratingsById.set(r.id, {
         global_display: r.global_display,
         total_games:    r.total_games,

@@ -160,4 +160,58 @@ describe('tournamentInvitationEmail', () => {
     });
     expect(email.html).toContain('http://localhost:3000');
   });
+
+  // ─── Individual format ──────────────────────────────────────────
+
+  describe('individual format', () => {
+    const individualInput = {
+      ...baseInput,
+      isIndividual: true,
+      partnerName: null,
+    };
+
+    test('subject mentions individual format', () => {
+      const email = tournamentInvitationEmail(individualInput);
+      expect(email.subject).toMatch(/individual/i);
+      expect(email.subject).toContain('Copa Invedin 2026');
+    });
+
+    test('body does NOT mention "tu pareja"', () => {
+      const email = tournamentInvitationEmail(individualInput);
+      expect(email.html).not.toMatch(/tu pareja/i);
+      expect(email.text).not.toMatch(/tu pareja/i);
+    });
+
+    test('body does NOT contain partner name token even if accidentally passed', () => {
+      const email = tournamentInvitationEmail({
+        ...individualInput,
+        partnerName: 'Ana López',
+      });
+      // isIndividual=true should override partnerName presence.
+      expect(email.html).not.toContain('Ana López');
+      expect(email.text).not.toContain('Ana López');
+    });
+
+    test('format row says "Individual"', () => {
+      const email = tournamentInvitationEmail(individualInput);
+      expect(email.html).toMatch(/Sistema Suizo individual/);
+      expect(email.text).toMatch(/Sistema Suizo individual/);
+    });
+
+    test('match-end copy uses "jugador" wording', () => {
+      const email = tournamentInvitationEmail(individualInput);
+      expect(email.html).toMatch(/cuando un jugador llega/);
+      expect(email.html).not.toMatch(/cuando una pareja llega/);
+    });
+
+    test('null partnerName without isIndividual still falls back to individual copy', () => {
+      // Defensive: a caller that forgets isIndividual but passes null partner
+      // should still get individual-flavored copy instead of "tu pareja null".
+      const email = tournamentInvitationEmail({
+        ...baseInput,
+        partnerName: null,
+      });
+      expect(email.html).not.toMatch(/tu pareja/i);
+    });
+  });
 });

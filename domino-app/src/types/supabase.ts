@@ -145,6 +145,205 @@ export type Database = {
           },
         ]
       }
+      group_invitations: {
+        Row: {
+          created_at: string
+          expires_at: string
+          group_id: string
+          id: string
+          invited_by_user_id: string
+          invited_user_id: string
+          notification_sent_at: string | null
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          group_id: string
+          id?: string
+          invited_by_user_id: string
+          invited_user_id: string
+          notification_sent_at?: string | null
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          group_id?: string
+          id?: string
+          invited_by_user_id?: string
+          invited_user_id?: string
+          notification_sent_at?: string | null
+          responded_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_invitations_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_match_attributions: {
+        Row: {
+          attributed_at: string
+          attribution_type: string
+          group_id: string
+          id: string
+          match_id: string
+        }
+        Insert: {
+          attributed_at?: string
+          attribution_type: string
+          group_id: string
+          id?: string
+          match_id: string
+        }
+        Update: {
+          attributed_at?: string
+          attribution_type?: string
+          group_id?: string
+          id?: string
+          match_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_match_attributions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_match_attributions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "active_matches_per_user"
+            referencedColumns: ["match_id"]
+          },
+          {
+            foreignKeyName: "group_match_attributions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "match_feed"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_match_attributions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "match_live_state"
+            referencedColumns: ["match_id"]
+          },
+          {
+            foreignKeyName: "group_match_attributions_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_members: {
+        Row: {
+          anonymized: boolean
+          group_id: string
+          id: string
+          invited_at: string
+          invited_by_user_id: string | null
+          joined_at: string | null
+          left_at: string | null
+          role: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          anonymized?: boolean
+          group_id: string
+          id?: string
+          invited_at?: string
+          invited_by_user_id?: string | null
+          joined_at?: string | null
+          left_at?: string | null
+          role?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          anonymized?: boolean
+          group_id?: string
+          id?: string
+          invited_at?: string
+          invited_by_user_id?: string | null
+          joined_at?: string | null
+          left_at?: string | null
+          role?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          allow_friendlies: boolean
+          created_at: string
+          created_by_user_id: string
+          description: string | null
+          id: string
+          is_active: boolean
+          migrated_from_tournament_id: string | null
+          name: string
+        }
+        Insert: {
+          allow_friendlies?: boolean
+          created_at?: string
+          created_by_user_id: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          migrated_from_tournament_id?: string | null
+          name: string
+        }
+        Update: {
+          allow_friendlies?: boolean
+          created_at?: string
+          created_by_user_id?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          migrated_from_tournament_id?: string | null
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "groups_migrated_from_tournament_id_fkey"
+            columns: ["migrated_from_tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_standings"
+            referencedColumns: ["tournament_id"]
+          },
+          {
+            foreignKeyName: "groups_migrated_from_tournament_id_fkey"
+            columns: ["migrated_from_tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_attestations: {
         Row: {
           action: string
@@ -902,8 +1101,8 @@ export type Database = {
           player_a_email: string
           player_a_name: string
           player_a_user_id: string | null
-          player_b_email: string
-          player_b_name: string
+          player_b_email: string | null
+          player_b_name: string | null
           player_b_user_id: string | null
           tournament_id: string
           withdrawn_at: string | null
@@ -916,8 +1115,8 @@ export type Database = {
           player_a_email: string
           player_a_name: string
           player_a_user_id?: string | null
-          player_b_email: string
-          player_b_name: string
+          player_b_email?: string | null
+          player_b_name?: string | null
           player_b_user_id?: string | null
           tournament_id: string
           withdrawn_at?: string | null
@@ -930,8 +1129,8 @@ export type Database = {
           player_a_email?: string
           player_a_name?: string
           player_a_user_id?: string | null
-          player_b_email?: string
-          player_b_name?: string
+          player_b_email?: string | null
+          player_b_name?: string | null
           player_b_user_id?: string | null
           tournament_id?: string
           withdrawn_at?: string | null
@@ -1202,14 +1401,6 @@ export type Database = {
           d9_doubles_points_won: number
           d9_doubles_sigma: number
           d9_doubles_wins: number
-          d9_singles_elo: number
-          d9_singles_games: number
-          d9_singles_losses: number
-          d9_singles_mu: number
-          d9_singles_points_lost: number
-          d9_singles_points_won: number
-          d9_singles_sigma: number
-          d9_singles_wins: number
           date_of_birth: string | null
           default_modality: string | null
           display_name: string | null
@@ -1239,14 +1430,6 @@ export type Database = {
           reliability_volume: number
           role: string
           signup_method: string | null
-          singles_elo: number
-          singles_games: number
-          singles_losses: number
-          singles_mu: number
-          singles_points_lost: number
-          singles_points_won: number
-          singles_sigma: number
-          singles_wins: number
           terms_accepted_at: string | null
           updated_at: string
           username: string
@@ -1266,14 +1449,6 @@ export type Database = {
           d9_doubles_points_won?: number
           d9_doubles_sigma?: number
           d9_doubles_wins?: number
-          d9_singles_elo?: number
-          d9_singles_games?: number
-          d9_singles_losses?: number
-          d9_singles_mu?: number
-          d9_singles_points_lost?: number
-          d9_singles_points_won?: number
-          d9_singles_sigma?: number
-          d9_singles_wins?: number
           date_of_birth?: string | null
           default_modality?: string | null
           display_name?: string | null
@@ -1303,14 +1478,6 @@ export type Database = {
           reliability_volume?: number
           role?: string
           signup_method?: string | null
-          singles_elo?: number
-          singles_games?: number
-          singles_losses?: number
-          singles_mu?: number
-          singles_points_lost?: number
-          singles_points_won?: number
-          singles_sigma?: number
-          singles_wins?: number
           terms_accepted_at?: string | null
           updated_at?: string
           username: string
@@ -1330,14 +1497,6 @@ export type Database = {
           d9_doubles_points_won?: number
           d9_doubles_sigma?: number
           d9_doubles_wins?: number
-          d9_singles_elo?: number
-          d9_singles_games?: number
-          d9_singles_losses?: number
-          d9_singles_mu?: number
-          d9_singles_points_lost?: number
-          d9_singles_points_won?: number
-          d9_singles_sigma?: number
-          d9_singles_wins?: number
           date_of_birth?: string | null
           default_modality?: string | null
           display_name?: string | null
@@ -1367,14 +1526,6 @@ export type Database = {
           reliability_volume?: number
           role?: string
           signup_method?: string | null
-          singles_elo?: number
-          singles_games?: number
-          singles_losses?: number
-          singles_mu?: number
-          singles_points_lost?: number
-          singles_points_won?: number
-          singles_sigma?: number
-          singles_wins?: number
           terms_accepted_at?: string | null
           updated_at?: string
           username?: string
@@ -1655,6 +1806,7 @@ export type Database = {
           rated: boolean
           requires_attestation: boolean
           rounds: number
+          rounds_count: number | null
           session_started_at: string | null
           status: string
           tables_count: number
@@ -1683,6 +1835,7 @@ export type Database = {
           rated?: boolean
           requires_attestation?: boolean
           rounds?: number
+          rounds_count?: number | null
           session_started_at?: string | null
           status?: string
           tables_count?: number
@@ -1711,6 +1864,7 @@ export type Database = {
           rated?: boolean
           requires_attestation?: boolean
           rounds?: number
+          rounds_count?: number | null
           session_started_at?: string | null
           status?: string
           tables_count?: number
@@ -1853,6 +2007,45 @@ export type Database = {
           },
         ]
       }
+      group_leaderboard: {
+        Row: {
+          diff: number | null
+          effectiveness_coefficient: number | null
+          effectiveness_percent: number | null
+          group_id: string | null
+          losses: number | null
+          matches_played: number | null
+          points_against: number | null
+          points_for: number | null
+          rank: number | null
+          user_id: string | null
+          win_rate: number | null
+          wins: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_match_attributions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_players_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profile_ratings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_players_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_feed: {
         Row: {
           created_at: string | null
@@ -1893,17 +2086,6 @@ export type Database = {
           d6_doubles_points_won: number | null
           d6_doubles_sigma: number | null
           d6_doubles_wins: number | null
-          d6_singles_display: number | null
-          d6_singles_display_legacy: number | null
-          d6_singles_elo: number | null
-          d6_singles_games: number | null
-          d6_singles_losses: number | null
-          d6_singles_mu: number | null
-          d6_singles_ordinal: number | null
-          d6_singles_points_lost: number | null
-          d6_singles_points_won: number | null
-          d6_singles_sigma: number | null
-          d6_singles_wins: number | null
           d9_doubles_display: number | null
           d9_doubles_elo: number | null
           d9_doubles_games: number | null
@@ -1914,16 +2096,6 @@ export type Database = {
           d9_doubles_points_won: number | null
           d9_doubles_sigma: number | null
           d9_doubles_wins: number | null
-          d9_singles_display: number | null
-          d9_singles_elo: number | null
-          d9_singles_games: number | null
-          d9_singles_losses: number | null
-          d9_singles_mu: number | null
-          d9_singles_ordinal: number | null
-          d9_singles_points_lost: number | null
-          d9_singles_points_won: number | null
-          d9_singles_sigma: number | null
-          d9_singles_wins: number | null
           default_modality: string | null
           display_name: string | null
           global_display: number | null
@@ -1956,6 +2128,7 @@ export type Database = {
           current_round_number: number | null
           display_slug: string | null
           finished_at: string | null
+          format: string | null
           id: string | null
           name: string | null
           organization_logo_url: string | null
@@ -2020,6 +2193,10 @@ export type Database = {
         Args: { p_action: string; p_comment?: string; p_match_id: string }
         Returns: string
       }
+      attribute_match_to_groups: {
+        Args: { p_attribution_type?: string; p_match_id: string }
+        Returns: number
+      }
       auto_confirm_stale_matches: { Args: never; Returns: string[] }
       calc_day_streak: {
         Args: {
@@ -2041,12 +2218,6 @@ export type Database = {
           d9_games: number
           d9_mu: number
           d9_sigma: number
-          s6_games: number
-          s6_mu: number
-          s6_sigma: number
-          s9_games: number
-          s9_mu: number
-          s9_sigma: number
         }
         Returns: number
       }
@@ -2226,6 +2397,14 @@ export type Database = {
         }[]
       }
       increment_edit_count: { Args: { p_round_id: number }; Returns: undefined }
+      is_group_admin: {
+        Args: { p_group_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_group_member: {
+        Args: { p_group_id: string; p_user_id: string }
+        Returns: boolean
+      }
       link_match_to_pairing: {
         Args: { p_match_id: string; p_pairing_id: number }
         Returns: undefined
@@ -2280,6 +2459,10 @@ export type Database = {
       }
       to_display_rating: { Args: { ordinal: number }; Returns: number }
       to_display_rating_elo: { Args: { p_elo: number }; Returns: number }
+      transfer_group_admin: {
+        Args: { p_group_id: string; p_new_admin_id: string }
+        Returns: undefined
+      }
       transfer_score_keeper: {
         Args: { p_match_id: string; p_new_keeper_user_id: string }
         Returns: undefined

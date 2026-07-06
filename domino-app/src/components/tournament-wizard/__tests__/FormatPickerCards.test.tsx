@@ -14,25 +14,22 @@ afterEach(() => {
 });
 
 describe("FormatPickerCards", () => {
-  it("renderiza 4 cards (Liga continua, Eliminación directa, Suizo, Round Robin parejas)", () => {
+  it("renderiza 3 cards (Suizo, Round Robin parejas, Eliminación directa) — sin Liga continua", () => {
     render(<FormatPickerCards value={undefined} onChange={() => {}} />);
-    expect(screen.getByText("Liga continua")).toBeDefined();
-    expect(screen.getByText("Eliminación directa")).toBeDefined();
     expect(screen.getByText("Suizo")).toBeDefined();
     expect(screen.getByText("Round Robin parejas")).toBeDefined();
+    expect(screen.getByText("Eliminación directa")).toBeDefined();
+    expect(screen.queryByText("Liga continua")).toBeNull();
   });
 
-  it("renderiza 4 radios", () => {
+  it("renderiza 3 radios", () => {
     render(<FormatPickerCards value={undefined} onChange={() => {}} />);
-    expect(screen.getAllByRole("radio")).toHaveLength(4);
+    expect(screen.getAllByRole("radio")).toHaveLength(3);
   });
 
   it("click en card invoca onChange con el format key correcto", () => {
     const onChange = vi.fn();
     render(<FormatPickerCards value={undefined} onChange={onChange} />);
-
-    fireEvent.click(screen.getByText("Liga continua"));
-    expect(onChange).toHaveBeenCalledWith("continuous_league");
 
     fireEvent.click(screen.getByText("Eliminación directa"));
     expect(onChange).toHaveBeenCalledWith("single_elim");
@@ -46,7 +43,7 @@ describe("FormatPickerCards", () => {
 
   it("la card seleccionada tiene aria-checked=true y clases visuales distintas", () => {
     const { container } = render(
-      <FormatPickerCards value="continuous_league" onChange={() => {}} />,
+      <FormatPickerCards value="swiss" onChange={() => {}} />,
     );
 
     const radios = container.querySelectorAll('[role="radio"]');

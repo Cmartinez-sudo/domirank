@@ -23,7 +23,7 @@ export const createTournamentSchema = z
       .max(60, "Máximo 60 caracteres"),
     /** 'public' es legacy del schema viejo; el wizard nuevo usa 'private' | 'code'. */
     visibility: z.enum(["public", "private", "code"]),
-    format: z.enum(["single_elim", "round_robin", "swiss", "continuous_league"]),
+    format: z.enum(["single_elim", "round_robin", "swiss"]),
     modality: z.enum(["ven", "dom", "cub", "pri", "custom"]),
     custom_goal: z.number().int().min(50).max(500).optional(),
     custom_capicua: z.number().int().min(10).max(100).optional(),
@@ -55,6 +55,9 @@ export const createTournamentSchema = z
 
     time_limit_minutes: z.number().int().min(5).max(180).nullable(),
 
+    /** Rondas planificadas (solo aplica a format='swiss'). 2..12. Null = motor decide. */
+    rounds_count: z.number().int().min(2).max(12).nullable().optional(),
+
     /** Cantidad de mesas físicas disponibles en el torneo. Default 1. DB allow 1..16. */
     num_boards: z.number().int().min(1).max(16).default(1),
     description: z.string().max(500).optional(),
@@ -72,3 +75,25 @@ export const createTournamentSchema = z
   });
 
 export type CreateTournamentInput = z.infer<typeof createTournamentSchema>;
+
+/** Puntos default por modalidad — fuente de verdad para el wizard y el server action. */
+export const MODALITY_DEFAULT_POINTS: Record<string, number> = {
+  ven: 100,
+  dom: 200,
+  cub: 200,
+  pri: 200,
+};
+
+/**
+ * Resuelve los puntos objetivo de la partida.
+ *
+ * Fase B: si `customGoal` está presente, gana sobre el default de modality.
+ * Esto permite editar puntos sin tener que cambiar modality a 'custom'.
+ * Fallback 100 si modality es desconocido.
+ */
+export function computePointsToWin(
+  modality: string,
+  customGoal: number | null | undefined,
+): number {
+  return customGoal ?? MODALITY_DEFAULT_POINTS[modality] ?? 100;
+}

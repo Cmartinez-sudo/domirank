@@ -68,10 +68,10 @@ export type PlayerRatingUpdate = {
   k_used: number;
 };
 
-export type RatingBucketKey = 'd6_singles' | 'd6_doubles' | 'd9_singles' | 'd9_doubles';
+export type RatingBucketKey = 'd6_doubles' | 'd9_doubles';
 
 export const RATING_BUCKETS: RatingBucketKey[] = [
-  'd6_singles', 'd6_doubles', 'd9_singles', 'd9_doubles',
+  'd6_doubles', 'd9_doubles',
 ];
 
 // ─── K-factor ────────────────────────────────────────────────────────────────
@@ -127,9 +127,8 @@ function movMultiplier(scoreDiff: number, eloGap: number): number {
 /**
  * Calculates new Elo for all players after a 2-team match.
  *
- * Doubles (2v2): team_elo = avg(partners). Both partners move identically.
- * Singles (1v1): team_elo = individual elo. Same formula.
- * FFA (>2 teams): throws — not yet supported.
+ * Post-Fase-A: solo 2v2 (doubles). team_elo = avg(partners). Both partners
+ * move identically. FFA (>2 teams): throws — not supported.
  *
  * Each player's K-factor is evaluated independently at the moment of the update.
  */
@@ -286,9 +285,7 @@ export function winProbability(teamA: Player[], teamB: Player[]): number {
 export type RatedProfileLike = {
   is_rated?: boolean | null;
   reliability_score?: number | null;
-  singles_games?: number | null;
   doubles_games?: number | null;
-  d9_singles_games?: number | null;
   d9_doubles_games?: number | null;
 };
 
@@ -299,11 +296,7 @@ export type RatedProfileLike = {
  */
 export function isRated(p: RatedProfileLike): boolean {
   if (typeof p.is_rated === "boolean") return p.is_rated;
-  const total =
-    (p.singles_games    ?? 0)
-  + (p.doubles_games    ?? 0)
-  + (p.d9_singles_games ?? 0)
-  + (p.d9_doubles_games ?? 0);
+  const total = (p.doubles_games ?? 0) + (p.d9_doubles_games ?? 0);
   return total >= NR_THRESHOLD;
 }
 

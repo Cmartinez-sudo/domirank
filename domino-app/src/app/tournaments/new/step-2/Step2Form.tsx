@@ -38,10 +38,10 @@ export function Step2Form({ userId, currentUser, friends }: Props) {
   const { draft, setField } = useTournamentDraft(userId);
   const playerCount = draft.player_count ?? 4;
 
-  // Liga continua sin attestation permite agregar no-amigos (F1.10).
-  // Si attestation ON o formato no-continuous, solo amigos pueden participar.
-  const canAddNonFriends =
-    draft.format === "continuous_league" && draft.requires_attestation === false;
+  // Post-Fase-5: continuous_league fue removido. La excepción que permitía
+  // agregar no-amigos solo aplicaba ahí — ahora siempre requerimos amigos
+  // mutuos (los grupos absorben el caso de uso de no-amigos).
+  const canAddNonFriends = false;
 
   // Selección inicial: lo que haya en draft, o ninguno (organizer no cuenta en participant_ids
   // — se agrega automáticamente al crear el torneo en createTournament).

@@ -254,7 +254,7 @@ exports[`AppShell bottom nav icons > matches snapshot of the bottom nav 1`] = `
     </a>
     <a
       class="group flex flex-col items-center justify-center gap-1 transition-all text-text-mute"
-      href="/friends"
+      href="/groups"
     >
       <span
         class="relative transition-transform opacity-50"
@@ -288,7 +288,7 @@ exports[`AppShell bottom nav icons > matches snapshot of the bottom nav 1`] = `
       <span
         class="text-[10px] font-semibold tracking-wide opacity-60"
       >
-        Amigos
+        Grupos
       </span>
     </a>
   </div>

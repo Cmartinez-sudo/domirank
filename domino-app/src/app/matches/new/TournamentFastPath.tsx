@@ -22,7 +22,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { startLiveMatch } from "@/lib/live-match";
 import { linkMatchToPairing } from "@/lib/tournament-pairing-link";
-import { MODALIDADES, type ModalityCode, type FormatCode, type SetCode } from "@/lib/modalidades";
+import { MODALIDADES, type ModalityCode, type SetCode } from "@/lib/modalidades";
 
 // ─── Helpers ────────────────────────────────────────────────
 
@@ -178,11 +178,8 @@ export async function TournamentFastPath({
   // ── 3. Determinar parámetros del match desde el torneo ───
   const modality = (tournament.modality ?? "ven") as ModalityCode;
 
-  // El format del match (singles/doubles) se deduce del tamaño de los equipos del pairing.
-  // Los torneos del EPIC R siempre usan parejas de 2 → doubles. Si el pairing tiene 1
-  // jugador por equipo, se infiere singles para compatibilidad futura.
-  const teamASize = (pairing.team_a_user_ids as string[]).length;
-  const matchFormat: FormatCode = teamASize === 1 ? "singles" : "doubles";
+  // Post-Fase-A: toda partida es doubles (parejas 2v2).
+  const matchFormat = "doubles" as const;
 
   const setSize = resolveSetSize(modality);
   const targetPoints = (tournament as { points_to_win?: number }).points_to_win ?? 100;

@@ -1,13 +1,14 @@
 /**
  * Modalidades de juego de dominó disponibles en DomiRank.
  *
+ * Post-Fase-A: todas las partidas son 2v2 (doubles). El tipo FormatCode
+ * se mantiene para retrocompat con código que aún tipea el campo
+ * `matches.format`, pero el único valor posible es 'doubles'.
+ *
  * Diseño:
  *   - Modalidades con el MISMO set (doble-seis) comparten bucket de rating:
  *     Venezolano, Dominicano, Puertorriqueño usan el bucket d6_*.
- *     La razón es que la estructura estratégica es idéntica; solo cambian
- *     puntos meta y bonus capicúa.
- *   - Sets distintos (doble-nueve cubano) tienen buckets separados porque
- *     el espacio de acciones y la carga de memoria difieren.
+ *   - Sets distintos (doble-nueve cubano) tienen bucket separado.
  */
 
 export type SetCode = "d6" | "d9";
@@ -16,7 +17,7 @@ export type CountryCode =
   | "VE" | "DO" | "CU" | "PR" | "CO" | "MX" | "PA"
   | "ES" | "US" | "AR" | "CL" | "PE" | "OT";
 
-export type FormatCode = "singles" | "doubles";
+export type FormatCode = "doubles";
 
 export type SetInfo = {
   code: SetCode;
@@ -84,21 +85,16 @@ export function countryByCode(code: string | null | undefined): Country | null {
 }
 
 /**
- * Columnas de rating en `profiles` para una combinación de set + formato.
- * Devuelve las claves base; los campos completos son `${base}_mu`, `${base}_sigma`,
- * `${base}_games`, `${base}_wins`, `${base}_losses`.
+ * Columnas de rating en `profiles` para el bucket doubles según set.
+ * Post-Fase-A: el parámetro `format` se ignora — singles no existe.
  */
-export function ratingColumnBase(set: SetCode, format: FormatCode): string {
-  // d6 usa las columnas legacy `singles_*` y `doubles_*` (pre-migración 0004)
-  // d9 usa `d9_singles_*` y `d9_doubles_*`
-  if (set === "d6") return format === "singles" ? "singles" : "doubles";
-  return format === "singles" ? "d9_singles" : "d9_doubles";
+export function ratingColumnBase(set: SetCode, _format?: FormatCode): string {
+  return set === "d6" ? "doubles" : "d9_doubles";
 }
 
 /**
- * Helper para el view profile_ratings que expone los 4 buckets con prefijos
- * consistentes (d6_singles_*, d6_doubles_*, d9_singles_*, d9_doubles_*).
+ * Helper para el view profile_ratings: prefijo del bucket doubles según set.
  */
-export function viewRatingPrefix(set: SetCode, format: FormatCode): string {
-  return `${set}_${format}`;
+export function viewRatingPrefix(set: SetCode, _format?: FormatCode): string {
+  return `${set}_doubles`;
 }
