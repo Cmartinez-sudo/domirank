@@ -131,21 +131,25 @@ export async function claimInvitation(input: unknown): Promise<ClaimResult> {
   const service = supabaseService();
   const email = lookup.invitation.email.toLowerCase();
 
-  // Check if a user with this email already exists.
-  const { data: existing } = await service.auth.admin.listUsers();
-  const existingUser = existing.users.find((u) => u.email?.toLowerCase() === email);
+  // Lookup existing user via RPC (O(1) — 0098 replaced the previous
+  // listUsers() call which silently truncated to page 1 of 50).
+  const { data: existingUserId, error: lookupErr } = await service.rpc(
+    'get_user_id_by_email',
+    { p_email: email },
+  );
+  if (lookupErr) return { ok: false, error: `lookup user: ${lookupErr.message}` };
 
   let userId: string;
 
-  if (existingUser) {
+  if (existingUserId) {
     // User already exists (e.g. invited to a previous tournament). Set their
     // password and reuse.
-    const { error: updErr } = await service.auth.admin.updateUserById(existingUser.id, {
+    const { error: updErr } = await service.auth.admin.updateUserById(existingUserId, {
       password: parsed.data.password,
       email_confirm: true,
     });
     if (updErr) return { ok: false, error: `update user: ${updErr.message}` };
-    userId = existingUser.id;
+    userId = existingUserId;
   } else {
     const { data: created, error: createErr } = await service.auth.admin.createUser({
       email,
