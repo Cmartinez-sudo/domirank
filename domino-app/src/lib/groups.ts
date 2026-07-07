@@ -19,6 +19,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseService } from "@/lib/supabase/service";
 import { rl, checkLimit } from "@/lib/ratelimit";
 import { sendEmail } from "@/lib/email";
 import { groupInvitationEmail } from "@/lib/email-templates";
@@ -47,15 +48,21 @@ export async function createGroup(input: CreateGroupInput): Promise<ActionResult
   const parsed = CreateGroupSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
 
-  const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Auth check via user client (verifies JWT against Auth server).
+  const authClient = await supabaseServer();
+  const { data: { user } } = await authClient.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
   // Reusamos el rate limit de torneos — son operaciones de creación equivalentes.
   const limit = await checkLimit(rl.tournament, `group:${user.id}`);
   if (!limit.allowed) return { ok: false, error: limit.error };
 
-  const { data: group, error: insertErr } = await supabase
+  // Write path uses service_role to bypass RLS. Safe because we just
+  // verified auth server-side and always attribute created_by_user_id
+  // to the authenticated user. Same pattern as org-actions/claim-actions.
+  const service = supabaseService();
+
+  const { data: group, error: insertErr } = await service
     .from("groups")
     .insert({
       name: parsed.data.name,
@@ -73,7 +80,7 @@ export async function createGroup(input: CreateGroupInput): Promise<ActionResult
   const groupId = (group as { id: string }).id;
 
   // Auto-add al creator como admin activo (decisión #7).
-  const { error: memberErr } = await supabase.from("group_members").insert({
+  const { error: memberErr } = await service.from("group_members").insert({
     group_id: groupId,
     user_id: user.id,
     role: "admin",
@@ -84,7 +91,7 @@ export async function createGroup(input: CreateGroupInput): Promise<ActionResult
 
   if (memberErr) {
     // Rollback best-effort.
-    await supabase.from("groups").delete().eq("id", groupId);
+    await service.from("groups").delete().eq("id", groupId);
     return { ok: false, error: `No se pudo asignar admin: ${memberErr.message}` };
   }
 
