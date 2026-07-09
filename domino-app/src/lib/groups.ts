@@ -121,20 +121,24 @@ export async function inviteToGroup(input: z.infer<typeof InviteSchema>): Promis
   const parsed = InviteSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Datos inválidos" };
 
-  const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const authClient = await supabaseServer();
+  const { data: { user } } = await authClient.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
   if (user.id === parsed.data.userId) {
     return { ok: false, error: "No puedes invitarte a ti mismo" };
   }
 
+  // Post-auth: usamos service_role para bypass RLS. Ver feedback pattern
+  // documentado en createGroup (PR #54).
+  const service = supabaseService();
+
   // Validar que el caller es admin o co_admin del grupo.
-  const isAdmin = await checkIsGroupAdmin(supabase, user.id, parsed.data.groupId);
+  const isAdmin = await checkIsGroupAdmin(service, user.id, parsed.data.groupId);
   if (!isAdmin) return { ok: false, error: "No tienes permisos para invitar a este grupo" };
 
   // Verificar que el invitee no esté ya activo.
-  const { data: existing } = await supabase
+  const { data: existing } = await service
     .from("group_members")
     .select("id, status")
     .eq("group_id", parsed.data.groupId)
@@ -151,7 +155,7 @@ export async function inviteToGroup(input: z.infer<typeof InviteSchema>): Promis
   // Insertar o actualizar fila en group_members.
   if (existing) {
     // Reactivar fila previa (left/removed/rejected).
-    const { error: updateErr } = await supabase
+    const { error: updateErr } = await service
       .from("group_members")
       .update({
         status: "invited",
@@ -163,7 +167,7 @@ export async function inviteToGroup(input: z.infer<typeof InviteSchema>): Promis
       .eq("id", (existing as { id: string }).id);
     if (updateErr) return { ok: false, error: updateErr.message };
   } else {
-    const { error: insertErr } = await supabase.from("group_members").insert({
+    const { error: insertErr } = await service.from("group_members").insert({
       group_id: parsed.data.groupId,
       user_id: parsed.data.userId,
       role: "member",
@@ -186,7 +190,7 @@ export async function inviteToGroup(input: z.infer<typeof InviteSchema>): Promis
   }
 
   // Insertar invitación (audit log) — UPSERT por si quedó una vieja.
-  const { data: invitation, error: invErr } = await supabase
+  const { data: invitation, error: invErr } = await service
     .from("group_invitations")
     .insert({
       group_id: parsed.data.groupId,
@@ -210,7 +214,7 @@ export async function inviteToGroup(input: z.infer<typeof InviteSchema>): Promis
   // Notificación por email (Fase C+D #6). Best-effort: si falla, la
   // invitación in-app ya está creada. La invitación se ve igual al entrar
   // a /groups, así que el email es "bonus" para usuarios no logueados.
-  await sendInvitationEmail(supabase, {
+  await sendInvitationEmail(service, {
     inviterId: user.id,
     inviteeId: parsed.data.userId,
     groupId: parsed.data.groupId,
@@ -231,7 +235,7 @@ export async function inviteToGroup(input: z.infer<typeof InviteSchema>): Promis
  *  - Si Resend rechaza, log y skip — la operación principal no se afecta.
  */
 async function sendInvitationEmail(
-  supabase: Awaited<ReturnType<typeof supabaseServer>>,
+  supabase: ReturnType<typeof supabaseService> | Awaited<ReturnType<typeof supabaseServer>>,
   { inviterId, inviteeId, groupId }: { inviterId: string; inviteeId: string; groupId: string },
 ): Promise<void> {
   // Email del invitado.
@@ -295,11 +299,13 @@ export async function acceptInvitation(input: z.infer<typeof InvitationIdSchema>
   const parsed = InvitationIdSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Datos inválidos" };
 
-  const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const authClient = await supabaseServer();
+  const { data: { user } } = await authClient.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
-  const { data: invitation } = await supabase
+  const service = supabaseService();
+
+  const { data: invitation } = await service
     .from("group_invitations")
     .select("id, group_id, invited_user_id, status")
     .eq("id", parsed.data.invitationId)
@@ -313,13 +319,13 @@ export async function acceptInvitation(input: z.infer<typeof InvitationIdSchema>
   // Update invitation + member en paralelo (no son atómicas pero el riesgo es bajo).
   const now = new Date().toISOString();
 
-  const { error: invUpdErr } = await supabase
+  const { error: invUpdErr } = await service
     .from("group_invitations")
     .update({ status: "accepted", responded_at: now } as never)
     .eq("id", inv.id);
   if (invUpdErr) return { ok: false, error: invUpdErr.message };
 
-  const { error: memUpdErr } = await supabase
+  const { error: memUpdErr } = await service
     .from("group_members")
     .update({ status: "active", joined_at: now } as never)
     .eq("group_id", inv.group_id)
@@ -327,7 +333,7 @@ export async function acceptInvitation(input: z.infer<typeof InvitationIdSchema>
   if (memUpdErr) {
     if (memUpdErr.message.includes("group_member_limit_reached")) {
       // Revertir invitación.
-      await supabase
+      await service
         .from("group_invitations")
         .update({ status: "pending", responded_at: null } as never)
         .eq("id", inv.id);
@@ -347,11 +353,13 @@ export async function rejectInvitation(input: z.infer<typeof InvitationIdSchema>
   const parsed = InvitationIdSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Datos inválidos" };
 
-  const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const authClient = await supabaseServer();
+  const { data: { user } } = await authClient.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
-  const { data: invitation } = await supabase
+  const service = supabaseService();
+
+  const { data: invitation } = await service
     .from("group_invitations")
     .select("id, group_id, invited_user_id, status")
     .eq("id", parsed.data.invitationId)
@@ -363,13 +371,13 @@ export async function rejectInvitation(input: z.infer<typeof InvitationIdSchema>
   if (inv.status !== "pending") return { ok: false, error: "Esta invitación ya no está pendiente" };
 
   // Update invitation + DELETE member row (decisión #3 hard-delete).
-  const { error: invUpdErr } = await supabase
+  const { error: invUpdErr } = await service
     .from("group_invitations")
     .update({ status: "rejected", responded_at: new Date().toISOString() } as never)
     .eq("id", inv.id);
   if (invUpdErr) return { ok: false, error: invUpdErr.message };
 
-  const { error: delErr } = await supabase
+  const { error: delErr } = await service
     .from("group_members")
     .delete()
     .eq("group_id", inv.group_id)
@@ -394,11 +402,13 @@ export async function cancelInvitation(input: z.infer<typeof InvitationIdSchema>
   const parsed = InvitationIdSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Datos inválidos" };
 
-  const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const authClient = await supabaseServer();
+  const { data: { user } } = await authClient.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
-  const { data: invitation } = await supabase
+  const service = supabaseService();
+
+  const { data: invitation } = await service
     .from("group_invitations")
     .select("id, group_id, invited_user_id, status")
     .eq("id", parsed.data.invitationId)
@@ -409,16 +419,16 @@ export async function cancelInvitation(input: z.infer<typeof InvitationIdSchema>
   if (inv.status !== "pending") return { ok: false, error: "Esta invitación ya no está pendiente" };
 
   // Solo admins/co_admins del grupo pueden cancelar.
-  const isAdmin = await checkIsGroupAdmin(supabase, user.id, inv.group_id);
+  const isAdmin = await checkIsGroupAdmin(service, user.id, inv.group_id);
   if (!isAdmin) return { ok: false, error: "No tienes permisos para cancelar invitaciones" };
 
-  const { error: invErr } = await supabase
+  const { error: invErr } = await service
     .from("group_invitations")
     .update({ status: "expired", responded_at: new Date().toISOString() } as never)
     .eq("id", inv.id);
   if (invErr) return { ok: false, error: invErr.message };
 
-  const { error: delErr } = await supabase
+  const { error: delErr } = await service
     .from("group_members")
     .delete()
     .eq("group_id", inv.group_id)
@@ -437,11 +447,13 @@ export async function leaveGroup(input: z.infer<typeof GroupIdSchema>): Promise<
   const parsed = GroupIdSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Datos inválidos" };
 
-  const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const authClient = await supabaseServer();
+  const { data: { user } } = await authClient.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
-  const { data: member } = await supabase
+  const service = supabaseService();
+
+  const { data: member } = await service
     .from("group_members")
     .select("id, role, status")
     .eq("group_id", parsed.data.groupId)
@@ -460,7 +472,7 @@ export async function leaveGroup(input: z.infer<typeof GroupIdSchema>): Promise<
     };
   }
 
-  const { error: updErr } = await supabase
+  const { error: updErr } = await service
     .from("group_members")
     .update({ status: "left", left_at: new Date().toISOString() } as never)
     .eq("id", m.id);
@@ -488,16 +500,18 @@ export async function removeMember(input: z.infer<typeof RemoveMemberSchema>): P
   const parsed = RemoveMemberSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Datos inválidos" };
 
-  const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const authClient = await supabaseServer();
+  const { data: { user } } = await authClient.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
   if (user.id === parsed.data.userId) {
     return { ok: false, error: "Usa 'salir del grupo' para sacarte a ti mismo" };
   }
 
+  const service = supabaseService();
+
   // Validar caller role.
-  const { data: caller } = await supabase
+  const { data: caller } = await service
     .from("group_members")
     .select("role, status")
     .eq("group_id", parsed.data.groupId)
@@ -509,7 +523,7 @@ export async function removeMember(input: z.infer<typeof RemoveMemberSchema>): P
   }
 
   // Validar target role.
-  const { data: target } = await supabase
+  const { data: target } = await service
     .from("group_members")
     .select("id, role, status")
     .eq("group_id", parsed.data.groupId)
@@ -527,7 +541,7 @@ export async function removeMember(input: z.infer<typeof RemoveMemberSchema>): P
     return { ok: false, error: "No se puede sacar al admin del grupo" };
   }
 
-  const { error: updErr } = await supabase
+  const { error: updErr } = await service
     .from("group_members")
     .update({ status: "removed", left_at: new Date().toISOString() } as never)
     .eq("id", t.id);
@@ -565,12 +579,14 @@ async function changeRole(
   const parsed = RoleChangeSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Datos inválidos" };
 
-  const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const authClient = await supabaseServer();
+  const { data: { user } } = await authClient.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
+  const service = supabaseService();
+
   // Solo creator del grupo (decisión #10 dim 2 = e).
-  const { data: group } = await supabase
+  const { data: group } = await service
     .from("groups")
     .select("created_by_user_id")
     .eq("id", parsed.data.groupId)
@@ -580,7 +596,7 @@ async function changeRole(
     return { ok: false, error: "Solo el admin del grupo puede cambiar roles" };
   }
 
-  const { data: target } = await supabase
+  const { data: target } = await service
     .from("group_members")
     .select("id, role, status")
     .eq("group_id", parsed.data.groupId)
@@ -592,7 +608,7 @@ async function changeRole(
     return { ok: false, error: `El usuario debe ser ${expectedCurrent} para esta operación (es ${t.role})` };
   }
 
-  const { error: updErr } = await supabase
+  const { error: updErr } = await service
     .from("group_members")
     .update({ role: newRole } as never)
     .eq("id", t.id);
@@ -624,8 +640,8 @@ export async function transferAdmin(input: z.infer<typeof TransferAdminSchema>):
   const parsed = TransferAdminSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Datos inválidos" };
 
-  const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const authClient = await supabaseServer();
+  const { data: { user } } = await authClient.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
   if (user.id === parsed.data.newAdminUserId) {
@@ -635,7 +651,13 @@ export async function transferAdmin(input: z.infer<typeof TransferAdminSchema>):
   // Las 3 mutations (groups.created_by + role nuevo admin + role viejo admin)
   // corren atómicamente dentro de transfer_group_admin (SECURITY DEFINER,
   // migración 0096). Si cualquiera falla, todas revierten. Issue #1 del review.
-  const { error: rpcErr } = await supabase.rpc("transfer_group_admin", {
+  //
+  // NOTA: la RPC usa auth.uid() internamente (línea 153 de 0096) para verificar
+  // que el caller es el admin actual. Por eso NO usamos supabaseService acá —
+  // service_role llega con auth.uid()=NULL y la función rechazaría con
+  // "only_creator_can_transfer". Follow-up: migrar la función a aceptar
+  // p_caller_id explícito para poder usar el patrón service_role.
+  const { error: rpcErr } = await authClient.rpc("transfer_group_admin", {
     p_group_id: parsed.data.groupId,
     p_new_admin_id: parsed.data.newAdminUserId,
   } as never);
@@ -678,11 +700,13 @@ export async function updateGroupSettings(input: z.infer<typeof UpdateGroupSetti
   const parsed = UpdateGroupSettingsSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
 
-  const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const authClient = await supabaseServer();
+  const { data: { user } } = await authClient.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
-  const { data: group } = await supabase
+  const service = supabaseService();
+
+  const { data: group } = await service
     .from("groups")
     .select("created_by_user_id, is_active")
     .eq("id", parsed.data.groupId)
@@ -703,7 +727,7 @@ export async function updateGroupSettings(input: z.infer<typeof UpdateGroupSetti
     return { ok: false, error: "No hay cambios para guardar" };
   }
 
-  const { error: updErr } = await supabase
+  const { error: updErr } = await service
     .from("groups")
     .update(update as never)
     .eq("id", parsed.data.groupId);
@@ -722,11 +746,13 @@ export async function deactivateGroup(input: z.infer<typeof GroupIdSchema>): Pro
   const parsed = GroupIdSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Datos inválidos" };
 
-  const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const authClient = await supabaseServer();
+  const { data: { user } } = await authClient.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado" };
 
-  const { data: group } = await supabase
+  const service = supabaseService();
+
+  const { data: group } = await service
     .from("groups")
     .select("created_by_user_id, is_active")
     .eq("id", parsed.data.groupId)
@@ -738,7 +764,7 @@ export async function deactivateGroup(input: z.infer<typeof GroupIdSchema>): Pro
   }
   if (!g.is_active) return { ok: false, error: "El grupo ya está desactivado" };
 
-  const { error: updErr } = await supabase
+  const { error: updErr } = await service
     .from("groups")
     .update({ is_active: false } as never)
     .eq("id", parsed.data.groupId);
@@ -748,7 +774,7 @@ export async function deactivateGroup(input: z.infer<typeof GroupIdSchema>): Pro
   // review). Sin esto, las invitaciones quedaban huérfanas en BD aunque la
   // query `listMyInvitations` ya las filtraba por groups.is_active=true.
   // Best-effort: si falla, log y seguimos — el grupo ya está desactivado.
-  const { error: invExpireErr } = await supabase
+  const { error: invExpireErr } = await service
     .from("group_invitations")
     .update({ status: "expired", responded_at: new Date().toISOString() } as never)
     .eq("group_id", parsed.data.groupId)
@@ -769,7 +795,7 @@ export async function deactivateGroup(input: z.infer<typeof GroupIdSchema>): Pro
  * Lo llamamos via RPC para evitar duplicar la lógica en TS.
  */
 async function checkIsGroupAdmin(
-  supabase: Awaited<ReturnType<typeof supabaseServer>>,
+  supabase: ReturnType<typeof supabaseService> | Awaited<ReturnType<typeof supabaseServer>>,
   userId: string,
   groupId: string,
 ): Promise<boolean> {
