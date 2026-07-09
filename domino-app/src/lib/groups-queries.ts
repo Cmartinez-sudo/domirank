@@ -2,11 +2,19 @@
  * Helpers de lectura para grupos (Fase C+D #2 + #3).
  *
  * No usan "use server" — son funciones puras async invocables desde
- * Server Components o Server Actions. La autenticación y RLS del cliente
- * Supabase se encarga del filtrado de seguridad.
+ * Server Components o Server Actions.
+ *
+ * IMPORTANTE: En este repo, RLS con `auth.uid()` NO funciona confiablemente
+ * cuando la request viene del cliente `supabaseServer()` (@supabase/ssr) —
+ * `auth.uid()` resuelve a NULL en PostgREST y los SELECTs quedan filtrados
+ * como si fuera anon. Por eso usamos el patrón: getUser() con authClient,
+ * y luego lecturas con `supabaseService()` (service_role), filtrando
+ * explícitamente por `user.id` u otros IDs seguros. Ver PR #54/#55 y el
+ * feedback memory `feedback_supabase_server_rls_pattern`.
  */
 
 import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseService } from "@/lib/supabase/service";
 
 export type GroupMatchHistoryRow = {
   match_id: string;
@@ -81,11 +89,13 @@ export type GroupDetails = {
  * Ordenados por created_at desc (más nuevos primero).
  */
 export async function listMyGroups(): Promise<GroupSummary[]> {
-  const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const authClient = await supabaseServer();
+  const { data: { user } } = await authClient.auth.getUser();
   if (!user) return [];
 
-  const { data: memberships } = await supabase
+  const service = supabaseService();
+
+  const { data: memberships } = await service
     .from("group_members")
     .select("group_id, role, groups!inner(id, name, description, is_active, created_by_user_id, allow_friendlies, created_at)")
     .eq("user_id", user.id)
@@ -111,7 +121,7 @@ export async function listMyGroups(): Promise<GroupSummary[]> {
 
   // Conteo de members activos por grupo (batch).
   const groupIds = groups.map((g) => g.group_id);
-  const { data: counts } = await supabase
+  const { data: counts } = await service
     .from("group_members")
     .select("group_id")
     .in("group_id", groupIds)
@@ -142,11 +152,13 @@ export async function listMyGroups(): Promise<GroupSummary[]> {
  * Incluye datos del grupo y del invitador para mostrar en UI.
  */
 export async function listMyInvitations(): Promise<GroupInvitation[]> {
-  const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const authClient = await supabaseServer();
+  const { data: { user } } = await authClient.auth.getUser();
   if (!user) return [];
 
-  const { data } = await supabase
+  const service = supabaseService();
+
+  const { data } = await service
     .from("group_invitations")
     .select(`
       id,
@@ -187,11 +199,13 @@ export async function listMyInvitations(): Promise<GroupInvitation[]> {
  * Devuelve null si el user no tiene acceso (RLS lo filtra).
  */
 export async function getGroupDetails(groupId: string): Promise<GroupDetails | null> {
-  const supabase = await supabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  const authClient = await supabaseServer();
+  const { data: { user } } = await authClient.auth.getUser();
   if (!user) return null;
 
-  const { data: group } = await supabase
+  const service = supabaseService();
+
+  const { data: group } = await service
     .from("groups")
     .select("id, name, description, is_active, allow_friendlies, created_by_user_id, created_at")
     .eq("id", groupId)
@@ -208,7 +222,7 @@ export async function getGroupDetails(groupId: string): Promise<GroupDetails | n
     created_at: string;
   };
 
-  const { data: members } = await supabase
+  const { data: members } = await service
     .from("group_members")
     .select(`
       user_id,
@@ -236,6 +250,12 @@ export async function getGroupDetails(groupId: string): Promise<GroupDetails | n
 
   const myRecord = memberList.find((m) => m.user_id === user.id);
 
+  // Security check reintroducido en TS (antes lo hacía RLS): si el user no
+  // es miembro activo del grupo, no exponemos el detalle. Excepción:
+  // invitados pendientes deben ver el nombre para decidir aceptar/rechazar,
+  // pero esa lookup va por otro path (listMyInvitations).
+  if (!myRecord) return null;
+
   return {
     id: g.id,
     name: g.name,
@@ -245,7 +265,7 @@ export async function getGroupDetails(groupId: string): Promise<GroupDetails | n
     created_by_user_id: g.created_by_user_id,
     created_at: g.created_at,
     members: memberList,
-    my_role: myRecord?.role ?? null,
+    my_role: myRecord.role,
   };
 }
 
@@ -269,9 +289,25 @@ export async function getGroupMatchHistory(
   const limit = opts?.limit ?? 25;
   const offset = opts?.offset ?? 0;
 
-  const supabase = await supabaseServer();
+  const authClient = await supabaseServer();
+  const { data: { user } } = await authClient.auth.getUser();
+  if (!user) return [];
 
-  const { data } = await supabase
+  const service = supabaseService();
+
+  // Security: reproducir el chequeo que antes hacía la RLS
+  // (attributions_select_member). Solo devolver el history si el caller es
+  // miembro activo del grupo.
+  const { data: memberCheck } = await service
+    .from("group_members")
+    .select("id")
+    .eq("group_id", groupId)
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!memberCheck) return [];
+
+  const { data } = await service
     .from("group_match_attributions")
     .select(`
       match_id,
@@ -311,7 +347,7 @@ export async function getGroupMatchHistory(
 
   // Cargar players de los matches en batch para evitar N+1.
   const matchIds = rows.map((r) => r.match_id);
-  const { data: playersRaw } = await supabase
+  const { data: playersRaw } = await service
     .from("match_players")
     .select(`
       match_id,

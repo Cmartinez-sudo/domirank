@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseService } from "@/lib/supabase/service";
 import { getGroupDetails } from "@/lib/groups-queries";
 import { MembersPanel } from "./MembersPanel";
 
@@ -20,11 +20,13 @@ export default async function GroupMembersPage({
   const isCreator = group.created_by_user_id === user.id;
 
   // DomiRank Global de cada miembro (vía profile_ratings).
+  // Reads con service_role: getGroupDetails ya verificó que el user es miembro
+  // activo, así que exponer profile_ratings de los co-members es seguro.
+  const service = supabaseService();
   const userIds = group.members.map((m) => m.user_id);
   const ratingsMap = new Map<string, { global_display: number | null; is_rated: boolean }>();
   if (userIds.length > 0) {
-    const supabase = await supabaseServer();
-    const { data: ratings } = await supabase
+    const { data: ratings } = await service
       .from("profile_ratings")
       .select("id, global_display, is_rated")
       .in("id", userIds);
@@ -42,8 +44,7 @@ export default async function GroupMembersPage({
   };
   let pending: PendingInvitationRow[] = [];
   if (isAdminOrCo) {
-    const supabase = await supabaseServer();
-    const { data } = await supabase
+    const { data } = await service
       .from("group_invitations")
       .select(`
         id,
