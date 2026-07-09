@@ -36,26 +36,47 @@ export default async function GroupMembersPage({
   }
 
   // Invitaciones pendientes del grupo (visible para admin/co_admin).
+  // NOTA: el embedded profiles:profiles!fk_name(...) no funciona porque el
+  // FK invited_user_id apunta a auth.users. Hacemos batch lookup separado.
   type PendingInvitationRow = {
-    id: string;
-    invited_user_id: string;
+    invitation_id: string;
+    user_id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
     created_at: string;
-    profiles: { username: string; display_name: string | null; avatar_url: string | null } | null;
   };
   let pending: PendingInvitationRow[] = [];
   if (isAdminOrCo) {
-    const { data } = await service
+    const { data: invRaw } = await service
       .from("group_invitations")
-      .select(`
-        id,
-        invited_user_id,
-        created_at,
-        profiles:profiles!group_invitations_invited_user_id_fkey(username, display_name, avatar_url)
-      `)
+      .select("id, invited_user_id, created_at")
       .eq("group_id", id)
       .eq("status", "pending")
       .order("created_at", { ascending: false });
-    pending = (data as unknown as PendingInvitationRow[] | null) ?? [];
+    const invRows = (invRaw as Array<{ id: string; invited_user_id: string; created_at: string }> | null) ?? [];
+    if (invRows.length > 0) {
+      const invUserIds = Array.from(new Set(invRows.map((r) => r.invited_user_id)));
+      const { data: invProfiles } = await service
+        .from("profiles")
+        .select("id, username, display_name, avatar_url")
+        .in("id", invUserIds);
+      const invProfileMap = new Map<string, { username: string; display_name: string | null; avatar_url: string | null }>();
+      for (const p of (invProfiles ?? []) as Array<{ id: string; username: string; display_name: string | null; avatar_url: string | null }>) {
+        invProfileMap.set(p.id, { username: p.username, display_name: p.display_name, avatar_url: p.avatar_url });
+      }
+      pending = invRows.map((r) => {
+        const p = invProfileMap.get(r.invited_user_id);
+        return {
+          invitation_id: r.id,
+          user_id: r.invited_user_id,
+          username: p?.username ?? "?",
+          display_name: p?.display_name ?? null,
+          avatar_url: p?.avatar_url ?? null,
+          created_at: r.created_at,
+        };
+      });
+    }
   }
 
   const members = group.members.map((m) => ({
@@ -68,14 +89,7 @@ export default async function GroupMembersPage({
     <MembersPanel
       groupId={id}
       members={members}
-      pending={pending.map((p) => ({
-        invitation_id: p.id,
-        user_id: p.invited_user_id,
-        username: p.profiles?.username ?? "?",
-        display_name: p.profiles?.display_name ?? null,
-        avatar_url: p.profiles?.avatar_url ?? null,
-        created_at: p.created_at,
-      }))}
+      pending={pending}
       currentUserId={user.id}
       isAdminOrCo={isAdminOrCo}
       isCreator={isCreator}
