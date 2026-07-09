@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { requireUser } from "@/lib/auth";
-import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseService } from "@/lib/supabase/service";
 import { getGroupDetails } from "@/lib/groups-queries";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +30,9 @@ export default async function GroupLeaderboardPage({
   const group = await getGroupDetails(id);
   if (!group) notFound();
 
-  const supabase = await supabaseServer();
+  // getGroupDetails ya verificó membresía activa. Safe usar service para
+  // el read del leaderboard (mismo patrón que members/page.tsx).
+  const supabase = supabaseService();
   const { data: rowsRaw } = await supabase
     .from("group_leaderboard")
     .select("*")
