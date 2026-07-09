@@ -158,6 +158,10 @@ export async function listMyInvitations(): Promise<GroupInvitation[]> {
 
   const service = supabaseService();
 
+  // NOTA: no usamos embedded resource `profiles:profiles!fk_name(...)` porque
+  // el FK invited_by_user_id apunta a auth.users, no a profiles → PGRST200.
+  // Con supabaseServer + RLS antes daba [] silenciosamente y el join no se
+  // resolvía; con service_role la query trata de resolver el join y explota.
   const { data } = await service
     .from("group_invitations")
     .select(`
@@ -165,8 +169,7 @@ export async function listMyInvitations(): Promise<GroupInvitation[]> {
       group_id,
       invited_by_user_id,
       created_at,
-      groups!inner(name, is_active),
-      profiles:profiles!group_invitations_invited_by_user_id_fkey(username, display_name)
+      groups!inner(name, is_active)
     `)
     .eq("invited_user_id", user.id)
     .eq("status", "pending")
@@ -174,24 +177,37 @@ export async function listMyInvitations(): Promise<GroupInvitation[]> {
 
   if (!data) return [];
 
-  return (data as unknown as Array<{
+  const rows = (data as unknown as Array<{
     id: string;
     group_id: string;
     invited_by_user_id: string;
     created_at: string;
     groups: { name: string; is_active: boolean };
-    profiles: { username: string | null; display_name: string | null } | null;
-  }>)
-    .filter((r) => r.groups.is_active)
-    .map((r) => ({
-      id: r.id,
-      group_id: r.group_id,
-      group_name: r.groups.name,
-      invited_by_user_id: r.invited_by_user_id,
-      invited_by_username: r.profiles?.username ?? null,
-      invited_by_display_name: r.profiles?.display_name ?? null,
-      created_at: r.created_at,
-    }));
+  }>).filter((r) => r.groups?.is_active);
+
+  if (rows.length === 0) return [];
+
+  // Batch profile lookup — el FK apunta a auth.users pero profiles.id refs
+  // auth.users.id, así que hacemos el fetch por separado.
+  const inviterIds = Array.from(new Set(rows.map((r) => r.invited_by_user_id)));
+  const { data: profiles } = await service
+    .from("profiles")
+    .select("id, username, display_name")
+    .in("id", inviterIds);
+  const profileMap = new Map<string, { username: string | null; display_name: string | null }>();
+  for (const p of (profiles ?? []) as Array<{ id: string; username: string | null; display_name: string | null }>) {
+    profileMap.set(p.id, { username: p.username, display_name: p.display_name });
+  }
+
+  return rows.map((r) => ({
+    id: r.id,
+    group_id: r.group_id,
+    group_name: r.groups.name,
+    invited_by_user_id: r.invited_by_user_id,
+    invited_by_username: profileMap.get(r.invited_by_user_id)?.username ?? null,
+    invited_by_display_name: profileMap.get(r.invited_by_user_id)?.display_name ?? null,
+    created_at: r.created_at,
+  }));
 }
 
 /**
@@ -222,31 +238,44 @@ export async function getGroupDetails(groupId: string): Promise<GroupDetails | n
     created_at: string;
   };
 
+  // Ver comentario en listMyInvitations: no usamos embedded resource porque
+  // group_members.user_id apunta a auth.users, no a profiles.
   const { data: members } = await service
     .from("group_members")
-    .select(`
-      user_id,
-      role,
-      joined_at,
-      profiles!inner(username, display_name, avatar_url)
-    `)
+    .select("user_id, role, joined_at")
     .eq("group_id", groupId)
     .eq("status", "active")
     .order("joined_at", { ascending: true });
 
-  const memberList: GroupMember[] = (members as unknown as Array<{
+  const rawMembers = (members as Array<{
     user_id: string;
     role: "admin" | "co_admin" | "member";
     joined_at: string | null;
-    profiles: { username: string; display_name: string | null; avatar_url: string | null };
-  }> | null ?? []).map((m) => ({
-    user_id: m.user_id,
-    username: m.profiles.username,
-    display_name: m.profiles.display_name,
-    avatar_url: m.profiles.avatar_url,
-    role: m.role,
-    joined_at: m.joined_at,
-  }));
+  }> | null) ?? [];
+
+  const memberUserIds = rawMembers.map((m) => m.user_id);
+  const profileMap = new Map<string, { username: string; display_name: string | null; avatar_url: string | null }>();
+  if (memberUserIds.length > 0) {
+    const { data: profiles } = await service
+      .from("profiles")
+      .select("id, username, display_name, avatar_url")
+      .in("id", memberUserIds);
+    for (const p of (profiles ?? []) as Array<{ id: string; username: string; display_name: string | null; avatar_url: string | null }>) {
+      profileMap.set(p.id, { username: p.username, display_name: p.display_name, avatar_url: p.avatar_url });
+    }
+  }
+
+  const memberList: GroupMember[] = rawMembers.map((m) => {
+    const p = profileMap.get(m.user_id);
+    return {
+      user_id: m.user_id,
+      username: p?.username ?? "?",
+      display_name: p?.display_name ?? null,
+      avatar_url: p?.avatar_url ?? null,
+      role: m.role,
+      joined_at: m.joined_at,
+    };
+  });
 
   const myRecord = memberList.find((m) => m.user_id === user.id);
 
@@ -346,32 +375,42 @@ export async function getGroupMatchHistory(
   if (rows.length === 0) return [];
 
   // Cargar players de los matches en batch para evitar N+1.
+  // Ver comentario en listMyInvitations: sin embedded profiles porque
+  // match_players.user_id apunta a auth.users, no a profiles.
   const matchIds = rows.map((r) => r.match_id);
   const { data: playersRaw } = await service
     .from("match_players")
-    .select(`
-      match_id,
-      user_id,
-      team,
-      rank,
-      profiles!inner(username, display_name, avatar_url)
-    `)
+    .select("match_id, user_id, team, rank")
     .in("match_id", matchIds);
 
-  const playersByMatch = new Map<string, GroupMatchHistoryRow["players"]>();
-  for (const p of (playersRaw as unknown as Array<{
+  const playerRows = (playersRaw as Array<{
     match_id: string;
     user_id: string;
     team: number;
     rank: number | null;
-    profiles: { username: string; display_name: string | null; avatar_url: string | null };
-  }> | null) ?? []) {
+  }> | null) ?? [];
+
+  const playerUserIds = Array.from(new Set(playerRows.map((p) => p.user_id)));
+  const profileMap = new Map<string, { username: string; display_name: string | null; avatar_url: string | null }>();
+  if (playerUserIds.length > 0) {
+    const { data: profiles } = await service
+      .from("profiles")
+      .select("id, username, display_name, avatar_url")
+      .in("id", playerUserIds);
+    for (const p of (profiles ?? []) as Array<{ id: string; username: string; display_name: string | null; avatar_url: string | null }>) {
+      profileMap.set(p.id, { username: p.username, display_name: p.display_name, avatar_url: p.avatar_url });
+    }
+  }
+
+  const playersByMatch = new Map<string, GroupMatchHistoryRow["players"]>();
+  for (const p of playerRows) {
+    const profile = profileMap.get(p.user_id);
     const list = playersByMatch.get(p.match_id) ?? [];
     list.push({
       user_id: p.user_id,
-      username: p.profiles.username,
-      display_name: p.profiles.display_name,
-      avatar_url: p.profiles.avatar_url,
+      username: profile?.username ?? "?",
+      display_name: profile?.display_name ?? null,
+      avatar_url: profile?.avatar_url ?? null,
       team: p.team,
       rank: p.rank,
     });
