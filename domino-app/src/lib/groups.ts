@@ -238,15 +238,26 @@ async function sendInvitationEmail(
   supabase: ReturnType<typeof supabaseService> | Awaited<ReturnType<typeof supabaseServer>>,
   { inviterId, inviteeId, groupId }: { inviterId: string; inviteeId: string; groupId: string },
 ): Promise<void> {
-  // Email del invitado.
-  const { data: email, error: emailErr } = await supabase.rpc("get_user_email", {
-    p_user_id: inviteeId,
-  } as never);
-  if (emailErr) {
-    console.warn("[sendInvitationEmail] get_user_email failed:", emailErr.message);
+  // Email + opt-out del invitado. NOTA: no usamos la RPC get_user_email
+  // porque requiere auth.uid() no-null; con service_role auth.uid()=null
+  // y la función tiraba 'not_authenticated' — los correos NO llegaban.
+  // Chequeamos email_notifications en JS (equivalente al opt-out que
+  // hacía la RPC).
+  const service = supabaseService();
+  const { data: profile } = await service
+    .from("profiles")
+    .select("email_notifications")
+    .eq("id", inviteeId)
+    .maybeSingle();
+  const optIn = ((profile as { email_notifications: boolean | null } | null)?.email_notifications) ?? true;
+  if (!optIn) return; // usuario opted-out — respetamos preferencia
+
+  const { data: authUser, error: emailErr } = await service.auth.admin.getUserById(inviteeId);
+  if (emailErr || !authUser?.user?.email) {
+    console.warn("[sendInvitationEmail] auth.admin.getUserById failed:", emailErr?.message);
     return;
   }
-  if (!email) return; // opted out o sin email
+  const email = authUser.user.email;
 
   // Datos del invitador.
   const { data: inviter } = await supabase
@@ -288,7 +299,10 @@ async function sendInvitationEmail(
     activeMembersCount: activeCount ?? 0,
   });
 
-  await sendEmail({ to: email as string, ...template });
+  const ok = await sendEmail({ to: email, ...template });
+  if (!ok) {
+    console.warn("[sendInvitationEmail] sendEmail returned false for", email);
+  }
 }
 
 // ─── 3. acceptInvitation ─────────────────────────────────────
