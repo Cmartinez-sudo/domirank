@@ -268,6 +268,29 @@ async function renderLeaderboard({ id }: { id: string }) {
       return b.matches_played - a.matches_played;
     })[0];
 
+  // ⚠ DEBUG: bisección para encontrar el crash
+  return (
+    <div className="card space-y-2 text-xs font-mono">
+      <div className="text-emerald-400 font-bold">✓ Data fetch OK — rendering minimal debug</div>
+      <div>group: {group.name} · members: {group.members.length}</div>
+      <div>leaderboard rows: {leaderboardRows.length}</div>
+      <div>matchIds: {matchIds.length}</div>
+      <div>ratings loaded: {ratingMap.size}</div>
+      <div>merged rows: {merged.length}</div>
+      <div>ranked (played): {ranked.length} · unranked (0 played): {unranked.length}</div>
+      <div>bestAverage: {bestAverage ? `${bestAverage.profile.username} (${bestAverage.win_rate}%)` : "none"}</div>
+      <div>bestStreak: {bestStreak ? `${bestStreak.profile.username} (${bestStreak.streak?.count}${bestStreak.streak?.outcome})` : "none"}</div>
+      <div className="pt-2 text-text-mute">rows sample:</div>
+      {rows.slice(0, 3).map((r, i) => (
+        <div key={r.user_id} className="pl-2">
+          [{i}] user={r.user_id.slice(0, 8)} rank={String(r.displayRank)} name=&quot;{r.profile.display_name ?? "null"}&quot; username={r.profile.username} rating={String(r.rating.global_display)} isRated={String(r.rating.is_rated)} MP={r.matches_played} V={r.wins} winRate={r.win_rate} CE={r.effectiveness_coefficient} diff={r.diff} streak={r.streak ? `${r.streak.count}${r.streak.outcome}` : "null"}
+        </div>
+      ))}
+    </div>
+  );
+
+  // Original render bloqueado abajo para bisección — no se ejecuta.
+  // eslint-disable-next-line no-unreachable
   return (
     <div className="space-y-4">
       {/* ─── Highlights ─────────────────────────────────────── */}
@@ -286,7 +309,7 @@ async function renderLeaderboard({ id }: { id: string }) {
               icon={<FlameIcon className="text-orange-500" />}
               label="En racha"
               row={bestStreak}
-              stat={`${bestStreak.streak.count}W consecutivas`}
+              stat={`${bestStreak.streak?.count}W consecutivas`}
             />
           )}
         </div>
