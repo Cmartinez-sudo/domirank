@@ -133,8 +133,29 @@ export default async function GroupLeaderboardPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  try {
+    return await renderLeaderboard(await params);
+  } catch (e) {
+    // Debug: mostrar el error inline hasta que estabilice. TODO remove.
+    const err = e instanceof Error ? e : new Error(String(e));
+    console.error("[GroupLeaderboardPage] crash:", err);
+    return (
+      <div className="card border-red-500/40 bg-red-950/20 text-sm text-red-200 space-y-2">
+        <div className="font-bold text-red-400">Debug: crash del leaderboard</div>
+        <div className="font-mono text-xs whitespace-pre-wrap break-all">{err.message}</div>
+        {err.stack && (
+          <details>
+            <summary className="cursor-pointer text-red-300 text-xs">stack</summary>
+            <pre className="text-[10px] overflow-auto max-h-64 mt-1">{err.stack}</pre>
+          </details>
+        )}
+      </div>
+    );
+  }
+}
+
+async function renderLeaderboard({ id }: { id: string }) {
   await requireUser();
-  const { id } = await params;
   const group = await getGroupDetails(id);
   if (!group) notFound();
 
