@@ -8,6 +8,14 @@ export const dynamic = "force-dynamic";
 
 // TEMPORARY DEBUG — try/catch cada paso y renderear el mensaje si crashea.
 // TODO: remover una vez identificado el bug.
+function isRedirectError(err: unknown): boolean {
+  // Next.js throws these exceptions internally to signal redirect/notFound.
+  // NO deben ser capturadas — dejar propagar para que Next las maneje.
+  if (!(err instanceof Error)) return false;
+  const msg = err.message || "";
+  return msg === "NEXT_REDIRECT" || msg === "NEXT_NOT_FOUND" || (err as { digest?: string }).digest?.startsWith("NEXT_REDIRECT") === true;
+}
+
 function renderDebugError(where: string, err: unknown) {
   const e = err instanceof Error ? err : new Error(String(err));
   return (
@@ -34,6 +42,7 @@ export default async function GroupsPage() {
   try {
     await requireUser();
   } catch (e) {
+    if (isRedirectError(e)) throw e;
     return renderDebugError("requireUser()", e);
   }
 
@@ -43,12 +52,14 @@ export default async function GroupsPage() {
   try {
     groups = await listMyGroups();
   } catch (e) {
+    if (isRedirectError(e)) throw e;
     return renderDebugError("listMyGroups()", e);
   }
 
   try {
     invitations = await listMyInvitations();
   } catch (e) {
+    if (isRedirectError(e)) throw e;
     return renderDebugError("listMyInvitations()", e);
   }
 
@@ -104,6 +115,7 @@ export default async function GroupsPage() {
       </div>
     );
   } catch (e) {
+    if (isRedirectError(e)) throw e;
     return renderDebugError("JSX render", e);
   }
 }
