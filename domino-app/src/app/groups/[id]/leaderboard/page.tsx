@@ -265,7 +265,7 @@ export default async function GroupLeaderboardPage({
               icon={<FlameIcon className="text-orange-500" />}
               label="En racha"
               row={bestStreak}
-              stat={`${bestStreak.streak.count}W consecutivas`}
+              stat={`${bestStreak.streak.count} ${bestStreak.streak.count === 1 ? "victoria" : "victorias"} consecutivas`}
             />
           )}
         </div>
@@ -394,7 +394,7 @@ function LeaderboardRowView({ row }: { row: MergedRow }) {
             }`}
           >
             {row.streak.count}
-            {row.streak.outcome}
+            {row.streak.outcome === "W" ? "V" : "D"}
           </span>
         ) : (
           <span className="text-text-mute">—</span>
