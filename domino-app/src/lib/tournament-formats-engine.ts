@@ -5,6 +5,7 @@
 
 import { supabaseServer } from "@/lib/supabase/server";
 import type { TournamentFormat } from "@/lib/tournament-formats";
+import { generateMultiRoundFixture, isSupportedPlayerCount } from "@/lib/round-robin-fixture";
 
 // ─── Types (internos, no exportables desde "use server") ───────────────────
 
@@ -75,6 +76,30 @@ export async function generateInitialPairings(tournamentId: string): Promise<{ o
     if (format === "rotation" || format === "points_league") {
       // No auto pairings for these formats
       return { ok: true };
+    } else if (format === "round_robin_individual") {
+      // Fixture pre-computado por playerCount ∈ {4, 5}. Cada partida tiene
+      // 2 duplas DINÁMICAS de 2 individuals cada una. `rounds_count` es R
+      // (ciclos completos); default 1 si no está seteado.
+      if (!isSupportedPlayerCount(playerIds.length)) {
+        return {
+          ok: false,
+          error: `Round Robin individual solo soporta 4 o 5 jugadores por ahora. Actualmente: ${playerIds.length}.`,
+        };
+      }
+      const R = ((t as Record<string, unknown>).rounds_count as number) ?? 1;
+      const fixture = generateMultiRoundFixture(playerIds.length, R);
+      pairings = fixture.map((m) => ({
+        round: m.matchNumber,
+        board: 1,
+        teamA: {
+          userIds: [playerIds[m.home[0]]!, playerIds[m.home[1]]!],
+          label: "Home",
+        },
+        teamB: {
+          userIds: [playerIds[m.away[0]]!, playerIds[m.away[1]]!],
+          label: "Away",
+        },
+      }));
     } else if (format === "round_robin") {
       pairings = generateRoundRobin(teams, numBoards);
     } else if (format === "swiss") {

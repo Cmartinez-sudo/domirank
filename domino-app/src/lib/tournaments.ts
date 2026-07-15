@@ -84,6 +84,14 @@ export async function createTournament(input: CreateTournamentInput) {
   if (f.format === "round_robin" && maxPlayers % 2 !== 0) {
     return { ok: false as const, error: "Round Robin de parejas requiere número par de jugadores." };
   }
+  if (f.format === "round_robin_individual") {
+    if (maxPlayers !== 4 && maxPlayers !== 5) {
+      return {
+        ok: false as const,
+        error: "Round Robin individual soporta 4 o 5 jugadores por ahora (próximamente 8 y 9).",
+      };
+    }
+  }
   if (f.format === "single_elim") {
     const validPow2 = [4, 8, 16, 32, 64];
     if (!validPow2.includes(maxPlayers)) {
@@ -145,9 +153,13 @@ export async function createTournament(input: CreateTournamentInput) {
     created_by: user.id,
     inscription_mode: finalInscriptionMode,
     time_limit_minutes: f.time_limit_minutes,
-    // rounds_count solo se persiste para Suizo; los demás formatos derivan
-    // sus rondas (RR=n-1, Single Elim=log2(n)).
-    rounds_count: f.format === "swiss" ? f.rounds_count ?? null : null,
+    // rounds_count se persiste para Suizo (# rondas swiss) y RR Individual
+    // (R = ciclos completos del fixture). Los demás formatos derivan sus
+    // rondas (RR=n-1, Single Elim=log2(n)).
+    rounds_count:
+      f.format === "swiss" || f.format === "round_robin_individual"
+        ? f.rounds_count ?? null
+        : null,
     join_code: joinCode,
     description: f.description ?? null,
     max_players: maxPlayers,

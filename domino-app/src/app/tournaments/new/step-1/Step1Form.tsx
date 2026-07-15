@@ -128,9 +128,11 @@ export function Step1Form({ userId }: { userId: string }) {
       requires_attestation: requiresAttestation,
       rated,
       time_limit_minutes: timeLimitMinutes,
-      // rounds_count solo persiste si el formato lo usa (Suizo). En los demás
-      // formatos pasamos null para que el motor decida.
-      rounds_count: format === "swiss" ? roundsCount : null,
+      // rounds_count solo persiste si el formato lo usa (Suizo o RR Individual
+      // donde R = cantidad de ciclos completos). En los demás formatos
+      // pasamos null para que el motor decida.
+      rounds_count:
+        format === "swiss" || format === "round_robin_individual" ? roundsCount : null,
       // pointsToWin se mapea a `custom_goal`; el server action prioriza este
       // sobre el default de modality (lógica `pointsToWin` en tournaments.ts).
       custom_goal: pointsToWin,
