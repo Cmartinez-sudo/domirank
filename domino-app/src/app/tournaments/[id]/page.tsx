@@ -388,7 +388,7 @@ export default async function TournamentDetail({
   const isOwner = user?.id === (tournament as { created_by?: string }).created_by;
   const hasPairings = (pairings ?? []).length > 0;
   const isBracketFormat = ["single_elim", "double_elim"].includes((tournament as { format?: string }).format ?? "");
-  const isRoundFormat = ["round_robin", "swiss"].includes((tournament as { format?: string }).format ?? "");
+  const isRoundFormat = ["round_robin", "round_robin_individual", "swiss"].includes((tournament as { format?: string }).format ?? "");
   const tournamentStatus = (tournament as { status: string }).status;
   const timeLimitMinutes = (tournament as { time_limit_minutes?: number | null }).time_limit_minutes ?? null;
   const totalRounds = (tournament as { total_rounds?: number | null }).total_rounds ?? null;
