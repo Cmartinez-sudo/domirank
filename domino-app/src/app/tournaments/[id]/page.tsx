@@ -35,6 +35,8 @@ import { GenerateNextRoundButton, GeneratePairingsButton } from "./TournamentAct
 import { PageTransition } from "@/components/Motion";
 import { TournamentLeaderboard } from "./TournamentLeaderboard";
 import { HeroNextMatch, HeroWaiting } from "@/components/tournament/HeroNextMatch";
+import { CancelTournamentButton } from "@/components/tournament/CancelTournamentButton";
+import { CancelMatchButton } from "@/components/tournament/CancelMatchButton";
 import { TournamentRealtimeRefresher } from "./TournamentRealtimeRefresher";
 import type { LeaderboardRow } from "@/types/leaderboard";
 
@@ -388,7 +390,7 @@ export default async function TournamentDetail({
   const isOwner = user?.id === (tournament as { created_by?: string }).created_by;
   const hasPairings = (pairings ?? []).length > 0;
   const isBracketFormat = ["single_elim", "double_elim"].includes((tournament as { format?: string }).format ?? "");
-  const isRoundFormat = ["round_robin", "swiss"].includes((tournament as { format?: string }).format ?? "");
+  const isRoundFormat = ["round_robin", "round_robin_individual", "swiss"].includes((tournament as { format?: string }).format ?? "");
   const tournamentStatus = (tournament as { status: string }).status;
   const timeLimitMinutes = (tournament as { time_limit_minutes?: number | null }).time_limit_minutes ?? null;
   const totalRounds = (tournament as { total_rounds?: number | null }).total_rounds ?? null;
@@ -462,7 +464,7 @@ export default async function TournamentDetail({
           </section>
         )}
 
-        {/* ── Rounds (round_robin / swiss) ── */}
+        {/* ── Rounds (round_robin / round_robin_individual / swiss) ── */}
         {isRoundFormat && hasPairings && (
           <RoundsView
             pairings={pairings ?? []}
@@ -471,6 +473,8 @@ export default async function TournamentDetail({
             isOwner={isOwner}
             userId={user?.id ?? null}
             numBoards={numBoards}
+            inscribedUserIds={(tPlayers ?? []).map((p) => p.user_id as string)}
+            isIndividualRR={(tournament as { format?: string }).format === "round_robin_individual"}
           />
         )}
 
@@ -513,6 +517,8 @@ function RoundsView({
   isOwner,
   userId,
   numBoards,
+  inscribedUserIds,
+  isIndividualRR,
 }: {
   pairings: Record<string, unknown>[];
   profiles: { id: string; username: string; display_name: string | null; avatar_url: string | null }[];
@@ -520,17 +526,29 @@ function RoundsView({
   isOwner: boolean;
   userId: string | null;
   numBoards?: number;
+  inscribedUserIds?: string[];
+  isIndividualRR?: boolean;
 }) {
   const rounds = Array.from(new Set(pairings.map((p) => p.round as number))).sort((a, b) => a - b);
   const showBoards = (numBoards ?? 1) > 1;
+  const inscribedSet = new Set(inscribedUserIds ?? []);
+
   return (
     <div className="space-y-3">
+      {/* Hint para RR Individual (útil para late arrivals). */}
+      {isIndividualRR && isOwner && (
+        <div className="rounded-xl border border-info/30 bg-info/10 p-3 text-sm text-info">
+          💡 Podés jugar las partidas en cualquier orden. Si un jugador aún no
+          llegó, elegí una partida donde él descanse y arrancá con los que
+          están.
+        </div>
+      )}
       {rounds.map((round) => {
         const rPairings = pairings.filter((p) => (p.round as number) === round);
         return (
           <section key={round} className="card p-0 overflow-hidden">
             <h2 className="px-4 py-2.5 border-b border-border font-semibold text-sm">
-              Ronda {round}
+              {isIndividualRR ? `Partida ${round}` : `Ronda ${round}`}
             </h2>
             <div className="divide-y divide-border">
               {rPairings.map((p) => {
@@ -539,6 +557,15 @@ function RoundsView({
                 const teamA = teamAIds.map((uid) => profiles.find((pr) => pr.id === uid)).filter(Boolean) as typeof profiles;
                 const teamB = teamBIds.map((uid) => profiles.find((pr) => pr.id === uid)).filter(Boolean) as typeof profiles;
 
+                // Descansa: inscritos MENOS jugadores en esta partida.
+                const playingSet = new Set([...teamAIds, ...teamBIds]);
+                const restingIds = isIndividualRR
+                  ? [...inscribedSet].filter((uid) => !playingSet.has(uid))
+                  : [];
+                const restingProfiles = restingIds
+                  .map((uid) => profiles.find((pr) => pr.id === uid))
+                  .filter(Boolean) as typeof profiles;
+
                 const isUserPairing = userId && (teamAIds.includes(userId) || teamBIds.includes(userId));
                 const matchId = p.match_id as string | null;
                 const boardNum = p.board as number ?? 1;
@@ -546,55 +573,67 @@ function RoundsView({
                 return (
                   <div
                     key={p.id as string}
-                    className={`flex items-center gap-3 px-4 py-3 ${isUserPairing ? "bg-primary/[.04] border-l-2 border-l-primary" : ""}`}
+                    className={`px-4 py-3 ${isUserPairing ? "bg-primary/[.04] border-l-2 border-l-primary" : ""}`}
                   >
-                    {/* Mesa badge — solo si el torneo tiene más de 1 mesa */}
-                    {showBoards && (
-                      <span className="text-xs font-semibold text-text-mute shrink-0 w-12 text-center">
-                        M{boardNum}
-                      </span>
-                    )}
-                    <div className="flex-1 flex items-center gap-2 min-w-0">
-                      <div className="flex -space-x-1.5">
-                        {teamA.map((pl) => (
-                          <Avatar key={pl.id} player={pl} size={24} />
-                        ))}
+                    <div className="flex items-center gap-3">
+                      {/* Mesa badge — solo si el torneo tiene más de 1 mesa */}
+                      {showBoards && (
+                        <span className="text-xs font-semibold text-text-mute shrink-0 w-12 text-center">
+                          M{boardNum}
+                        </span>
+                      )}
+                      <div className="flex-1 flex items-center gap-2 min-w-0">
+                        <div className="flex -space-x-1.5">
+                          {teamA.map((pl) => (
+                            <Avatar key={pl.id} player={pl} size={24} />
+                          ))}
+                        </div>
+                        <span className="text-sm text-text-dim truncate">
+                          {teamA.map((pl) => pl.display_name ?? pl.username).join(" & ")}
+                        </span>
                       </div>
-                      <span className="text-sm text-text-dim truncate">
-                        {teamA.map((pl) => pl.display_name ?? pl.username).join(" & ")}
-                      </span>
-                    </div>
-                    <span className="text-text-mute text-sm font-medium shrink-0">vs</span>
-                    <div className="flex-1 flex items-center gap-2 min-w-0 justify-end">
-                      <span className="text-sm text-text-dim truncate text-right">
-                        {teamB.map((pl) => pl.display_name ?? pl.username).join(" & ")}
-                      </span>
-                      <div className="flex -space-x-1.5">
-                        {teamB.map((pl) => (
-                          <Avatar key={pl.id} player={pl} size={24} />
-                        ))}
+                      <span className="text-text-mute text-sm font-medium shrink-0">vs</span>
+                      <div className="flex-1 flex items-center gap-2 min-w-0 justify-end">
+                        <span className="text-sm text-text-dim truncate text-right">
+                          {teamB.map((pl) => pl.display_name ?? pl.username).join(" & ")}
+                        </span>
+                        <div className="flex -space-x-1.5">
+                          {teamB.map((pl) => (
+                            <Avatar key={pl.id} player={pl} size={24} />
+                          ))}
+                        </div>
                       </div>
+                      {matchId ? (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Link href={`/matches/${matchId}`} className="text-xs text-primary hover:underline">
+                            Ver
+                          </Link>
+                          {isOwner && (
+                            <CancelMatchButton tournamentId={tournamentId} matchId={matchId} />
+                          )}
+                        </div>
+                      ) : isUserPairing ? (
+                        <Link
+                          href={`/matches/new?tournament=${tournamentId}&pairing=${p.id as string}`}
+                          className="text-xs btn-primary py-1 px-2 shrink-0"
+                        >
+                          Jugar
+                        </Link>
+                      ) : isOwner ? (
+                        <Link
+                          href={`/matches/new?tournament=${tournamentId}&pairing=${p.id as string}`}
+                          className="text-xs text-text-mute hover:text-primary shrink-0"
+                        >
+                          Jugar
+                        </Link>
+                      ) : (
+                        <span className="text-xs text-text-mute shrink-0">Pendiente</span>
+                      )}
                     </div>
-                    {matchId ? (
-                      <Link href={`/matches/${matchId}`} className="text-xs text-primary hover:underline shrink-0">
-                        Ver
-                      </Link>
-                    ) : isUserPairing ? (
-                      <Link
-                        href={`/matches/new?tournament=${tournamentId}&pairing=${p.id as string}`}
-                        className="text-xs btn-primary py-1 px-2 shrink-0"
-                      >
-                        Jugar
-                      </Link>
-                    ) : isOwner ? (
-                      <Link
-                        href={`/matches/new?tournament=${tournamentId}&pairing=${p.id as string}`}
-                        className="text-xs text-text-mute hover:text-primary shrink-0"
-                      >
-                        Jugar
-                      </Link>
-                    ) : (
-                      <span className="text-xs text-text-mute shrink-0">Pendiente</span>
+                    {restingProfiles.length > 0 && (
+                      <div className="mt-1.5 pl-1 text-xs text-text-mute">
+                        Descansa: {restingProfiles.map((pl) => pl.display_name?.split(" ")[0] ?? pl.username).join(", ")}
+                      </div>
                     )}
                   </div>
                 );
@@ -735,6 +774,13 @@ function OrganizerActions({
           </Link>
         )}
       </div>
+      {/* Ajustes destructivos (siempre disponibles cuando el torneo no está finalizado) */}
+      {(status === "open" || status === "in_progress" || status === "draft") && (
+        <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between">
+          <span className="text-xs text-text-mute">Ajustes</span>
+          <CancelTournamentButton tournamentId={tournamentId} />
+        </div>
+      )}
     </section>
   );
 }

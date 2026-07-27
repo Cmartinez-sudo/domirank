@@ -7,6 +7,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseService } from "@/lib/supabase/service";
 import { rl, checkLimit } from "@/lib/ratelimit";
 import { createTournamentSchema, computePointsToWin } from "./tournament-schema";
 import type { CreateTournamentInput } from "./tournament-schema";
@@ -84,6 +85,14 @@ export async function createTournament(input: CreateTournamentInput) {
   if (f.format === "round_robin" && maxPlayers % 2 !== 0) {
     return { ok: false as const, error: "Round Robin de parejas requiere número par de jugadores." };
   }
+  if (f.format === "round_robin_individual") {
+    if (maxPlayers !== 4 && maxPlayers !== 5) {
+      return {
+        ok: false as const,
+        error: "Round Robin individual soporta 4 o 5 jugadores por ahora (próximamente 8 y 9).",
+      };
+    }
+  }
   if (f.format === "single_elim") {
     const validPow2 = [4, 8, 16, 32, 64];
     if (!validPow2.includes(maxPlayers)) {
@@ -145,9 +154,13 @@ export async function createTournament(input: CreateTournamentInput) {
     created_by: user.id,
     inscription_mode: finalInscriptionMode,
     time_limit_minutes: f.time_limit_minutes,
-    // rounds_count solo se persiste para Suizo; los demás formatos derivan
-    // sus rondas (RR=n-1, Single Elim=log2(n)).
-    rounds_count: f.format === "swiss" ? f.rounds_count ?? null : null,
+    // rounds_count se persiste para Suizo (# rondas swiss) y RR Individual
+    // (R = ciclos completos del fixture). Los demás formatos derivan sus
+    // rondas (RR=n-1, Single Elim=log2(n)).
+    rounds_count:
+      f.format === "swiss" || f.format === "round_robin_individual"
+        ? f.rounds_count ?? null
+        : null,
     join_code: joinCode,
     description: f.description ?? null,
     max_players: maxPlayers,
@@ -268,6 +281,68 @@ export async function setTournamentStatus(
 export async function setTournamentStatusLegacy(tournamentId: string, status: "active" | "finished") {
   const mapped = status === "active" ? "in_progress" : "finished";
   return setTournamentStatus(tournamentId, mapped);
+}
+
+/**
+ * Cancelar una partida del torneo como organizador. La partida queda con
+ * status='cancelled' y no afecta standings. Usa service_role para bypasear
+ * la restricción de participante del RPC cancel_match (el organizer puede
+ * no ser jugador de esa mesa específica).
+ *
+ * Solo aplica a matches que están 'in_progress' o 'pending_attestation'.
+ * Los 'confirmed' ya afectaron ratings y no se pueden cancelar desde acá.
+ */
+export async function cancelTournamentMatch(tournamentId: string, matchId: string) {
+  const authClient = await supabaseServer();
+  const { data: { user } } = await authClient.auth.getUser();
+  if (!user) return { ok: false as const, error: "No autenticado" };
+
+  const service = supabaseService();
+
+  // Validar que el caller es el organizador.
+  const { data: t } = await service
+    .from("tournaments")
+    .select("created_by")
+    .eq("id", tournamentId)
+    .maybeSingle();
+  if (!t) return { ok: false as const, error: "Torneo no encontrado" };
+  if ((t as { created_by: string }).created_by !== user.id) {
+    return { ok: false as const, error: "Solo el organizador puede cancelar partidas" };
+  }
+
+  // Validar que la partida existe y pertenece al torneo.
+  const { data: m } = await service
+    .from("matches")
+    .select("id, status, tournament_id")
+    .eq("id", matchId)
+    .maybeSingle();
+  if (!m) return { ok: false as const, error: "Partida no encontrada" };
+  const match = m as { id: string; status: string; tournament_id: string | null };
+  if (match.tournament_id !== tournamentId) {
+    return { ok: false as const, error: "La partida no pertenece a este torneo" };
+  }
+  if (match.status === "cancelled") {
+    return { ok: false as const, error: "La partida ya está cancelada" };
+  }
+  if (match.status === "confirmed") {
+    return { ok: false as const, error: "No se puede cancelar una partida confirmada (ya afectó standings)" };
+  }
+
+  const { error: updErr } = await service
+    .from("matches")
+    .update({ status: "cancelled" })
+    .eq("id", matchId);
+  if (updErr) return { ok: false as const, error: updErr.message };
+
+  // Desvincular el pairing (permite volver a "Jugar" desde la lista).
+  await service
+    .from("tournament_pairings")
+    .update({ match_id: null })
+    .eq("tournament_id", tournamentId)
+    .eq("match_id", matchId);
+
+  revalidatePath(`/tournaments/${tournamentId}`);
+  return { ok: true as const };
 }
 
 /**

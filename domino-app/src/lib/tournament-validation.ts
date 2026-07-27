@@ -45,6 +45,12 @@ export function validateTournamentConfig(config: {
           errors.player_count = `Round Robin de parejas requiere número par. Tienes ${config.player_count}, agrega o quita uno.`;
         }
         break;
+      case "round_robin_individual":
+        // Sprint inicial: solo N ∈ {4, 5}. N ∈ {8, 9} en follow-up.
+        if (config.player_count !== 4 && config.player_count !== 5) {
+          errors.player_count = `Round Robin individual soporta 4 o 5 jugadores. Tienes ${config.player_count}. Próximamente 8 y 9.`;
+        }
+        break;
       case "single_elim": {
         const validPow2 = [4, 8, 16, 32, 64];
         if (!validPow2.includes(config.player_count)) {

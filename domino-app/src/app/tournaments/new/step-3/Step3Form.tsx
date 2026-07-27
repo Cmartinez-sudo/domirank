@@ -26,6 +26,7 @@ type Props = {
 const FORMAT_LABELS: Record<string, string> = {
   single_elim: "Eliminación directa",
   round_robin: "Round Robin parejas",
+  round_robin_individual: "Round Robin individual",
   swiss: "Suizo",
   continuous_league: "Liga continua",
 };

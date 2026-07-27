@@ -14,17 +14,18 @@ afterEach(() => {
 });
 
 describe("FormatPickerCards", () => {
-  it("renderiza 3 cards (Suizo, Round Robin parejas, Eliminación directa) — sin Liga continua", () => {
+  it("renderiza 4 cards (Suizo, Round Robin parejas, RR Individual, Eliminación directa) — sin Liga continua", () => {
     render(<FormatPickerCards value={undefined} onChange={() => {}} />);
     expect(screen.getByText("Suizo")).toBeDefined();
     expect(screen.getByText("Round Robin parejas")).toBeDefined();
+    expect(screen.getByText("Todos contra todos (individual)")).toBeDefined();
     expect(screen.getByText("Eliminación directa")).toBeDefined();
     expect(screen.queryByText("Liga continua")).toBeNull();
   });
 
-  it("renderiza 3 radios", () => {
+  it("renderiza 4 radios", () => {
     render(<FormatPickerCards value={undefined} onChange={() => {}} />);
-    expect(screen.getAllByRole("radio")).toHaveLength(3);
+    expect(screen.getAllByRole("radio")).toHaveLength(4);
   });
 
   it("click en card invoca onChange con el format key correcto", () => {

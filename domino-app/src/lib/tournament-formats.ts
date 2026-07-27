@@ -1,6 +1,7 @@
 export type TournamentFormat =
   | "rotation"
   | "round_robin"
+  | "round_robin_individual"
   | "swiss"
   | "single_elim"
   | "double_elim"
@@ -64,6 +65,28 @@ export const TOURNAMENT_FORMATS: Record<TournamentFormat, TournamentFormatInfo> 
     minPlayers: 4,
     maxPlayers: 16,
     durationHint: "2-6 horas según equipos",
+    fairness: 5,
+    autopairing: true,
+  },
+  round_robin_individual: {
+    code: "round_robin_individual",
+    name: "Todos contra todos (individual)",
+    icon: "🎯",
+    short: "Cada jugador juega con y contra todos — ranking individual",
+    description:
+      "Ideal para crews. Cada jugador es individual (no hay parejas fijas). En cada partida 4 jugadores forman 2 duplas rotativas. Al finalizar una Ronda, cada jugador jugó como pareja con cada otro exactamente 1× y como rival 2×. Se puede jugar múltiples Rondas.",
+    pros: [
+      "Ranking individual — cada persona brilla por sí misma",
+      "Todos juegan con todos y contra todos (justicia máxima)",
+      "Ideal para crews recurrentes (jueves de dominó, casas)",
+    ],
+    cons: [
+      "Solo 4 o 5 jugadores por ahora (8 y 9 próximamente)",
+      "Con 5 jugadores, cada uno descansa 1 partida por Ronda",
+    ],
+    minPlayers: 4,
+    maxPlayers: 5,
+    durationHint: "1 Ronda: 3-5 partidas (~30-60 min)",
     fairness: 5,
     autopairing: true,
   },

@@ -23,8 +23,14 @@ const FORMATS: FormatCard[] = [
     desc: "Todas las parejas se enfrentan",
   },
   {
-    value: "single_elim",
+    value: "round_robin_individual",
     icon: "🎯",
+    label: "Todos contra todos (individual)",
+    desc: "Cada uno con y contra todos — ranking individual",
+  },
+  {
+    value: "single_elim",
+    icon: "🏅",
     label: "Eliminación directa",
     desc: "Pierdes una, sales. Bracket.",
   },

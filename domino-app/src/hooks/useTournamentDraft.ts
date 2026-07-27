@@ -21,6 +21,7 @@ import { useCallback, useEffect, useState } from "react";
 export type Format =
   | "swiss"
   | "round_robin"
+  | "round_robin_individual"
   | "single_elim";
 
 export type Modality = "ven" | "dom" | "cub" | "pri" | "custom";

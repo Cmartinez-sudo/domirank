@@ -69,13 +69,12 @@ export function GameConfigSection({
   pointsToWin,
   onPointsToWinChange,
 }: Props) {
-  const showRounds = format === "swiss";
+  const showRounds = format === "swiss" || format === "round_robin_individual";
 
-  // Para Suizo: con N parejas, las primeras N-1 rondas pueden ser únicas.
-  // Si el wizard no selecciona modo "pareja" todavía (Fase B), asumimos parejas
-  // fijas: pairs = floor(playerCount / 2).
+  // Solo aplica al Suizo — RR Individual permite repetir el ciclo libremente.
   const maxUniqueRounds = Math.max(1, Math.floor(playerCount / 2) - 1);
-  const roundsExceedUnique = showRounds && roundsCount > maxUniqueRounds;
+  const roundsExceedUnique =
+    format === "swiss" && roundsCount > maxUniqueRounds;
 
   // Estado local para "Otro" (input numérico libre de puntos).
   const isPresetPoints = POINT_PRESETS.includes(pointsToWin);

@@ -23,7 +23,7 @@ export const createTournamentSchema = z
       .max(60, "Máximo 60 caracteres"),
     /** 'public' es legacy del schema viejo; el wizard nuevo usa 'private' | 'code'. */
     visibility: z.enum(["public", "private", "code"]),
-    format: z.enum(["single_elim", "round_robin", "swiss"]),
+    format: z.enum(["single_elim", "round_robin", "round_robin_individual", "swiss"]),
     modality: z.enum(["ven", "dom", "cub", "pri", "custom"]),
     custom_goal: z.number().int().min(50).max(500).optional(),
     custom_capicua: z.number().int().min(10).max(100).optional(),
@@ -55,7 +55,8 @@ export const createTournamentSchema = z
 
     time_limit_minutes: z.number().int().min(5).max(180).nullable(),
 
-    /** Rondas planificadas (solo aplica a format='swiss'). 2..12. Null = motor decide. */
+    /** Rondas planificadas. Aplica a Swiss y RR Individual (R = ciclos completos).
+     *  Rango 2..12 por CHECK en DB. Para otros formatos: null. */
     rounds_count: z.number().int().min(2).max(12).nullable().optional(),
 
     /** Cantidad de mesas físicas disponibles en el torneo. Default 1. DB allow 1..16. */
