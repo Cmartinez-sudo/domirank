@@ -13,7 +13,7 @@ const TIME_PRESETS: Array<{ value: number | null; label: string }> = [
 
 const POINT_PRESETS = [50, 100, 150, 200, 300];
 
-const MIN_ROUNDS = 2;
+const MIN_ROUNDS = 1;
 const MAX_ROUNDS = 12;
 const DEFAULT_ROUNDS = 5;
 

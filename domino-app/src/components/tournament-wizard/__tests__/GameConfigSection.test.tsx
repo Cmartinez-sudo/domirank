@@ -51,12 +51,12 @@ describe("GameConfigSection — rondas (solo Suizo)", () => {
     expect(screen.queryByText("Rondas de juego")).toBeNull();
   });
 
-  it("clamp del stepper: no baja de 2", () => {
+  it("clamp del stepper: no baja de 1 (post mig 0100)", () => {
     const onChange = vi.fn();
     render(
       <GameConfigSection
         {...baseProps}
-        roundsCount={2}
+        roundsCount={1}
         onRoundsCountChange={onChange}
       />,
     );

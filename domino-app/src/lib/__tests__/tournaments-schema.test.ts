@@ -250,13 +250,15 @@ describe('createTournamentSchema', () => {
     ).toBe(true);
   });
 
-  it('acepta rounds_count en rango 2-12', () => {
+  it('acepta rounds_count en rango 1-12 (mig 0100)', () => {
+    expect(createTournamentSchema.safeParse({ ...VALID_BASE, rounds_count: 1 }).success).toBe(true);
     expect(createTournamentSchema.safeParse({ ...VALID_BASE, rounds_count: 2 }).success).toBe(true);
     expect(createTournamentSchema.safeParse({ ...VALID_BASE, rounds_count: 12 }).success).toBe(true);
   });
 
-  it('rechaza rounds_count < 2', () => {
-    expect(createTournamentSchema.safeParse({ ...VALID_BASE, rounds_count: 1 }).success).toBe(false);
+  it('rechaza rounds_count < 1', () => {
+    expect(createTournamentSchema.safeParse({ ...VALID_BASE, rounds_count: 0 }).success).toBe(false);
+    expect(createTournamentSchema.safeParse({ ...VALID_BASE, rounds_count: -1 }).success).toBe(false);
   });
 
   it('rechaza rounds_count > 12', () => {

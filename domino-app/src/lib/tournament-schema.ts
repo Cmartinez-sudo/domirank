@@ -56,8 +56,8 @@ export const createTournamentSchema = z
     time_limit_minutes: z.number().int().min(5).max(180).nullable(),
 
     /** Rondas planificadas. Aplica a Swiss y RR Individual (R = ciclos completos).
-     *  Rango 2..12 por CHECK en DB. Para otros formatos: null. */
-    rounds_count: z.number().int().min(2).max(12).nullable().optional(),
+     *  Rango 1..12 por CHECK en DB (mig 0100). Para otros formatos: null. */
+    rounds_count: z.number().int().min(1).max(12).nullable().optional(),
 
     /** Cantidad de mesas físicas disponibles en el torneo. Default 1. DB allow 1..16. */
     num_boards: z.number().int().min(1).max(16).default(1),
