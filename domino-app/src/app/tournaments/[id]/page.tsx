@@ -526,6 +526,7 @@ export default async function TournamentDetail({
             isIndividualRR={isIndividualRR}
             currentCiclo={currentCiclo ?? undefined}
             totalCiclos={totalCiclos ?? undefined}
+            tournamentStatus={tournamentStatus}
           />
         )}
 
@@ -578,6 +579,7 @@ function RoundsView({
   isIndividualRR,
   currentCiclo,
   totalCiclos,
+  tournamentStatus,
 }: {
   pairings: Record<string, unknown>[];
   profiles: { id: string; username: string; display_name: string | null; avatar_url: string | null }[];
@@ -589,8 +591,8 @@ function RoundsView({
   isIndividualRR?: boolean;
   currentCiclo?: number;
   totalCiclos?: number;
+  tournamentStatus?: string;
 }) {
-  const rounds = Array.from(new Set(pairings.map((p) => p.round as number))).sort((a, b) => a - b);
   const showBoards = (numBoards ?? 1) > 1;
   const inscribedSet = new Set(inscribedUserIds ?? []);
   const N = inscribedSet.size || 1;
@@ -603,6 +605,19 @@ function RoundsView({
     return Math.ceil(round / partidasPorRonda);
   }
 
+  // Filtro: en RR Individual con status=in_progress, mostrar SOLO las partidas
+  // de la ronda actual. En otros status (finished/archived/cancelled) o para
+  // formatos no-RR, mostrar todas. Los ciclos pasados se resumen en el
+  // leaderboard + sección "Partidas".
+  const filteredPairings =
+    isIndividualRR &&
+    tournamentStatus === "in_progress" &&
+    currentCiclo != null
+      ? pairings.filter((p) => cicloOf(p.round as number) === currentCiclo)
+      : pairings;
+
+  const rounds = Array.from(new Set(filteredPairings.map((p) => p.round as number))).sort((a, b) => a - b);
+
   return (
     <div className="space-y-3">
       {/* Hint para RR Individual (útil para late arrivals). */}
@@ -614,7 +629,7 @@ function RoundsView({
         </div>
       )}
       {rounds.map((round) => {
-        const rPairings = pairings.filter((p) => (p.round as number) === round);
+        const rPairings = filteredPairings.filter((p) => (p.round as number) === round);
         // Header de ciclo: mostrar solo en la primera partida del ciclo.
         const ciclo = isIndividualRR ? cicloOf(round) : null;
         const isFirstOfCiclo =
