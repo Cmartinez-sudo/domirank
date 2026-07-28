@@ -284,6 +284,90 @@ export async function setTournamentStatusLegacy(tournamentId: string, status: "a
 }
 
 /**
+ * Avanza al siguiente ciclo (aplicable a RR Individual). Incrementa
+ * `tournaments.current_round` en 1 si:
+ *   1. El caller es el organizador
+ *   2. Todas las partidas del ciclo actual están confirmed
+ *   3. Aún quedan ciclos por jugar (current_round < rounds_count)
+ *
+ * En RR Individual, "current_round" trackea el ciclo actual (1..R), no
+ * el número absoluto de partida. Los pairings tienen round=1..N*R
+ * (matchNumber secuencial); el ciclo se deriva como ceil(round / N).
+ */
+export async function advanceToNextCiclo(tournamentId: string) {
+  const authClient = await supabaseServer();
+  const { data: { user } } = await authClient.auth.getUser();
+  if (!user) return { ok: false as const, error: "No autenticado" };
+
+  const service = supabaseService();
+
+  const { data: t } = await service
+    .from("tournaments")
+    .select("id, created_by, format, current_round, rounds_count, max_players")
+    .eq("id", tournamentId)
+    .maybeSingle();
+  if (!t) return { ok: false as const, error: "Torneo no encontrado" };
+  const tx = t as {
+    id: string;
+    created_by: string;
+    format: string;
+    current_round: number | null;
+    rounds_count: number | null;
+    max_players: number | null;
+  };
+  if (tx.created_by !== user.id) {
+    return { ok: false as const, error: "Solo el organizador puede avanzar ciclos" };
+  }
+  if (tx.format !== "round_robin_individual") {
+    return { ok: false as const, error: "Solo disponible para Round Robin individual" };
+  }
+  const R = tx.rounds_count ?? 1;
+  const currentCiclo = tx.current_round ?? 1;
+  const N = tx.max_players ?? 0;
+  if (currentCiclo >= R) {
+    return { ok: false as const, error: "Ya se completaron todos los ciclos" };
+  }
+  if (N < 4) return { ok: false as const, error: "Torneo sin jugadores válido" };
+
+  // Verificar que todas las partidas del ciclo actual (rounds [(c-1)*N + 1 ... c*N])
+  // estén confirmed.
+  const firstMatch = (currentCiclo - 1) * N + 1;
+  const lastMatch = currentCiclo * N;
+  const { data: pairings } = await service
+    .from("tournament_pairings")
+    .select("id, round, match_id, matches(status)")
+    .eq("tournament_id", tournamentId)
+    .gte("round", firstMatch)
+    .lte("round", lastMatch);
+  const cicloPairings = (pairings ?? []) as unknown as Array<{
+    id: string;
+    round: number;
+    match_id: string | null;
+    matches: { status: string } | { status: string }[] | null;
+  }>;
+  const notConfirmed = cicloPairings.filter((p) => {
+    if (!p.match_id) return true;
+    const m = Array.isArray(p.matches) ? p.matches[0] : p.matches;
+    return m?.status !== "confirmed";
+  });
+  if (notConfirmed.length > 0) {
+    return {
+      ok: false as const,
+      error: `Faltan ${notConfirmed.length} partida(s) del ciclo ${currentCiclo} por confirmar`,
+    };
+  }
+
+  const { error: updErr } = await service
+    .from("tournaments")
+    .update({ current_round: currentCiclo + 1 })
+    .eq("id", tournamentId);
+  if (updErr) return { ok: false as const, error: updErr.message };
+
+  revalidatePath(`/tournaments/${tournamentId}`);
+  return { ok: true as const, newCiclo: currentCiclo + 1 };
+}
+
+/**
  * Cancelar una partida del torneo como organizador. La partida queda con
  * status='cancelled' y no afecta standings. Usa service_role para bypasear
  * la restricción de participante del RPC cancel_match (el organizer puede

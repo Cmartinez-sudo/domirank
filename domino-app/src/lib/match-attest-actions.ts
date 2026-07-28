@@ -117,6 +117,59 @@ export async function attestMatch(
  * Internal: típicamente lo llama attestMatch cuando se alcanza quórum.
  * También puede llamarse desde un job que detecta matches confirmed sin ratear.
  */
+/**
+ * Setea match_players.rank a partir de match_rounds (score por team).
+ * Rank=1 para el team ganador, rank=2 para el perdedor. No hace nada si
+ * no hay rounds (partida sin scores).
+ *
+ * Se usa cuando saltamos apply_match_rating (rated=false) porque esa RPC
+ * es la única que normalmente setea rank via su UPDATE interno.
+ *
+ * Idempotente: puede llamarse múltiples veces sin efectos secundarios
+ * (siempre setea al mismo valor determinístico).
+ */
+async function syncMatchRankByRounds(
+  supabase: Awaited<ReturnType<typeof supabaseServer>>,
+  matchId: string,
+): Promise<void> {
+  const { data: rounds } = await supabase
+    .from("match_rounds")
+    .select("team, points")
+    .eq("match_id", matchId);
+  if (!rounds || rounds.length === 0) return;
+
+  // Sum por team.
+  const teamTotals = new Map<number, number>();
+  for (const r of rounds as Array<{ team: number; points: number }>) {
+    teamTotals.set(r.team, (teamTotals.get(r.team) ?? 0) + r.points);
+  }
+  if (teamTotals.size === 0) return;
+
+  const winningTeam = [...teamTotals.entries()].reduce((a, b) => (b[1] > a[1] ? b : a))[0];
+
+  const { data: mps } = await supabase
+    .from("match_players")
+    .select("id, team")
+    .eq("match_id", matchId);
+  if (!mps) return;
+
+  // UPDATE en batch — un query por rank distinto (2 queries max: rank=1 y rank=2).
+  const winners = (mps as Array<{ id: number; team: number }>).filter((m) => m.team === winningTeam);
+  const losers = (mps as Array<{ id: number; team: number }>).filter((m) => m.team !== winningTeam);
+  if (winners.length > 0) {
+    await supabase
+      .from("match_players")
+      .update({ rank: 1 })
+      .in("id", winners.map((w) => w.id));
+  }
+  if (losers.length > 0) {
+    await supabase
+      .from("match_players")
+      .update({ rank: 2 })
+      .in("id", losers.map((l) => l.id));
+  }
+}
+
 export async function applyMatchRating(matchId: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = await supabaseServer();
 
@@ -132,7 +185,13 @@ export async function applyMatchRating(matchId: string): Promise<{ ok: true } | 
   // amistoso o torneo con rated=false), no afecta el Elo. Marca rated_at
   // para que el flow de attestation no quede pendiente, pero sin ejecutar
   // la lógica de rating.
+  //
+  // IMPORTANTE: aunque saltemos el rating, DEBEMOS setear match_players.rank
+  // porque las standings del torneo (get_tournament_standings) y las del
+  // grupo (group_leaderboard) leen rank para computar V/D/CE/racha. Sin
+  // rank, un torneo con rated=false muestra 0V 0D para todos (bug reportado).
   if (match.rated === false) {
+    await syncMatchRankByRounds(supabase, matchId);
     await supabase
       .from("matches")
       .update({ rated_at: new Date().toISOString() })

@@ -37,6 +37,7 @@ import { TournamentLeaderboard } from "./TournamentLeaderboard";
 import { HeroNextMatch, HeroWaiting } from "@/components/tournament/HeroNextMatch";
 import { CancelTournamentButton } from "@/components/tournament/CancelTournamentButton";
 import { CancelMatchButton } from "@/components/tournament/CancelMatchButton";
+import { AdvanceCicloButton } from "@/components/tournament/AdvanceCicloButton";
 import { TournamentRealtimeRefresher } from "./TournamentRealtimeRefresher";
 import type { LeaderboardRow } from "@/types/leaderboard";
 
@@ -395,6 +396,41 @@ export default async function TournamentDetail({
   const timeLimitMinutes = (tournament as { time_limit_minutes?: number | null }).time_limit_minutes ?? null;
   const totalRounds = (tournament as { total_rounds?: number | null }).total_rounds ?? null;
   const currentRound = (tournament as { current_round?: number | null }).current_round ?? null;
+  const roundsCount = (tournament as { rounds_count?: number | null }).rounds_count ?? null;
+
+  // Para RR Individual, "current_round" trackea el ciclo actual (1..R) y
+  // "rounds_count" es R (total de ciclos). Los pairings.round representan
+  // el matchNumber absoluto (1..N*R); el ciclo se deriva por ceil(round / N).
+  const isIndividualRR = (tournament as { format?: string }).format === "round_robin_individual";
+  const currentCiclo = isIndividualRR ? (currentRound ?? 1) : null;
+  const totalCiclos = isIndividualRR ? roundsCount : null;
+
+  // Check si el ciclo actual está completo (para mostrar botón de avanzar).
+  let cicloComplete = false;
+  if (isIndividualRR && currentCiclo != null && totalCiclos != null && currentCiclo < totalCiclos) {
+    const N = inscribedCount;
+    if (N >= 4) {
+      const firstMatch = (currentCiclo - 1) * N + 1;
+      const lastMatch = currentCiclo * N;
+      const cicloPairings = (pairings ?? []).filter((p) => {
+        const r = (p as { round: number }).round;
+        return r >= firstMatch && r <= lastMatch;
+      });
+      // Necesitamos consultar los matches asociados para el status
+      const matchIds = cicloPairings
+        .map((p) => (p as { match_id: string | null }).match_id)
+        .filter(Boolean) as string[];
+      if (matchIds.length === cicloPairings.length && matchIds.length > 0) {
+        const { data: cicloMatches } = await supabase
+          .from("matches")
+          .select("id, status")
+          .in("id", matchIds);
+        const allConfirmed = (cicloMatches ?? []).length === matchIds.length
+          && (cicloMatches ?? []).every((m) => (m as { status: string }).status === "confirmed");
+        cicloComplete = allConfirmed;
+      }
+    }
+  }
 
   const tournamentName = (tournament as { name: string }).name;
 
@@ -418,7 +454,12 @@ export default async function TournamentDetail({
                 {fmtInfo.name} · {m.name} · {(tournament as { points_to_win?: number }).points_to_win ?? "?"} pts
                 {timeLimitMinutes ? ` · ${timeLimitMinutes} min/partida` : ""}
               </p>
-              {currentRound != null && totalRounds != null && tournamentStatus === "in_progress" && (
+              {tournamentStatus === "in_progress" && isIndividualRR && currentCiclo != null && totalCiclos != null && (
+                <p className="text-text-mute text-xs mt-0.5">
+                  Ciclo {currentCiclo} de {totalCiclos} · {inscribedCount} jugadores
+                </p>
+              )}
+              {tournamentStatus === "in_progress" && !isIndividualRR && currentRound != null && totalRounds != null && (
                 <p className="text-text-mute text-xs mt-0.5">
                   Ronda {currentRound} de {totalRounds} · {inscribedCount} jugadores
                 </p>
@@ -474,7 +515,9 @@ export default async function TournamentDetail({
             userId={user?.id ?? null}
             numBoards={numBoards}
             inscribedUserIds={(tPlayers ?? []).map((p) => p.user_id as string)}
-            isIndividualRR={(tournament as { format?: string }).format === "round_robin_individual"}
+            isIndividualRR={isIndividualRR}
+            currentCiclo={currentCiclo ?? undefined}
+            totalCiclos={totalCiclos ?? undefined}
           />
         )}
 
@@ -500,6 +543,9 @@ export default async function TournamentDetail({
             hasPairings={hasPairings}
             isRoundFormat={isRoundFormat}
             isBracketFormat={isBracketFormat}
+            cicloComplete={cicloComplete}
+            currentCiclo={currentCiclo}
+            totalCiclos={totalCiclos}
           />
         )}
       </div>
@@ -519,6 +565,8 @@ function RoundsView({
   numBoards,
   inscribedUserIds,
   isIndividualRR,
+  currentCiclo,
+  totalCiclos,
 }: {
   pairings: Record<string, unknown>[];
   profiles: { id: string; username: string; display_name: string | null; avatar_url: string | null }[];
@@ -528,10 +576,18 @@ function RoundsView({
   numBoards?: number;
   inscribedUserIds?: string[];
   isIndividualRR?: boolean;
+  currentCiclo?: number;
+  totalCiclos?: number;
 }) {
   const rounds = Array.from(new Set(pairings.map((p) => p.round as number))).sort((a, b) => a - b);
   const showBoards = (numBoards ?? 1) > 1;
   const inscribedSet = new Set(inscribedUserIds ?? []);
+  const N = inscribedSet.size || 1;
+
+  // Para RR Individual, agrupamos partidas por ciclo (matchNumber / N).
+  function cicloOf(round: number): number {
+    return Math.ceil(round / N);
+  }
 
   return (
     <div className="space-y-3">
@@ -545,11 +601,33 @@ function RoundsView({
       )}
       {rounds.map((round) => {
         const rPairings = pairings.filter((p) => (p.round as number) === round);
+        // Header de ciclo: mostrar solo en la primera partida del ciclo.
+        const ciclo = isIndividualRR ? cicloOf(round) : null;
+        const isFirstOfCiclo =
+          isIndividualRR &&
+          rounds.findIndex((r) => cicloOf(r) === ciclo) === rounds.indexOf(round);
+        const isCurrentCiclo = ciclo !== null && ciclo === currentCiclo;
         return (
-          <section key={round} className="card p-0 overflow-hidden">
-            <h2 className="px-4 py-2.5 border-b border-border font-semibold text-sm">
-              {isIndividualRR ? `Partida ${round}` : `Ronda ${round}`}
-            </h2>
+          <div key={round}>
+            {isFirstOfCiclo && ciclo !== null && (
+              <div className="flex items-center gap-2 mb-2 mt-3 first:mt-0">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-text-mute">
+                  Ciclo {ciclo}
+                  {totalCiclos ? ` de ${totalCiclos}` : ""}
+                </h3>
+                {isCurrentCiclo && (
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-primary bg-primary/15 px-2 py-0.5 rounded-full">
+                    En curso
+                  </span>
+                )}
+              </div>
+            )}
+            <section className="card p-0 overflow-hidden">
+              <h2 className="px-4 py-2.5 border-b border-border font-semibold text-sm">
+                {isIndividualRR
+                  ? `Partida ${((round - 1) % N) + 1}`
+                  : `Ronda ${round}`}
+              </h2>
             <div className="divide-y divide-border">
               {rPairings.map((p) => {
                 const teamAIds = (p.team_a_user_ids as string[]) ?? [];
@@ -639,7 +717,8 @@ function RoundsView({
                 );
               })}
             </div>
-          </section>
+            </section>
+          </div>
         );
       })}
     </div>
@@ -728,6 +807,9 @@ function OrganizerActions({
   hasPairings,
   isRoundFormat,
   isBracketFormat,
+  cicloComplete,
+  currentCiclo,
+  totalCiclos,
 }: {
   tournamentId: string;
   status: string;
@@ -735,8 +817,19 @@ function OrganizerActions({
   hasPairings: boolean;
   isRoundFormat: boolean;
   isBracketFormat: boolean;
+  cicloComplete?: boolean;
+  currentCiclo?: number | null;
+  totalCiclos?: number | null;
 }) {
   if (status === "finished" || status === "archived") return null;
+
+  const canAdvanceCiclo =
+    status === "in_progress" &&
+    format === "round_robin_individual" &&
+    cicloComplete === true &&
+    currentCiclo != null &&
+    totalCiclos != null &&
+    currentCiclo < totalCiclos;
 
   return (
     <section className="card !p-4">
@@ -759,6 +852,13 @@ function OrganizerActions({
         )}
         {status === "in_progress" && hasPairings && isRoundFormat && format === "swiss" && (
           <GenerateNextRoundButton tournamentId={tournamentId} />
+        )}
+        {canAdvanceCiclo && (
+          <AdvanceCicloButton
+            tournamentId={tournamentId}
+            currentCiclo={currentCiclo!}
+            totalCiclos={totalCiclos!}
+          />
         )}
         {status === "in_progress" && (isRoundFormat || isBracketFormat) && (
           <Link

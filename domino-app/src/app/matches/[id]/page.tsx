@@ -90,8 +90,13 @@ export default async function MatchDetail({
   const isCreator = currentUserId && match.created_by === currentUserId;
   const canVoid   = isCreator && status === "confirmed";
 
+  // Back button: si la partida pertenece a un torneo, volver al torneo.
+  const backPath = match.tournament_id
+    ? `/tournaments/${match.tournament_id}`
+    : BACK_FALLBACKS.match_detail;
+
   return (
-    <SecondaryPageShell title="Partida" fallbackPath={BACK_FALLBACKS.match_detail}>
+    <SecondaryPageShell title="Partida" fallbackPath={backPath}>
     <div className="max-w-4xl mx-auto px-4 py-5 space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>

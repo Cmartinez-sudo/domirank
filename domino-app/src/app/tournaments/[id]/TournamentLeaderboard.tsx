@@ -15,13 +15,14 @@ import { useTournamentRealtimeStandings } from "@/hooks/useTournamentRealtimeSta
 import type { LeaderboardProps, LeaderboardRow, SortKey, SortDir } from "@/types/leaderboard";
 
 const HEADER_TOOLTIPS: Record<SortKey, string> = {
-  rank:       "Posición actual",
-  wins:       "Victorias",
-  losses:     "Derrotas",
-  win_pct:    "Porcentaje de victorias",
-  pf:         "Puntos a favor",
-  pc:         "Puntos en contra",
-  plus_minus: "Diferencial (PF − PC)",
+  rank:                       "Posición actual",
+  wins:                       "Victorias",
+  losses:                     "Derrotas",
+  win_pct:                    "Porcentaje de victorias",
+  effectiveness_coefficient:  "Coeficiente de Eficiencia (federado)",
+  pf:                         "Puntos a favor",
+  pc:                         "Puntos en contra",
+  plus_minus:                 "Diferencial (PF − PC)",
 };
 
 export function TournamentLeaderboard({
@@ -197,6 +198,7 @@ export function TournamentLeaderboard({
           <div className="w-8 text-right"><ColHeader label="V" sortable colKey="wins" /></div>
           <div className="w-8 text-right"><ColHeader label="D" sortable colKey="losses" /></div>
           <div className="w-10 text-right"><ColHeader label="%" sortable colKey="win_pct" /></div>
+          <div className="w-12 text-right"><ColHeader label="CE" sortable colKey="effectiveness_coefficient" /></div>
           <div className="w-10 text-right"><ColHeader label="PF" sortable colKey="pf" /></div>
           <div className="w-10 text-right"><ColHeader label="PC" sortable colKey="pc" /></div>
           <div className="w-10 text-right"><ColHeader label="±" sortable colKey="plus_minus" /></div>
@@ -259,23 +261,31 @@ export function TournamentLeaderboard({
                     </span>
                   </div>
 
-                  {/* Nombre + movimiento */}
-                  <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                    <span className="font-medium text-sm truncate text-text group-hover:text-primary transition-colors duration-150">
-                      {highlightName(displayName)}
-                    </span>
-                    <MovementIndicator currentRank={row.rank} prevRank={row.prev_rank} />
-                    {isViewer && (
-                      <Tooltip content="Esa eres tú" className="hidden md:inline-flex">
-                        <span className="text-[10px] text-primary font-semibold">(tú)</span>
-                      </Tooltip>
-                    )}
-                    {/* Stats en mobile (comprimidos) */}
-                    <span className="flex sm:hidden items-center gap-1.5 ml-auto shrink-0">
-                      <span className="text-xs text-primary font-semibold">{row.wins}V</span>
-                      <span className="text-xs text-text-mute">{row.losses}D</span>
-                      <StreakChip streak={row.streak} />
-                    </span>
+                  {/* Nombre + Global rating + movimiento */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-medium text-sm truncate text-text group-hover:text-primary transition-colors duration-150">
+                        {highlightName(displayName)}
+                      </span>
+                      <MovementIndicator currentRank={row.rank} prevRank={row.prev_rank} />
+                      {isViewer && (
+                        <Tooltip content="Esa eres tú" className="hidden md:inline-flex">
+                          <span className="text-[10px] text-primary font-semibold">(tú)</span>
+                        </Tooltip>
+                      )}
+                      {/* Stats en mobile (comprimidos) */}
+                      <span className="flex sm:hidden items-center gap-1.5 ml-auto shrink-0">
+                        <span className="text-xs text-primary font-semibold">{row.wins}V</span>
+                        <span className="text-xs text-text-mute">{row.losses}D</span>
+                        <StreakChip streak={row.streak} />
+                      </span>
+                    </div>
+                    <div className="text-text-mute text-[11px] mt-0.5">
+                      Global ·{" "}
+                      {row.is_rated && row.global_display != null
+                        ? Number(row.global_display).toFixed(1)
+                        : "—"}
+                    </div>
                   </div>
 
                   {/* Stats desktop */}
@@ -283,6 +293,9 @@ export function TournamentLeaderboard({
                     <span className="w-8 text-right text-primary font-semibold">{row.wins}</span>
                     <span className="w-8 text-right text-text-mute">{row.losses}</span>
                     <span className="w-10 text-right font-bold text-text">{row.win_pct.toFixed(0)}%</span>
+                    <span className="w-12 text-right text-text">
+                      {Number(row.effectiveness_coefficient ?? 0).toFixed(2)}
+                    </span>
                     <span className="w-10 text-right text-text">{row.pf}</span>
                     <span className="w-10 text-right text-text-mute">{row.pc}</span>
                     <span className={`w-10 text-right font-semibold ${row.plus_minus > 0 ? "text-primary" : row.plus_minus < 0 ? "text-danger" : "text-text-mute"}`}>

@@ -9,6 +9,8 @@ export interface LeaderboardRow {
   wins: number;
   losses: number;
   win_pct: number;
+  /** Coeficiente de Eficiencia (federado). Suma de ce_delta por partida. */
+  effectiveness_coefficient: number;
   pf: number;
   pc: number;
   plus_minus: number;
@@ -18,9 +20,20 @@ export interface LeaderboardRow {
   last5: string[];
   /** Rank en el snapshot anterior. Null si no hay snapshot previo. */
   prev_rank: number | null;
+  /** DomiRank Global display rating. Null si no está calificado. */
+  global_display: number | null;
+  is_rated: boolean;
 }
 
-export type SortKey = "rank" | "wins" | "losses" | "win_pct" | "pf" | "pc" | "plus_minus";
+export type SortKey =
+  | "rank"
+  | "wins"
+  | "losses"
+  | "win_pct"
+  | "effectiveness_coefficient"
+  | "pf"
+  | "pc"
+  | "plus_minus";
 export type SortDir = "asc" | "desc";
 
 export interface SortState {
