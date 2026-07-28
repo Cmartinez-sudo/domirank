@@ -91,6 +91,9 @@ export function Step3Form({ userId, currentUser }: Props) {
         requires_attestation: requiresAttestation,
         rated,
         time_limit_minutes: draft.time_limit_minutes ?? null,
+        // rounds_count: R para RR Individual (# de ciclos completos), # rondas
+        // para Suizo. Sin esto, el server default a null → engine default a R=1.
+        rounds_count: draft.rounds_count ?? null,
         custom_goal: draft.custom_goal,
         custom_capicua: draft.custom_capicua,
         // is_open_ended legacy: el wizard nuevo no expone esto; default false.

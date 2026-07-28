@@ -5,6 +5,8 @@ interface SecondaryPageShellProps {
   fallbackPath: string;
   rightSlot?: React.ReactNode;
   children: React.ReactNode;
+  /** Si true, el back siempre va a fallbackPath (ignora historial). */
+  forceFallback?: boolean;
 }
 
 /**
@@ -19,10 +21,16 @@ export function SecondaryPageShell({
   fallbackPath,
   rightSlot,
   children,
+  forceFallback,
 }: SecondaryPageShellProps) {
   return (
     <div className="min-h-dvh flex flex-col">
-      <AppHeader title={title} fallbackPath={fallbackPath} rightSlot={rightSlot} />
+      <AppHeader
+        title={title}
+        fallbackPath={fallbackPath}
+        rightSlot={rightSlot}
+        forceFallback={forceFallback}
+      />
       <main className="flex-1">{children}</main>
     </div>
   );

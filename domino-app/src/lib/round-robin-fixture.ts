@@ -106,6 +106,16 @@ export function generateFixture(playerCount: number): Fixture {
 }
 
 /**
+ * Número de partidas que compone UNA ronda del fixture, dado N.
+ * N=4 → 3 partidas. N=5 → 5 partidas. Si N no está soportado retorna N
+ * como fallback razonable.
+ */
+export function matchesPerCycle(playerCount: number): number {
+  if (!isSupportedPlayerCount(playerCount)) return playerCount;
+  return FIXTURES[playerCount].length;
+}
+
+/**
  * Genera R rondas del fixture (mismo ciclo repetido). Los `matchNumber`
  * quedan consecutivos: para R=2 y N=5, las partidas van 1..10.
  */

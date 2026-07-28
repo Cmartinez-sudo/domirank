@@ -92,4 +92,23 @@ describe("useSafeBack", () => {
     const { result } = renderHook(() => useSafeBack(FALLBACK));
     expect(result.current.fallbackPath).toBe(FALLBACK);
   });
+
+  it("forceFallback: always pushes fallback, ignora historial mismo-origen", () => {
+    Object.defineProperty(document, "referrer", {
+      value: "http://localhost:3000/matches/new?tournament=abc",
+      writable: true,
+      configurable: true,
+    });
+
+    const { result } = renderHook(() =>
+      useSafeBack(FALLBACK, { forceFallback: true }),
+    );
+
+    act(() => {
+      result.current.goBack();
+    });
+
+    expect(mockPush).toHaveBeenCalledWith(FALLBACK);
+    expect(mockBack).not.toHaveBeenCalled();
+  });
 });
