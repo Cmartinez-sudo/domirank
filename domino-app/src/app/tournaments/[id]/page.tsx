@@ -547,6 +547,14 @@ export default async function TournamentDetail({
           </section>
         )}
 
+        {/* ── Standings — Leaderboard v2 (arriba del fixture) ── */}
+        <TournamentLeaderboard
+          tournamentId={id}
+          initialStandings={standings}
+          viewerId={user?.id ?? null}
+          isOrganizer={isOwner}
+        />
+
         {/* ── Rounds (round_robin / round_robin_individual / swiss) ── */}
         {isRoundFormat && hasPairings && (
           <RoundsView
@@ -563,14 +571,6 @@ export default async function TournamentDetail({
             tournamentStatus={tournamentStatus}
           />
         )}
-
-        {/* ── Standings — Leaderboard v2 ── */}
-        <TournamentLeaderboard
-          tournamentId={id}
-          initialStandings={standings}
-          viewerId={user?.id ?? null}
-          isOrganizer={isOwner}
-        />
 
         {/* ── Ultimas partidas ── */}
         {matches && matches.length > 0 && (

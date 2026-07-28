@@ -300,7 +300,7 @@ export function LiveMatchScreen({
               : `${winnerName} llegó a la meta`}
           </div>
           <button className="btn-primary w-full" disabled={pending} onClick={doFinalize}>
-            Finalizar y actualizar rating
+            Finalizar
           </button>
           <button className="btn-ghost w-full" disabled={pending} onClick={doUndo}>
             Deshacer última mano
