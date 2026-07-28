@@ -331,15 +331,33 @@ export default async function TournamentDetail({
 
   if (user && tournament.status === "in_progress") {
     const userId = user.id;
-    // Buscar la ronda más reciente en la que el usuario participa y el match
-    // no está aún confirmado
-    const { data: activePairings } = await supabase
+    // Para RR Individual, restringir la búsqueda al ciclo actual: en Ronda 1
+    // no debemos ofrecerle al usuario partidas de Ronda 2 aunque estén sin jugar.
+    const isRRIndForHero =
+      (tournament as { format?: string }).format === "round_robin_individual";
+    const currentRoundForHero =
+      (tournament as { current_round?: number | null }).current_round ?? 1;
+    const nForHero = (tPlayers ?? []).length;
+    const partidasPorRondaForHero = isRRIndForHero ? matchesPerCycle(nForHero) : 0;
+    const firstMatchForHero = isRRIndForHero
+      ? (currentRoundForHero - 1) * partidasPorRondaForHero + 1
+      : null;
+    const lastMatchForHero = isRRIndForHero
+      ? currentRoundForHero * partidasPorRondaForHero
+      : null;
+
+    let query = supabase
       .from("tournament_pairings")
       .select("id, round, board, team_a_user_ids, team_b_user_ids, match_id, match:matches(id, status)")
       .eq("tournament_id", id)
       .or(`team_a_user_ids.cs.{${userId}},team_b_user_ids.cs.{${userId}}`)
-      .order("round", { ascending: false })
-      .limit(5);
+      .order("round", { ascending: true }); // ascending → prioriza partidas más tempranas
+
+    if (isRRIndForHero && firstMatchForHero != null && lastMatchForHero != null) {
+      query = query.gte("round", firstMatchForHero).lte("round", lastMatchForHero);
+    }
+
+    const { data: activePairings } = await query.limit(20);
 
     // Priorizar el pairing sin match confirmado
     // Supabase typed join: match puede venir como array (1:many) o null
@@ -620,13 +638,20 @@ function RoundsView({
 
   return (
     <div className="space-y-3">
-      {/* Hint para RR Individual (útil para late arrivals). */}
+      {/* Hint colapsable para RR Individual (útil para late arrivals). */}
       {isIndividualRR && isOwner && (
-        <div className="rounded-xl border border-info/30 bg-info/10 p-3 text-sm text-info">
-          💡 Podés jugar las partidas en cualquier orden. Si un jugador aún no
-          llegó, elegí una partida donde él descanse y arrancá con los que
-          están.
-        </div>
+        <details className="rounded-xl border border-info/30 bg-info/10 group">
+          <summary className="cursor-pointer p-3 text-sm text-info flex items-center gap-1.5 list-none">
+            <span className="text-xs">💡</span>
+            <span>¿Cómo funciona esta ronda?</span>
+            <span className="ml-auto text-xs transition-transform group-open:rotate-180">▾</span>
+          </summary>
+          <div className="px-3 pb-3 text-sm text-info">
+            Podés jugar las partidas en cualquier orden. Si un jugador aún no
+            llegó, elegí una partida donde él descanse y arrancá con los que
+            están.
+          </div>
+        </details>
       )}
       {rounds.map((round) => {
         const rPairings = filteredPairings.filter((p) => (p.round as number) === round);
