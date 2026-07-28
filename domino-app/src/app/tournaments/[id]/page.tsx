@@ -38,6 +38,7 @@ import { HeroNextMatch, HeroWaiting } from "@/components/tournament/HeroNextMatc
 import { CancelTournamentButton } from "@/components/tournament/CancelTournamentButton";
 import { CancelMatchButton } from "@/components/tournament/CancelMatchButton";
 import { AdvanceCicloButton } from "@/components/tournament/AdvanceCicloButton";
+import { FinalizeTournamentButton } from "@/components/tournament/FinalizeTournamentButton";
 import { matchesPerCycle } from "@/lib/round-robin-fixture";
 import { TournamentRealtimeRefresher } from "./TournamentRealtimeRefresher";
 import type { LeaderboardRow } from "@/types/leaderboard";
@@ -426,9 +427,9 @@ export default async function TournamentDetail({
 
   // Check estado de la ronda actual (RR Individual solamente).
   // N=4 → 3 partidas por ronda. N=5 → 5 partidas. Ver matchesPerCycle().
-  let cicloComplete = false;
   let cicloConfirmedCount = 0;
   let cicloTotalPartidas = 0;
+  let allCicloConfirmed = false;
   if (isIndividualRR && currentCiclo != null && totalCiclos != null) {
     const N = inscribedCount;
     const partidasPorRonda = matchesPerCycle(N);
@@ -451,12 +452,27 @@ export default async function TournamentDetail({
         cicloConfirmedCount = (cicloMatches ?? [])
           .filter((m) => (m as { status: string }).status === "confirmed").length;
       }
-      cicloComplete =
-        cicloTotalPartidas > 0 &&
-        cicloConfirmedCount === cicloTotalPartidas &&
-        currentCiclo < totalCiclos;
+      allCicloConfirmed =
+        cicloTotalPartidas > 0 && cicloConfirmedCount === cicloTotalPartidas;
     }
   }
+
+  // canAdvance: cicloComplete + queda alguna ronda más
+  const canAdvanceCiclo =
+    isIndividualRR &&
+    allCicloConfirmed &&
+    currentCiclo != null &&
+    totalCiclos != null &&
+    currentCiclo < totalCiclos;
+
+  // canFinalize: cicloComplete + estamos en la última ronda
+  const canFinalizeTournament =
+    isIndividualRR &&
+    allCicloConfirmed &&
+    currentCiclo != null &&
+    totalCiclos != null &&
+    currentCiclo === totalCiclos &&
+    tournamentStatus === "in_progress";
 
   const tournamentName = (tournament as { name: string }).name;
 
@@ -571,7 +587,8 @@ export default async function TournamentDetail({
             isRoundFormat={isRoundFormat}
             isBracketFormat={isBracketFormat}
             isIndividualRR={isIndividualRR}
-            cicloComplete={cicloComplete}
+            canAdvanceCiclo={canAdvanceCiclo}
+            canFinalizeTournament={canFinalizeTournament}
             currentCiclo={currentCiclo}
             totalCiclos={totalCiclos}
             cicloConfirmedCount={cicloConfirmedCount}
@@ -862,7 +879,8 @@ function OrganizerActions({
   isRoundFormat,
   isBracketFormat,
   isIndividualRR,
-  cicloComplete,
+  canAdvanceCiclo,
+  canFinalizeTournament,
   currentCiclo,
   totalCiclos,
   cicloConfirmedCount,
@@ -875,7 +893,8 @@ function OrganizerActions({
   isRoundFormat: boolean;
   isBracketFormat: boolean;
   isIndividualRR?: boolean;
-  cicloComplete?: boolean;
+  canAdvanceCiclo?: boolean;
+  canFinalizeTournament?: boolean;
   currentCiclo?: number | null;
   totalCiclos?: number | null;
   cicloConfirmedCount?: number;
@@ -883,24 +902,17 @@ function OrganizerActions({
 }) {
   if (status === "finished" || status === "archived") return null;
 
-  const canAdvanceCiclo =
-    status === "in_progress" &&
-    format === "round_robin_individual" &&
-    cicloComplete === true &&
-    currentCiclo != null &&
-    totalCiclos != null &&
-    currentCiclo < totalCiclos;
-
   // Muestra el status de la ronda actual (RR Individual) — le da visibilidad
-  // al organizador de por qué el botón "Pasar a la siguiente ronda" aún no
-  // aparece.
+  // al organizador de por qué el botón "Pasar a la siguiente ronda" o
+  // "Finalizar torneo" aún no aparece.
   const showCicloStatus =
     status === "in_progress" &&
     isIndividualRR === true &&
     currentCiclo != null &&
     totalCiclos != null &&
     (cicloTotalPartidas ?? 0) > 0 &&
-    !canAdvanceCiclo;
+    !canAdvanceCiclo &&
+    !canFinalizeTournament;
 
   return (
     <section className="card !p-4">
@@ -912,6 +924,11 @@ function OrganizerActions({
           Ronda {currentCiclo}: {cicloConfirmedCount ?? 0} de{" "}
           {cicloTotalPartidas ?? 0} partidas confirmadas
           {currentCiclo === totalCiclos ? " (última ronda)" : ""}
+        </div>
+      )}
+      {canFinalizeTournament && (
+        <div className="mb-3">
+          <FinalizeTournamentButton tournamentId={tournamentId} />
         </div>
       )}
       <div className="flex flex-wrap gap-2">
