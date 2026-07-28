@@ -38,6 +38,7 @@ import { HeroNextMatch, HeroWaiting } from "@/components/tournament/HeroNextMatc
 import { CancelTournamentButton } from "@/components/tournament/CancelTournamentButton";
 import { CancelMatchButton } from "@/components/tournament/CancelMatchButton";
 import { AdvanceCicloButton } from "@/components/tournament/AdvanceCicloButton";
+import { matchesPerCycle } from "@/lib/round-robin-fixture";
 import { TournamentRealtimeRefresher } from "./TournamentRealtimeRefresher";
 import type { LeaderboardRow } from "@/types/leaderboard";
 
@@ -406,17 +407,18 @@ export default async function TournamentDetail({
   const totalCiclos = isIndividualRR ? roundsCount : null;
 
   // Check si el ciclo actual está completo (para mostrar botón de avanzar).
+  // N=4 → 3 partidas por ronda. N=5 → 5 partidas. Ver matchesPerCycle().
   let cicloComplete = false;
   if (isIndividualRR && currentCiclo != null && totalCiclos != null && currentCiclo < totalCiclos) {
     const N = inscribedCount;
-    if (N >= 4) {
-      const firstMatch = (currentCiclo - 1) * N + 1;
-      const lastMatch = currentCiclo * N;
+    const partidasPorRonda = matchesPerCycle(N);
+    if (N >= 4 && partidasPorRonda > 0) {
+      const firstMatch = (currentCiclo - 1) * partidasPorRonda + 1;
+      const lastMatch = currentCiclo * partidasPorRonda;
       const cicloPairings = (pairings ?? []).filter((p) => {
         const r = (p as { round: number }).round;
         return r >= firstMatch && r <= lastMatch;
       });
-      // Necesitamos consultar los matches asociados para el status
       const matchIds = cicloPairings
         .map((p) => (p as { match_id: string | null }).match_id)
         .filter(Boolean) as string[];
@@ -583,10 +585,13 @@ function RoundsView({
   const showBoards = (numBoards ?? 1) > 1;
   const inscribedSet = new Set(inscribedUserIds ?? []);
   const N = inscribedSet.size || 1;
+  // N=4 → 3 partidas por ronda. N=5 → 5. Ver matchesPerCycle().
+  const partidasPorRonda = isIndividualRR ? matchesPerCycle(N) : N;
 
-  // Para RR Individual, agrupamos partidas por ciclo (matchNumber / N).
+  // Para RR Individual, agrupamos partidas por ronda (matchNumber / partidasPorRonda).
   function cicloOf(round: number): number {
-    return Math.ceil(round / N);
+    if (partidasPorRonda <= 0) return 1;
+    return Math.ceil(round / partidasPorRonda);
   }
 
   return (
@@ -625,7 +630,7 @@ function RoundsView({
             <section className="card p-0 overflow-hidden">
               <h2 className="px-4 py-2.5 border-b border-border font-semibold text-sm">
                 {isIndividualRR
-                  ? `Partida ${((round - 1) % N) + 1}`
+                  ? `Partida ${((round - 1) % partidasPorRonda) + 1}`
                   : `Ronda ${round}`}
               </h2>
             <div className="divide-y divide-border">

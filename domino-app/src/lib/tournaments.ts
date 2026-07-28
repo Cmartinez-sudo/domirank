@@ -12,6 +12,7 @@ import { rl, checkLimit } from "@/lib/ratelimit";
 import { createTournamentSchema, computePointsToWin } from "./tournament-schema";
 import type { CreateTournamentInput } from "./tournament-schema";
 import { generateInitialPairings } from "./tournament-formats-engine";
+import { matchesPerCycle } from "./round-robin-fixture";
 
 /** Schema legado — no se usa en producción, solo mantiene el contrato de tipos */
 const CreateSchemaLegacy = z.object({
@@ -329,10 +330,11 @@ export async function advanceToNextCiclo(tournamentId: string) {
   }
   if (N < 4) return { ok: false as const, error: "Torneo sin jugadores válido" };
 
-  // Verificar que todas las partidas del ciclo actual (rounds [(c-1)*N + 1 ... c*N])
-  // estén confirmed.
-  const firstMatch = (currentCiclo - 1) * N + 1;
-  const lastMatch = currentCiclo * N;
+  // Verificar que todas las partidas de la ronda actual estén confirmed.
+  // N=4 → 3 partidas/ronda. N=5 → 5. Ver matchesPerCycle().
+  const partidasPorRonda = matchesPerCycle(N);
+  const firstMatch = (currentCiclo - 1) * partidasPorRonda + 1;
+  const lastMatch = currentCiclo * partidasPorRonda;
   const { data: pairings } = await service
     .from("tournament_pairings")
     .select("id, round, match_id, matches(status)")
