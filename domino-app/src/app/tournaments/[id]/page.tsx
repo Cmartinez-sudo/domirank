@@ -406,10 +406,12 @@ export default async function TournamentDetail({
   const currentCiclo = isIndividualRR ? (currentRound ?? 1) : null;
   const totalCiclos = isIndividualRR ? roundsCount : null;
 
-  // Check si el ciclo actual está completo (para mostrar botón de avanzar).
+  // Check estado de la ronda actual (RR Individual solamente).
   // N=4 → 3 partidas por ronda. N=5 → 5 partidas. Ver matchesPerCycle().
   let cicloComplete = false;
-  if (isIndividualRR && currentCiclo != null && totalCiclos != null && currentCiclo < totalCiclos) {
+  let cicloConfirmedCount = 0;
+  let cicloTotalPartidas = 0;
+  if (isIndividualRR && currentCiclo != null && totalCiclos != null) {
     const N = inscribedCount;
     const partidasPorRonda = matchesPerCycle(N);
     if (N >= 4 && partidasPorRonda > 0) {
@@ -419,18 +421,22 @@ export default async function TournamentDetail({
         const r = (p as { round: number }).round;
         return r >= firstMatch && r <= lastMatch;
       });
+      cicloTotalPartidas = cicloPairings.length;
       const matchIds = cicloPairings
         .map((p) => (p as { match_id: string | null }).match_id)
         .filter(Boolean) as string[];
-      if (matchIds.length === cicloPairings.length && matchIds.length > 0) {
+      if (matchIds.length > 0) {
         const { data: cicloMatches } = await supabase
           .from("matches")
           .select("id, status")
           .in("id", matchIds);
-        const allConfirmed = (cicloMatches ?? []).length === matchIds.length
-          && (cicloMatches ?? []).every((m) => (m as { status: string }).status === "confirmed");
-        cicloComplete = allConfirmed;
+        cicloConfirmedCount = (cicloMatches ?? [])
+          .filter((m) => (m as { status: string }).status === "confirmed").length;
       }
+      cicloComplete =
+        cicloTotalPartidas > 0 &&
+        cicloConfirmedCount === cicloTotalPartidas &&
+        currentCiclo < totalCiclos;
     }
   }
 
@@ -545,9 +551,12 @@ export default async function TournamentDetail({
             hasPairings={hasPairings}
             isRoundFormat={isRoundFormat}
             isBracketFormat={isBracketFormat}
+            isIndividualRR={isIndividualRR}
             cicloComplete={cicloComplete}
             currentCiclo={currentCiclo}
             totalCiclos={totalCiclos}
+            cicloConfirmedCount={cicloConfirmedCount}
+            cicloTotalPartidas={cicloTotalPartidas}
           />
         )}
       </div>
@@ -812,9 +821,12 @@ function OrganizerActions({
   hasPairings,
   isRoundFormat,
   isBracketFormat,
+  isIndividualRR,
   cicloComplete,
   currentCiclo,
   totalCiclos,
+  cicloConfirmedCount,
+  cicloTotalPartidas,
 }: {
   tournamentId: string;
   status: string;
@@ -822,9 +834,12 @@ function OrganizerActions({
   hasPairings: boolean;
   isRoundFormat: boolean;
   isBracketFormat: boolean;
+  isIndividualRR?: boolean;
   cicloComplete?: boolean;
   currentCiclo?: number | null;
   totalCiclos?: number | null;
+  cicloConfirmedCount?: number;
+  cicloTotalPartidas?: number;
 }) {
   if (status === "finished" || status === "archived") return null;
 
@@ -836,11 +851,29 @@ function OrganizerActions({
     totalCiclos != null &&
     currentCiclo < totalCiclos;
 
+  // Muestra el status de la ronda actual (RR Individual) — le da visibilidad
+  // al organizador de por qué el botón "Pasar a la siguiente ronda" aún no
+  // aparece.
+  const showCicloStatus =
+    status === "in_progress" &&
+    isIndividualRR === true &&
+    currentCiclo != null &&
+    totalCiclos != null &&
+    (cicloTotalPartidas ?? 0) > 0 &&
+    !canAdvanceCiclo;
+
   return (
     <section className="card !p-4">
       <h2 className="font-semibold text-sm text-text-mute uppercase tracking-wide mb-3">
         Acciones del organizador
       </h2>
+      {showCicloStatus && (
+        <div className="mb-3 text-xs text-text-mute">
+          Ronda {currentCiclo}: {cicloConfirmedCount ?? 0} de{" "}
+          {cicloTotalPartidas ?? 0} partidas confirmadas
+          {currentCiclo === totalCiclos ? " (última ronda)" : ""}
+        </div>
+      )}
       <div className="flex flex-wrap gap-2">
         {status === "open" && (
           <Link href={`/tournaments/${tournamentId}/manage`} className="btn-primary text-sm">
@@ -865,7 +898,9 @@ function OrganizerActions({
             totalCiclos={totalCiclos!}
           />
         )}
-        {status === "in_progress" && (isRoundFormat || isBracketFormat) && (
+        {/* "+ Registrar partida" no aplica a RR Individual — el fixture es fijo
+             y las partidas se juegan desde el link "Jugar" en cada pairing. */}
+        {status === "in_progress" && (isRoundFormat || isBracketFormat) && !isIndividualRR && (
           <Link
             href={`/matches/new?tournament=${tournamentId}`}
             className="btn-ghost text-sm"
