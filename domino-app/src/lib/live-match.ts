@@ -387,19 +387,20 @@ export async function finalizeMatch(match_id: string): Promise<{ ok: true } | { 
       return { ok: false, error: "No se pudo finalizar la partida." };
     }
 
-    // Aplicar rating si el match está rateado. Best-effort: si falla logueamos
-    // pero NO bloqueamos — el match queda confirmed igualmente.
-    const rated = matchRowExt.rated as boolean | undefined ?? true;
-    if (rated) {
-      try {
-        const { applyMatchRating } = await import("@/lib/match-attest-actions");
-        const ratingResult = await applyMatchRating(match_id);
-        if (!ratingResult.ok) {
-          console.error("[finalizeMatch attestation bypass] applyMatchRating failed:", ratingResult.error);
-        }
-      } catch (e) {
-        console.error("[finalizeMatch attestation bypass] rating import/apply error:", e);
+    // Aplicar rating (o sync de rank si rated=false). Best-effort: si falla
+    // logueamos pero NO bloqueamos — el match queda confirmed igualmente.
+    // NOTA: applyMatchRating maneja el caso rated=false internamente,
+    // sincronizando match_players.rank vía syncMatchRankByRounds. Esto es
+    // crítico para que el leaderboard del torneo (V/D/CE) funcione cuando
+    // el organizador desactiva rating.
+    try {
+      const { applyMatchRating } = await import("@/lib/match-attest-actions");
+      const ratingResult = await applyMatchRating(match_id);
+      if (!ratingResult.ok) {
+        console.error("[finalizeMatch attestation bypass] applyMatchRating failed:", ratingResult.error);
       }
+    } catch (e) {
+      console.error("[finalizeMatch attestation bypass] rating import/apply error:", e);
     }
 
     revalidatePath("/dashboard");
