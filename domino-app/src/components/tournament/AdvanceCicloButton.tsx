@@ -27,7 +27,7 @@ export function AdvanceCicloButton({
       const r = await advanceToNextCiclo(tournamentId);
       if (!r.ok) toast.error(r.error);
       else {
-        toast.success(`Ahora estás en el ciclo ${r.newCiclo} de ${totalCiclos}`);
+        toast.success(`Ahora estás en la ronda ${r.newCiclo} de ${totalCiclos}`);
         router.refresh();
       }
     });
@@ -40,7 +40,7 @@ export function AdvanceCicloButton({
       disabled={pending}
       className="btn-primary text-sm disabled:opacity-50"
     >
-      {pending ? "Avanzando…" : `Pasar al ciclo ${currentCiclo + 1}`}
+      {pending ? "Avanzando…" : `Pasar a la ronda ${currentCiclo + 1}`}
     </button>
   );
 }

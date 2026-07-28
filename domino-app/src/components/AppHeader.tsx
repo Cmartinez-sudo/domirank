@@ -6,6 +6,8 @@ export interface AppHeaderProps {
   title?: string;
   fallbackPath: string;
   rightSlot?: React.ReactNode;
+  /** Si true, el back siempre va a fallbackPath (ignora historial). */
+  forceFallback?: boolean;
 }
 
 /**
@@ -13,8 +15,8 @@ export interface AppHeaderProps {
  * Provee botón "back" seguro (useSafeBack) y slot derecho opcional.
  * Reusar en todas las pages fuera del bottom nav raíz.
  */
-export function AppHeader({ title, fallbackPath, rightSlot }: AppHeaderProps) {
-  const { goBack } = useSafeBack(fallbackPath);
+export function AppHeader({ title, fallbackPath, rightSlot, forceFallback }: AppHeaderProps) {
+  const { goBack } = useSafeBack(fallbackPath, { forceFallback });
 
   return (
     <header

@@ -316,7 +316,7 @@ export async function advanceToNextCiclo(tournamentId: string) {
     max_players: number | null;
   };
   if (tx.created_by !== user.id) {
-    return { ok: false as const, error: "Solo el organizador puede avanzar ciclos" };
+    return { ok: false as const, error: "Solo el organizador puede avanzar rondas" };
   }
   if (tx.format !== "round_robin_individual") {
     return { ok: false as const, error: "Solo disponible para Round Robin individual" };
@@ -325,7 +325,7 @@ export async function advanceToNextCiclo(tournamentId: string) {
   const currentCiclo = tx.current_round ?? 1;
   const N = tx.max_players ?? 0;
   if (currentCiclo >= R) {
-    return { ok: false as const, error: "Ya se completaron todos los ciclos" };
+    return { ok: false as const, error: "Ya se completaron todas las rondas" };
   }
   if (N < 4) return { ok: false as const, error: "Torneo sin jugadores válido" };
 
@@ -353,7 +353,7 @@ export async function advanceToNextCiclo(tournamentId: string) {
   if (notConfirmed.length > 0) {
     return {
       ok: false as const,
-      error: `Faltan ${notConfirmed.length} partida(s) del ciclo ${currentCiclo} por confirmar`,
+      error: `Faltan ${notConfirmed.length} partida(s) de la ronda ${currentCiclo} por confirmar`,
     };
   }
 

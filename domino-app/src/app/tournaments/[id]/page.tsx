@@ -456,7 +456,7 @@ export default async function TournamentDetail({
               </p>
               {tournamentStatus === "in_progress" && isIndividualRR && currentCiclo != null && totalCiclos != null && (
                 <p className="text-text-mute text-xs mt-0.5">
-                  Ciclo {currentCiclo} de {totalCiclos} · {inscribedCount} jugadores
+                  Ronda {currentCiclo} de {totalCiclos} · {inscribedCount} jugadores
                 </p>
               )}
               {tournamentStatus === "in_progress" && !isIndividualRR && currentRound != null && totalRounds != null && (
@@ -612,7 +612,7 @@ function RoundsView({
             {isFirstOfCiclo && ciclo !== null && (
               <div className="flex items-center gap-2 mb-2 mt-3 first:mt-0">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-text-mute">
-                  Ciclo {ciclo}
+                  Ronda {ciclo}
                   {totalCiclos ? ` de ${totalCiclos}` : ""}
                 </h3>
                 {isCurrentCiclo && (

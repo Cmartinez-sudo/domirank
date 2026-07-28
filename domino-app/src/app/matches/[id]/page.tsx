@@ -96,7 +96,11 @@ export default async function MatchDetail({
     : BACK_FALLBACKS.match_detail;
 
   return (
-    <SecondaryPageShell title="Partida" fallbackPath={backPath}>
+    <SecondaryPageShell
+      title="Partida"
+      fallbackPath={backPath}
+      forceFallback={!!match.tournament_id}
+    >
     <div className="max-w-4xl mx-auto px-4 py-5 space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>

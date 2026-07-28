@@ -12,13 +12,20 @@ export interface UseSafeBackResult {
  * Hook para navegación "back" segura.
  * - Si hay historial del mismo origen, llama router.back().
  * - Si es deep-link sin historial o viene de otro origen, llama router.push(fallbackPath).
+ * - Si `forceFallback` es true, siempre hace push (ignora historial) — útil
+ *   cuando el historial contiene pasos intermedios (ej. /matches/new) y
+ *   queremos saltarlos.
  * - SSR-safe: no toca document/window en el servidor.
  */
-export function useSafeBack(fallbackPath: string): UseSafeBackResult {
+export function useSafeBack(
+  fallbackPath: string,
+  options?: { forceFallback?: boolean },
+): UseSafeBackResult {
   const router = useRouter();
+  const forceFallback = options?.forceFallback ?? false;
 
   const goBack = useCallback(() => {
-    if (typeof window === "undefined") {
+    if (typeof window === "undefined" || forceFallback) {
       router.push(fallbackPath);
       return;
     }
@@ -37,7 +44,7 @@ export function useSafeBack(fallbackPath: string): UseSafeBackResult {
     }
 
     router.push(fallbackPath);
-  }, [router, fallbackPath]);
+  }, [router, fallbackPath, forceFallback]);
 
   return { goBack, fallbackPath };
 }
