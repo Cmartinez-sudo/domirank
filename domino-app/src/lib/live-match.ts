@@ -188,24 +188,16 @@ export async function addRound(input: z.infer<typeof AddRoundSchema>) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "No autenticado." };
 
-  // Determinar siguiente round_number
-  const { data: existing } = await supabase
-    .from("match_rounds")
-    .select("round_number")
-    .eq("match_id", match_id)
-    .order("round_number", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const round_number = (existing?.round_number ?? 0) + 1;
-
-  const { error } = await supabase.from("match_rounds").insert({
-    match_id, round_number, team, points, kind,
-    created_by: user.id,
-    recorded_by_user_id: user.id,
+  // Insert atómico via RPC (mig 0104). Un advisory lock por match_id
+  // serializa inserts concurrentes de varios jugadores de la misma mesa.
+  const { error } = await supabase.rpc("insert_match_round", {
+    p_match_id: match_id,
+    p_team: team,
+    p_points: points,
+    p_kind: kind,
   });
   if (error) return { ok: false as const, error: error.message };
 
-  // Actualizar score acumulado en match_players (denormalización para queries rápidas)
   await syncMatchScores(match_id);
   revalidatePath(`/matches/${match_id}/live`);
   return { ok: true as const };
