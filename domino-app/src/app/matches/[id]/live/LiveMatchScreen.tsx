@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
@@ -15,6 +15,7 @@ import { ContinuousLeagueFinishedState } from "@/components/continuous-league/Co
 import { HandRow, type HandRowData } from "@/components/match/HandRow";
 import { ScoreKeeperTransfer } from "@/components/match/ScoreKeeperTransfer";
 import { EditHandModal } from "@/components/match/EditHandModal";
+import { useToast } from "@/components/Toast";
 
 type PublicUser = { id: string; username: string; display_name: string | null; avatar_url: string | null; country: string | null };
 type AttributionProfile = { username: string; display_name: string | null; avatar_url: string | null };
@@ -71,9 +72,60 @@ export function LiveMatchScreen({
   currentUserId?: string | null;
 }) {
   const router = useRouter();
+  const toast = useToast();
   const [pending, setPending] = useState(false);
-  const [activeTeam, setActiveTeam] = useState<1 | 2>(1);
+  const [activeTeam, setActiveTeam] = useState<1 | 2>(() => {
+    if (rounds.length === 0) return 1;
+    const last = rounds[rounds.length - 1];
+    return last.team === 2 ? 2 : 1;
+  });
   const [input, setInput] = useState(0);
+
+  // Sprint 3: persistir input y activeTeam en localStorage por matchId. Si el
+  // token expira o el usuario hace F5 a mitad de escribir una mano, al volver
+  // a esta pantalla restauramos el buffer. Se limpia al finalizar/cancelar.
+  const draftKey = `match-draft:${matchId}`;
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(draftKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { input?: number; activeTeam?: 1 | 2 };
+      if (parsed && typeof parsed.input === "number" && parsed.input > 0) {
+        setInput(parsed.input);
+      }
+      if (parsed && (parsed.activeTeam === 1 || parsed.activeTeam === 2)) {
+        setActiveTeam(parsed.activeTeam);
+      }
+    } catch {
+      /* ignore corrupt draft */
+    }
+    // Solo al montar por matchId. No re-corre en cada cambio de state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (input === 0) {
+        // Solo persistimos el team activo si hay algo escrito, para no
+        // pisar la herencia natural del último round al re-montar.
+        window.localStorage.removeItem(draftKey);
+      } else {
+        window.localStorage.setItem(
+          draftKey,
+          JSON.stringify({ input, activeTeam }),
+        );
+      }
+    } catch {
+      /* localStorage disabled / quota exceeded — silent */
+    }
+  }, [draftKey, input, activeTeam]);
+
+  function clearDraft() {
+    if (typeof window === "undefined") return;
+    try { window.localStorage.removeItem(draftKey); } catch {}
+  }
   const [err, setErr] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [editingHandId, setEditingHandId] = useState<number | null>(null);
@@ -115,27 +167,49 @@ export function LiveMatchScreen({
 
   function doAdd() {
     if (input <= 0) return;
+    const scoredTeam = activeTeam;
+    const points = input;
     run(
-      () => addRound({ match_id: matchId, team: activeTeam, points: input, kind: "points" }),
-      () => { setInput(0); setErr(null); },
+      () => addRound({ match_id: matchId, team: scoredTeam, points, kind: "points" }),
+      () => {
+        setInput(0);
+        setErr(null);
+        toast.success(`+${points} · ${scoredTeam === 1 ? nameA : nameB}`);
+      },
     );
   }
   function doCapicua() {
+    const scoredTeam = activeTeam;
     run(
-      () => addRound({ match_id: matchId, team: activeTeam, points: capicuaBonus, kind: "capicua" }),
-      () => { setInput(0); setErr(null); },
+      () => addRound({ match_id: matchId, team: scoredTeam, points: capicuaBonus, kind: "capicua" }),
+      () => {
+        setInput(0);
+        setErr(null);
+        toast.success(`¡Capicúa! +${capicuaBonus} · ${scoredTeam === 1 ? nameA : nameB}`);
+      },
     );
   }
   function doTranque() {
     // Tranque: marca la mano (kind='tranque') sin sumar puntos al score.
     // Útil para registrar que hubo tranque en el historial.
+    const scoredTeam = activeTeam;
     run(
-      () => addRound({ match_id: matchId, team: activeTeam, points: 0, kind: "tranque" }),
-      () => { setInput(0); setErr(null); },
+      () => addRound({ match_id: matchId, team: scoredTeam, points: 0, kind: "tranque" }),
+      () => {
+        setInput(0);
+        setErr(null);
+        toast.info(`Tranque · ${scoredTeam === 1 ? nameA : nameB}`);
+      },
     );
   }
   function doUndo() {
-    run(() => undoLastRound(matchId), () => setErr(null));
+    run(
+      () => undoLastRound(matchId),
+      () => {
+        setErr(null);
+        toast.info("Última mano deshecha");
+      },
+    );
   }
   async function doCancel() {
     if (rounds.length > 0) {
@@ -148,6 +222,7 @@ export function LiveMatchScreen({
     setConfirmCancel(false);
     setPending(true);
     try {
+      clearDraft();
       // En polla redirige al home de la polla, en quick match al dashboard.
       const redirectTo = isContinuousLeague && tournamentId ? `/tournaments/${tournamentId}` : "/dashboard";
       await cancelLiveMatch(matchId, redirectTo);
@@ -161,12 +236,21 @@ export function LiveMatchScreen({
     try {
       const r = await finalizeMatch(matchId);
       if (r.ok) {
+        clearDraft();
         const winnerTeam =
           (validation.status === "finishable" || validation.status === "time_expired_finishable") &&
           validation.winnerTeam != null
             ? validation.winnerTeam === 1 ? nameA : nameB
             : "unknown";
         analytics.track("match_finalized", { match_id: matchId, winner_team: winnerTeam });
+        if (r.groupAttributions && r.groupAttributions.length > 0) {
+          const names = r.groupAttributions.join(" · ");
+          toast.success(
+            r.groupAttributions.length === 1
+              ? `Cuenta para el grupo ${names}`
+              : `Cuenta para los grupos ${names}`,
+          );
+        }
         // En polla: refresh para que el page re-renderice con status='confirmed'
         // y aparezca el inline trophy state. En quick match: redirect a detalle.
         if (isContinuousLeague && tournamentId) {

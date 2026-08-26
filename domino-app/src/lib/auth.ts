@@ -1,5 +1,6 @@
 import { supabaseServer } from "./supabase/server";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 
 export async function getCurrentUser() {
   const supabase = await supabaseServer();
@@ -20,9 +21,40 @@ export async function getCurrentProfile() {
   return profile;
 }
 
+/**
+ * Construye /login?next=<current_pathname> para que tras re-autenticarse el
+ * usuario vuelva exactamente donde estaba (Sprint 3: sesión expirada a mitad
+ * de partida). El pathname viene de un request header seteado por middleware.
+ *
+ * Sólo consideramos rutas internas seguras. Rutas de auth (/login, /signup,
+ * /auth/*) NO se propagan como next para evitar loops.
+ */
+async function buildLoginRedirect(): Promise<string> {
+  try {
+    const h = await headers();
+    const pathname = h.get("x-pathname") ?? "";
+    if (!pathname || !pathname.startsWith("/")) return "/login";
+    // Excluir rutas de auth para prevenir loops.
+    if (
+      pathname === "/login" ||
+      pathname.startsWith("/login?") ||
+      pathname === "/signup" ||
+      pathname.startsWith("/signup?") ||
+      pathname.startsWith("/auth/") ||
+      pathname.startsWith("/forgot-password") ||
+      pathname.startsWith("/reset-password")
+    ) {
+      return "/login";
+    }
+    return `/login?next=${encodeURIComponent(pathname)}`;
+  } catch {
+    return "/login";
+  }
+}
+
 export async function requireUser() {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  if (!user) redirect(await buildLoginRedirect());
   return user;
 }
 

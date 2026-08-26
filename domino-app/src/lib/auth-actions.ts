@@ -83,6 +83,29 @@ const LoginSchema = z.object({
   password: z.string().min(1),
 });
 
+/**
+ * Valida que el `next` param sea una ruta interna segura. Rechaza URLs
+ * absolutas, protocol-relative (//evil.com), y rutas de auth para
+ * prevenir loops de redirect. Idéntico al helper en /auth/callback.
+ */
+function safeNext(raw: string | null | undefined): string | null {
+  if (!raw || typeof raw !== "string") return null;
+  if (!raw.startsWith("/")) return null;
+  if (raw.startsWith("//")) return null;
+  if (
+    raw === "/login" ||
+    raw.startsWith("/login?") ||
+    raw === "/signup" ||
+    raw.startsWith("/signup?") ||
+    raw.startsWith("/auth/") ||
+    raw.startsWith("/forgot-password") ||
+    raw.startsWith("/reset-password")
+  ) {
+    return null;
+  }
+  return raw;
+}
+
 export async function signInWithPassword(formData: FormData) {
   const limit = await checkLimit(rl.auth, `signin:${getIp()}`);
   if (!limit.allowed) return { ok: false as const, error: limit.error };
@@ -114,7 +137,14 @@ export async function signInWithPassword(formData: FormData) {
       .select("onboarded")
       .eq("id", user.id)
       .single();
-    if (profile && profile.onboarded === false) next = "/onboarding";
+    if (profile && profile.onboarded === false) {
+      next = "/onboarding";
+    } else {
+      // Si el form envía ?next=<internal_path>, respetamos ese destino.
+      // Sprint 3: preservar destino tras sesión expirada.
+      const requested = safeNext(formData.get("next") as string | null);
+      if (requested) next = requested;
+    }
   }
   return { ok: true as const, next };
 }
@@ -128,11 +158,16 @@ export async function signInWithMagicLink(formData: FormData) {
   const parsed = MagicSchema.safeParse({ email: formData.get("email") });
   if (!parsed.success) return { ok: false as const, error: "Correo inválido" };
 
+  const requestedNext = safeNext(formData.get("next") as string | null);
+  const callback = requestedNext
+    ? `${getOrigin()}/auth/callback?next=${encodeURIComponent(requestedNext)}`
+    : `${getOrigin()}/auth/callback`;
+
   const supabase = await supabaseServer();
   const { error } = await supabase.auth.signInWithOtp({
     email: parsed.data.email,
     options: {
-      emailRedirectTo: `${getOrigin()}/auth/callback`,
+      emailRedirectTo: callback,
       shouldCreateUser: true,
       data: { signup_method: "magic_link", terms_accepted: true },
     },
@@ -146,12 +181,17 @@ export async function signInWithMagicLink(formData: FormData) {
   return { ok: true as const };
 }
 
-export async function signInWithOAuth(provider: "google" | "apple") {
+export async function signInWithOAuth(provider: "google" | "apple", nextParam?: string | null) {
+  const requestedNext = safeNext(nextParam ?? null);
+  const callback = requestedNext
+    ? `${getOrigin()}/auth/callback?next=${encodeURIComponent(requestedNext)}`
+    : `${getOrigin()}/auth/callback`;
+
   const supabase = await supabaseServer();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: `${getOrigin()}/auth/callback`,
+      redirectTo: callback,
     },
   });
   if (error) {

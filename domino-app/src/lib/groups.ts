@@ -457,7 +457,9 @@ export async function cancelInvitation(input: z.infer<typeof InvitationIdSchema>
 
 const GroupIdSchema = z.object({ groupId: UuidSchema });
 
-export async function leaveGroup(input: z.infer<typeof GroupIdSchema>): Promise<ActionResult> {
+export async function leaveGroup(
+  input: z.infer<typeof GroupIdSchema>,
+): Promise<ActionResult<{ archived: boolean }>> {
   const parsed = GroupIdSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Datos inválidos" };
 
@@ -478,12 +480,24 @@ export async function leaveGroup(input: z.infer<typeof GroupIdSchema>): Promise<
   const m = member as { id: string; role: string; status: string };
   if (m.status !== "active") return { ok: false, error: "No eres miembro activo" };
 
-  // Decisión #11: admin no se puede salir sin transferir el rol.
+  // Sprint 2 decisión: si eres el ÚNICO admin y quedan otros miembros
+  // activos, bloqueamos hasta que transfiera admin. Si eres admin y no
+  // queda nadie más, se permite salir y el grupo se auto-archiva.
+  let archiveGroup = false;
   if (m.role === "admin") {
-    return {
-      ok: false,
-      error: "Eres admin del grupo. Transfiere el rol a otro miembro antes de salir.",
-    };
+    const { data: others } = await service
+      .from("group_members")
+      .select("id")
+      .eq("group_id", parsed.data.groupId)
+      .eq("status", "active")
+      .neq("user_id", user.id);
+    if ((others?.length ?? 0) > 0) {
+      return {
+        ok: false,
+        error: "Eres admin del grupo. Transfiere el rol a otro miembro antes de salir.",
+      };
+    }
+    archiveGroup = true;
   }
 
   const { error: updErr } = await service
@@ -492,9 +506,20 @@ export async function leaveGroup(input: z.infer<typeof GroupIdSchema>): Promise<
     .eq("id", m.id);
   if (updErr) return { ok: false, error: updErr.message };
 
+  if (archiveGroup) {
+    const { error: archErr } = await service
+      .from("groups")
+      .update({ is_active: false } as never)
+      .eq("id", parsed.data.groupId);
+    if (archErr) {
+      console.error("[leaveGroup] archive group failed:", archErr);
+      // No revertimos la salida — el usuario ya está fuera. Log y continue.
+    }
+  }
+
   revalidatePath("/groups");
   revalidatePath(`/groups/${parsed.data.groupId}`);
-  return { ok: true };
+  return { ok: true, data: { archived: archiveGroup } };
 }
 
 // ─── 6. removeMember ─────────────────────────────────────────

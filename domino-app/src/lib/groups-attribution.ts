@@ -29,6 +29,23 @@ export type ImportResult = {
 };
 
 /**
+ * Devuelve los nombres de los grupos a los que fue atribuido un match.
+ * Usado tras finalizar/confirmar una partida para mostrar toast al usuario.
+ * RLS: el SELECT respeta las policies del viewer.
+ */
+export async function getMatchGroupAttributionNames(matchId: string): Promise<string[]> {
+  const supabase = await supabaseServer();
+  const { data } = await supabase
+    .from("group_match_attributions")
+    .select("groups(name)")
+    .eq("match_id", matchId);
+  if (!data) return [];
+  return (data as unknown as Array<{ groups: { name: string } | null }>)
+    .map((r) => r.groups?.name)
+    .filter((n): n is string => !!n);
+}
+
+/**
  * Importa partidas históricas al grupo (decisión #2 del grilling Fase 3).
  *
  * Algoritmo:

@@ -1,9 +1,67 @@
 import { requireOnboardedUser, getCurrentProfile } from "@/lib/auth";
 import { getUserPreferences } from "@/lib/user-preferences-actions";
+import { supabaseServer } from "@/lib/supabase/server";
 import { NewMatchForm } from "./NewMatchForm";
 import { TournamentFastPath } from "./TournamentFastPath";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Sprint 3: top jugadores frecuentes con los que el viewer ya jugó.
+ * Nos evita re-buscar por nombre a los mismos amigos en cada partida.
+ * Ventana: últimos 60 matches. Excluye al mismo user y limita a 6.
+ */
+async function getFrequentPlayers(userId: string) {
+  const supabase = await supabaseServer();
+
+  // 1) Últimos matches del user.
+  const { data: myRows } = await supabase
+    .from("match_players")
+    .select("match_id, matches!inner(created_at, status)")
+    .eq("user_id", userId)
+    .order("created_at", { foreignTable: "matches", ascending: false })
+    .limit(60);
+
+  type MyRow = { match_id: string; matches: { created_at: string; status: string } };
+  const rows = (myRows as unknown as MyRow[] | null) ?? [];
+  const relevantIds = rows
+    .filter((r) => r.matches?.status !== "cancelled" && r.matches?.status !== "void")
+    .map((r) => r.match_id);
+  if (relevantIds.length === 0) return [] as Array<{
+    id: string; username: string; display_name: string | null;
+    avatar_url: string | null; country: string | null;
+  }>;
+
+  // 2) Coplayers de esos matches (excluye al viewer).
+  const { data: coRows } = await supabase
+    .from("match_players")
+    .select("user_id")
+    .in("match_id", relevantIds)
+    .neq("user_id", userId);
+
+  const counts = new Map<string, number>();
+  for (const row of (coRows as Array<{ user_id: string }> | null) ?? []) {
+    counts.set(row.user_id, (counts.get(row.user_id) ?? 0) + 1);
+  }
+  const topIds = Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([id]) => id);
+  if (topIds.length === 0) return [];
+
+  // 3) Profiles del top.
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, username, display_name, avatar_url, country")
+    .in("id", topIds);
+
+  type Prof = { id: string; username: string; display_name: string | null; avatar_url: string | null; country: string | null };
+  const map = new Map<string, Prof>();
+  for (const p of (profiles as Prof[] | null) ?? []) map.set(p.id, p);
+  return topIds
+    .map((id) => map.get(id))
+    .filter((p): p is Prof => !!p);
+}
 
 export default async function NewMatchPage({
   searchParams,
@@ -41,6 +99,13 @@ export default async function NewMatchPage({
     console.warn("[NewMatchPage] No se pudieron cargar preferences:", err);
   }
 
+  let frequentPlayers: Awaited<ReturnType<typeof getFrequentPlayers>> = [];
+  try {
+    frequentPlayers = await getFrequentPlayers(profile.id);
+  } catch (err) {
+    console.warn("[NewMatchPage] No se pudieron cargar jugadores frecuentes:", err);
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-4">
       <h1 className="text-3xl font-bold">Nueva partida</h1>
@@ -58,6 +123,7 @@ export default async function NewMatchPage({
         }}
         defaultModality={profile?.default_modality ?? "ven"}
         initialPreferences={initialPreferences}
+        frequentPlayers={frequentPlayers}
       />
     </div>
   );

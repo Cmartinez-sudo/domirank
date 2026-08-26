@@ -281,7 +281,9 @@ export async function undoMatchCancellation(match_id: string) {
  *   - Si después se llega a quórum vía attestMatch, ahí se aplica el
  *     rating. Ver src/lib/match-attest-actions.ts.
  */
-export async function finalizeMatch(match_id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function finalizeMatch(
+  match_id: string,
+): Promise<{ ok: true; groupAttributions?: string[] } | { ok: false; error: string }> {
   const supabase = await supabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "No autenticado." };
@@ -406,7 +408,17 @@ export async function finalizeMatch(match_id: string): Promise<{ ok: true } | { 
     revalidatePath("/dashboard");
     revalidatePath(`/matches/${match_id}`);
     if (tournamentId) revalidatePath(`/tournaments/${tournamentId}`);
-    return { ok: true };
+
+    // Recolectar nombres de grupos a los que la partida quedó atribuida (por
+    // el trigger trg_attribute_match_on_confirmed) para feedback al usuario.
+    let groupAttributions: string[] = [];
+    try {
+      const { getMatchGroupAttributionNames } = await import("@/lib/groups-attribution");
+      groupAttributions = await getMatchGroupAttributionNames(match_id);
+    } catch (e) {
+      console.warn("[finalizeMatch bypass] getMatchGroupAttributionNames failed:", e);
+    }
+    return { ok: true, groupAttributions };
   }
 
   // ============================================================

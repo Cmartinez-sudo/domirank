@@ -9,7 +9,11 @@ import { buildMatchEmailMeta, sendToUserIds } from "@/lib/match-notifications";
 import { matchConfirmedEmail, matchDisputedEmail } from "@/lib/email-templates";
 
 export type AttestResult =
-  | { ok: true; newStatus: "pending_attestation" | "confirmed" | "disputed" }
+  | {
+      ok: true;
+      newStatus: "pending_attestation" | "confirmed" | "disputed";
+      groupAttributions?: string[];
+    }
   | { ok: false; error: string };
 
 /**
@@ -64,12 +68,19 @@ export async function attestMatch(
   const status = newStatus as "pending_attestation" | "confirmed" | "disputed";
 
   // Si la attestation acabó de confirmar el match, aplica el rating ahora
+  let groupAttributions: string[] = [];
   if (status === "confirmed") {
     const ratingResult = await applyMatchRating(matchId);
     if (!ratingResult.ok) {
       console.error("applyMatchRating failed after confirm:", ratingResult.error);
       // El match sigue confirmed pero sin rating aplicado. Otro request
       // o el cron lo pueden retomar (rated_at IS NULL).
+    }
+    try {
+      const { getMatchGroupAttributionNames } = await import("@/lib/groups-attribution");
+      groupAttributions = await getMatchGroupAttributionNames(matchId);
+    } catch (e) {
+      console.warn("[attestMatch] getMatchGroupAttributionNames failed:", e);
     }
   }
 
@@ -108,7 +119,7 @@ export async function attestMatch(
     })();
   }
 
-  return { ok: true, newStatus: status };
+  return { ok: true, newStatus: status, groupAttributions };
 }
 
 /**

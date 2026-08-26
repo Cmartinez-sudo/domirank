@@ -43,10 +43,13 @@ export function NewMatchForm({
   currentUser,
   defaultModality,
   initialPreferences,
+  frequentPlayers = [],
 }: {
   currentUser: Player;
   defaultModality: ModalityCode;
   initialPreferences?: UserPreferences | null;
+  /** Top jugadores frecuentes con los que el user ya jugó (Sprint 3). */
+  frequentPlayers?: Player[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -363,6 +366,7 @@ export function NewMatchForm({
           players={teamA}
           setPlayers={setTeamA}
           excludeIds={excludeIds}
+          frequentPlayers={frequentPlayers}
         />
         <TeamPicker
           label="Equipo B"
@@ -371,6 +375,7 @@ export function NewMatchForm({
           players={teamB}
           setPlayers={setTeamB}
           excludeIds={excludeIds}
+          frequentPlayers={frequentPlayers}
         />
       </div>
 
@@ -424,6 +429,7 @@ function TeamPicker({
   players,
   setPlayers,
   excludeIds,
+  frequentPlayers,
 }: {
   label: string;
   colorClass: string;
@@ -431,16 +437,44 @@ function TeamPicker({
   players: Player[];
   setPlayers: (p: Player[]) => void;
   excludeIds: string[];
+  frequentPlayers: Player[];
 }) {
+  const availableQuickPicks = frequentPlayers.filter(
+    (p) => !excludeIds.includes(p.id),
+  );
   return (
     <section className="card">
       <h3 className={`font-semibold mb-3 ${colorClass}`}>{label}</h3>
       {players.length < size ? (
-        <UserSearch
-          excludeIds={excludeIds}
-          placeholder="Buscar jugador por nombre o @usuario…"
-          onSelect={(u) => setPlayers([...players, u as Player])}
-        />
+        <>
+          <UserSearch
+            excludeIds={excludeIds}
+            placeholder="Buscar jugador por nombre o @usuario…"
+            onSelect={(u) => setPlayers([...players, u as Player])}
+          />
+          {availableQuickPicks.length > 0 && (
+            <div className="mt-3">
+              <div className="text-text-mute text-xs uppercase tracking-wider mb-1.5">
+                Con quien juegas seguido
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {availableQuickPicks.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setPlayers([...players, p])}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-surface-2 border border-border hover:border-primary/60 text-xs transition-colors"
+                  >
+                    <Avatar player={p as any} size={20} />
+                    <span className="max-w-[100px] truncate">
+                      {(p.display_name || p.username).split(" ")[0]}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       ) : null}
       <div className={`space-y-2 ${players.length < size ? "mt-3" : ""}`}>
         {players.map((p) => (
