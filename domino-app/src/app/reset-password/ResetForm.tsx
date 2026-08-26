@@ -26,7 +26,7 @@ export function ResetForm() {
         <label className="label" htmlFor="password">Nueva contraseña</label>
         <input id="password" name="password" type="password" required minLength={8} maxLength={72} className="input" placeholder="Mínimo 8 caracteres" autoComplete="new-password" />
       </div>
-      {error && <div className="p-3 bg-danger/10 border border-danger/30 rounded text-danger text-sm">{error}</div>}
+      {error && <div role="alert" aria-live="assertive" className="p-3 bg-danger/10 border border-danger/30 rounded text-danger text-sm">{error}</div>}
       <button type="submit" className="btn-primary w-full" disabled={pending}>
         {pending ? "Guardando…" : "Guardar contraseña"}
       </button>

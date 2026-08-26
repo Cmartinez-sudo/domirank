@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -7,6 +8,18 @@ import { TierBadge, ColHeader } from "@/components/RatingInfo";
 import { ReliabilityBadge } from "@/components/reliability/ReliabilityBadge";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Ranking global",
+  description: "Top 100 jugadores de dominó de DomiRank, ordenados por rating global. Rating por modalidad, confiabilidad y país.",
+  alternates: { canonical: "/leaderboard" },
+  openGraph: {
+    title: "Ranking global · DomiRank",
+    description: "Los mejores jugadores de dominó del ranking DomiRank.",
+    url: "/leaderboard",
+    type: "website",
+  },
+};
 
 export default async function Leaderboard() {
   const supabase = await supabaseServer();

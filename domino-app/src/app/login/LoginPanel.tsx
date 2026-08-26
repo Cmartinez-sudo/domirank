@@ -85,7 +85,7 @@ export function LoginPanel() {
         )}
 
         {error && (
-          <div className="p-3 bg-danger/10 border border-danger/30 rounded text-danger text-sm">
+          <div role="alert" aria-live="assertive" className="p-3 bg-danger/10 border border-danger/30 rounded text-danger text-sm">
             {error}
           </div>
         )}

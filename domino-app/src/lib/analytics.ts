@@ -1,4 +1,5 @@
 import posthog from "posthog-js";
+import { hasAcceptedAnalytics } from "./consent";
 
 export type EventName =
   | "user_signed_up"
@@ -26,6 +27,7 @@ class Analytics {
     if (typeof window === "undefined" || this.initialized) return;
     if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) return;
     if (process.env.NODE_ENV !== "production") return; // skip en dev/test
+    if (!hasAcceptedAnalytics()) return; // esperar consentimiento explícito
 
     posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
       api_host:

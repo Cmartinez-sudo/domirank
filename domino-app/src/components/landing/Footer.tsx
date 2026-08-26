@@ -15,10 +15,11 @@ export function Footer() {
           />
         </Link>
 
-        <nav className="flex items-center gap-5 text-text-dim flex-wrap justify-center">
+        <nav aria-label="Enlaces del pie de página" className="flex items-center gap-5 text-text-dim flex-wrap justify-center">
+          <Link href="/como-funciona" className="hover:text-text transition-colors">Cómo funciona</Link>
+          <Link href="/faq" className="hover:text-text transition-colors">FAQ</Link>
           <Link href="/terms" className="hover:text-text transition-colors">Términos</Link>
           <Link href="/privacy" className="hover:text-text transition-colors">Privacidad</Link>
-          <Link href="/como-funciona" className="hover:text-text transition-colors">Cómo funciona</Link>
           <a href="mailto:hola@domirank.app" className="hover:text-text transition-colors">Contacto</a>
         </nav>
 

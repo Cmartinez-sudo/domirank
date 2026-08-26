@@ -16,6 +16,13 @@ export function AnalyticsProvider({ user, profile, children }: Props) {
 
   useEffect(() => {
     analytics.init();
+    // Si el usuario acepta el banner después del primer render, re-inicializar.
+    const onConsent = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail === "accepted") analytics.init();
+    };
+    window.addEventListener("domirank:consent-changed", onConsent);
+    return () => window.removeEventListener("domirank:consent-changed", onConsent);
   }, []);
 
   useEffect(() => {

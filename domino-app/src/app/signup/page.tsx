@@ -3,7 +3,9 @@ import Link from "next/link";
 import { SignupForm } from "./SignupForm";
 
 export const metadata = {
-  title: "Crear cuenta · DomiRank",
+  title: "Crear cuenta gratis",
+  description: "Empieza gratis en DomiRank. Registra tus partidas de dominó, sigue tu rating real y arma torneos con amigos.",
+  alternates: { canonical: "/signup" },
 };
 
 export default function SignupPage() {

@@ -107,11 +107,11 @@ export function PhoneMockup() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.win ? "bg-primary/15 text-primary" : "bg-danger/15 text-danger"}`}
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.win ? "bg-primary/15 text-primary" : "bg-red-400/15 text-red-300"}`}
                   >
                     {m.result}
                   </span>
-                  <span className={`text-[11px] font-mono font-semibold ${m.win ? "text-primary" : "text-danger"}`}>
+                  <span className={`text-[11px] font-mono font-semibold ${m.win ? "text-primary" : "text-red-300"}`}>
                     {m.delta}
                   </span>
                 </div>

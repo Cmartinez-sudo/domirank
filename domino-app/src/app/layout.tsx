@@ -13,15 +13,22 @@ import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { IOSInstallInstructions } from "@/components/pwa/IOSInstallInstructions";
 import type { PendingTournament } from "@/components/tournament/TournamentPopup";
 import { AnalyticsProvider } from "@/components/AnalyticsProvider";
+import { CookieConsent } from "@/components/CookieConsent";
 import type { User } from "@supabase/supabase-js";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
-  title: "DomiRank — Tu app de dominó",
+  metadataBase: new URL("https://domirank.app"),
+  title: {
+    default: "DomiRank — Tu app de dominó",
+    template: "%s · DomiRank",
+  },
   description: "Ranking transparente, torneos profesionales y comunidad para jugadores de dominó en Latinoamérica.",
   applicationName: "DomiRank",
   manifest: "/manifest.webmanifest",
+  // No canonical global: cada página pública define su propio alternates.canonical.
+  // Las rutas privadas quedan bloqueadas por robots.ts / noindex, no necesitan canonical.
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -33,7 +40,7 @@ export const metadata: Metadata = {
     title: "DomiRank — Tu app de dominó",
     description: "Ranking, torneos y comunidad para jugadores de dominó.",
     url: "https://domirank.app",
-    locale: "es_VE",
+    locale: "es_LA",
     images: [
       {
         url: "/branding/og-image.png",
@@ -53,6 +60,8 @@ export const metadata: Metadata = {
     icon: [
       { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
       { url: "/icons/favicon-16.png", sizes: "16x16", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
     apple: [
       { url: "/icons/apple-touch-icon-180.png", sizes: "180x180", type: "image/png" },
@@ -133,6 +142,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <ServiceWorkerRegister />
           <InstallPrompt />
           <IOSInstallInstructions />
+          <CookieConsent />
         </AnalyticsProvider>
       </body>
     </html>

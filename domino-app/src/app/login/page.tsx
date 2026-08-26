@@ -3,7 +3,9 @@ import Link from "next/link";
 import { LoginPanel } from "./LoginPanel";
 
 export const metadata = {
-  title: "Entrar · DomiRank",
+  title: "Iniciar sesión",
+  description: "Entra a DomiRank para registrar partidas, ver tu ranking y unirte a torneos.",
+  alternates: { canonical: "/login" },
 };
 
 export default function LoginPage() {
