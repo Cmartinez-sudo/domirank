@@ -67,6 +67,22 @@ export function AttestationPanel(props: Props) {
 
   const isParticipant = props.players.some((p) => p.user_id === props.viewerId);
 
+  // Sprint 3: deeplink #attestation desde emails/notifs. Scrollea al panel
+  // si el hash coincide (participantes) — bypasses lo que haya arriba (header,
+  // cancelation banner, scorecard). scroll-margin en el wrapper evita quedar
+  // debajo del top bar.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#attestation") return;
+    if (!isParticipant) return;
+    // requestAnimationFrame para que corra tras el layout inicial.
+    requestAnimationFrame(() => {
+      document
+        .getElementById("attestation")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [isParticipant]);
+
   // Realtime: cualquier nueva attestation sobre esta partida → refresh
   // Nombre único por mount para evitar conflict de canal existente
   useEffect(() => {
@@ -120,6 +136,14 @@ export function AttestationPanel(props: Props) {
     analytics.track("match_attested", { match_id: props.matchId, action });
     if (r.newStatus === "confirmed") {
       toast.success("Resultado confirmado · rating aplicado");
+      if (r.groupAttributions && r.groupAttributions.length > 0) {
+        const names = r.groupAttributions.join(" · ");
+        toast.success(
+          r.groupAttributions.length === 1
+            ? `Cuenta para el grupo ${names}`
+            : `Cuenta para los grupos ${names}`,
+        );
+      }
     } else if (r.newStatus === "disputed") {
       toast.info("Partida en disputa — esperando resolución");
     } else {
@@ -137,12 +161,13 @@ export function AttestationPanel(props: Props) {
   return (
     <AnimatePresence mode="wait">
       <motion.section
+        id="attestation"
         key={props.status}
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -6 }}
         transition={{ duration: 0.25, ease: EASE_OUT }}
-        className="card"
+        className="card scroll-mt-20"
       >
         <StatusHeader
           status={props.status}

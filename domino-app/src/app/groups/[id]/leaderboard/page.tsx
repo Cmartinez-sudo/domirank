@@ -57,6 +57,8 @@ type MergedRow = {
   /** Rank a mostrar (1, 2, 3…) o null si no ha jugado — celda muestra "—". */
   displayRank: number | null;
   joined_at: string | null;
+  /** true si el miembro salió/fue removido. Se renderiza tachado y al final. */
+  is_former: boolean;
 };
 
 const MIN_MATCHES_FOR_AVG_HIGHLIGHT = 3;
@@ -148,16 +150,53 @@ export default async function GroupLeaderboardPage({
   const leaderboardRows = (rowsRaw as LeaderboardRow[] | null) ?? [];
   const leaderboardByUser = new Map(leaderboardRows.map((r) => [r.user_id, r]));
 
-  // 2) Ratings globales para todos los miembros (mismo patrón que /members).
-  const memberUserIds = group.members.map((m) => m.user_id);
+  // 2a) Ex-miembros (status IN 'left','removed') — mostrar tachados al final.
+  //     Sprint 2 decisión: opacity + strikethrough + final del ranking.
+  //     Historial de sus partidas ya jugadas se conserva (no editamos
+  //     group_match_attributions al salir), y sus stats en group_leaderboard
+  //     siguen contando; las partidas nuevas ya no se les atribuirán porque
+  //     el trigger requiere status='active'.
+  const { data: formerRaw } = await supabase
+    .from("group_members")
+    .select("user_id, role, joined_at, left_at")
+    .eq("group_id", id)
+    .in("status", ["left", "removed"])
+    .order("left_at", { ascending: true });
+  const formerRows = (formerRaw as Array<{
+    user_id: string;
+    role: string;
+    joined_at: string | null;
+    left_at: string | null;
+  }> | null) ?? [];
+
+  // 2b) Ratings globales + profiles para todos los miembros (activos + ex).
+  const activeUserIds = group.members.map((m) => m.user_id);
+  const formerUserIds = formerRows.map((m) => m.user_id);
+  const allUserIds = Array.from(new Set([...activeUserIds, ...formerUserIds]));
   const ratingMap = new Map<string, PlayerRating>();
-  if (memberUserIds.length > 0) {
+  if (allUserIds.length > 0) {
     const { data: ratings } = await supabase
       .from("profile_ratings")
       .select("id, global_display, is_rated")
-      .in("id", memberUserIds);
+      .in("id", allUserIds);
     for (const r of (ratings ?? []) as Array<{ id: string; global_display: number | null; is_rated: boolean }>) {
       ratingMap.set(r.id, { global_display: r.global_display, is_rated: r.is_rated });
+    }
+  }
+
+  // Profiles para ex-miembros (los activos ya vienen en group.members).
+  const formerProfileMap = new Map<string, PlayerProfile>();
+  if (formerUserIds.length > 0) {
+    const { data: formerProfiles } = await supabase
+      .from("profiles")
+      .select("id, username, display_name, avatar_url")
+      .in("id", formerUserIds);
+    for (const p of (formerProfiles ?? []) as Array<{ id: string; username: string; display_name: string | null; avatar_url: string | null }>) {
+      formerProfileMap.set(p.id, {
+        username: p.username,
+        display_name: p.display_name,
+        avatar_url: p.avatar_url,
+      });
     }
   }
 
@@ -190,8 +229,8 @@ export default async function GroupLeaderboardPage({
     }
   }
 
-  // 4) Merge: para cada miembro activo, combinar stats + rating + racha.
-  const merged: MergedRow[] = group.members.map((m) => {
+  // 4) Merge: para cada miembro (activo + ex-miembro), combinar stats + rating + racha.
+  const activeMerged: MergedRow[] = group.members.map((m) => {
     const stats = leaderboardByUser.get(m.user_id);
     const streak = computeStreak(matchesByUser.get(m.user_id) ?? []);
     return {
@@ -213,18 +252,48 @@ export default async function GroupLeaderboardPage({
       streak,
       displayRank: stats ? stats.rank : null,
       joined_at: m.joined_at,
+      is_former: false,
     };
   });
 
-  // 5) Sort: los que jugaron por rank ASC (respetando SQL federado);
-  //    los que no jugaron al final, ordenados por joined_at ASC.
-  const ranked = merged
+  const formerMerged: MergedRow[] = formerRows.map((m) => {
+    const profile = formerProfileMap.get(m.user_id) ?? {
+      username: "?",
+      display_name: null,
+      avatar_url: null,
+    };
+    const stats = leaderboardByUser.get(m.user_id);
+    const streak = computeStreak(matchesByUser.get(m.user_id) ?? []);
+    return {
+      user_id: m.user_id,
+      profile,
+      rating: ratingMap.get(m.user_id) ?? { global_display: null, is_rated: false },
+      matches_played: stats?.matches_played ?? 0,
+      wins: stats?.wins ?? 0,
+      losses: stats?.losses ?? 0,
+      win_rate: Number(stats?.win_rate ?? 0),
+      effectiveness_coefficient: Number(stats?.effectiveness_coefficient ?? 0),
+      points_for: stats?.points_for ?? 0,
+      points_against: stats?.points_against ?? 0,
+      diff: stats?.diff ?? 0,
+      streak,
+      displayRank: null, // Ex-miembros no muestran rank — van al final con "—".
+      joined_at: m.joined_at,
+      is_former: true,
+    };
+  });
+
+  // 5) Sort:
+  //    a) activos con partidas → por rank ASC
+  //    b) activos sin partidas → por joined_at ASC
+  //    c) ex-miembros → al final, por left_at ASC (más recientes al final)
+  const ranked = activeMerged
     .filter((r) => r.matches_played > 0)
     .sort((a, b) => (a.displayRank ?? 999) - (b.displayRank ?? 999));
-  const unranked = merged
+  const unranked = activeMerged
     .filter((r) => r.matches_played === 0)
     .sort((a, b) => (a.joined_at ?? "").localeCompare(b.joined_at ?? ""));
-  const rows = [...ranked, ...unranked];
+  const rows = [...ranked, ...unranked, ...formerMerged];
 
   // 6) Highlights: Mejor promedio (≥3 partidas) y En racha (≥2W activos).
   const bestAverage = ranked
@@ -314,9 +383,14 @@ function LeaderboardRowView({ row }: { row: MergedRow }) {
   const name = firstName(row.profile);
   const diffFmt = formatDiff(row.diff);
   const hasPlayed = row.matches_played > 0;
+  const isFormer = row.is_former;
 
   return (
-    <tr className="border-b border-border/50 hover:bg-surface-2/60 transition-colors">
+    <tr
+      className={`border-b border-border/50 hover:bg-surface-2/60 transition-colors ${
+        isFormer ? "opacity-60" : ""
+      }`}
+    >
       {/* # */}
       <td className="px-4 py-3">
         {row.displayRank ? (
@@ -338,12 +412,24 @@ function LeaderboardRowView({ row }: { row: MergedRow }) {
         >
           <Avatar player={row.profile} size={36} />
           <div className="min-w-0">
-            <div className="font-semibold text-base leading-tight">{name}</div>
+            <div
+              className={`font-semibold text-base leading-tight ${
+                isFormer ? "line-through text-text-mute" : ""
+              }`}
+            >
+              {name}
+            </div>
             <div className="text-text-mute text-xs mt-0.5">
-              Global ·{" "}
-              {row.rating.is_rated && row.rating.global_display != null
-                ? row.rating.global_display
-                : "—"}
+              {isFormer ? (
+                <>Ex-miembro</>
+              ) : (
+                <>
+                  Global ·{" "}
+                  {row.rating.is_rated && row.rating.global_display != null
+                    ? row.rating.global_display
+                    : "—"}
+                </>
+              )}
             </div>
           </div>
         </Link>

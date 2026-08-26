@@ -97,7 +97,7 @@ export async function PendingAttestationsCard({ userId }: { userId: string }) {
           return (
             <li key={m.id}>
               <Link
-                href={`/matches/${m.id}`}
+                href={`/matches/${m.id}#attestation`}
                 className="flex items-center justify-between gap-3 p-3 bg-surface-2 rounded-xl hover:bg-surface-3 transition-colors"
               >
                 <div className="flex-1 min-w-0">

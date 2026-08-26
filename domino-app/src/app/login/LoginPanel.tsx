@@ -2,11 +2,16 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { signInWithPassword, signInWithMagicLink, signInWithOAuth } from "@/lib/auth-actions";
 
 type Mode = "password" | "magic";
 
 export function LoginPanel() {
+  const searchParams = useSearchParams();
+  // Sprint 3: destino tras re-autenticarse (preservado por middleware/requireUser).
+  // Sólo pasamos rutas internas; el server valida con safeNext.
+  const nextParam = searchParams.get("next");
   const [mode, setMode] = useState<Mode>("password");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +63,7 @@ export function LoginPanel() {
 
   return (
     <div className="space-y-4">
-      <SocialButtons />
+      <SocialButtons nextParam={nextParam} />
 
       <div className="flex items-center gap-3">
         <div className="flex-1 h-px bg-border" />
@@ -67,6 +72,9 @@ export function LoginPanel() {
       </div>
 
       <form onSubmit={onSubmit} className="space-y-3">
+        {nextParam && (
+          <input type="hidden" name="next" value={nextParam} />
+        )}
         <div>
           <label className="label" htmlFor="email">Correo</label>
           <input id="email" name="email" type="email" required className="input" placeholder="tu@correo.com" autoComplete="email" />
@@ -106,14 +114,14 @@ export function LoginPanel() {
   );
 }
 
-function SocialButtons() {
+function SocialButtons({ nextParam }: { nextParam: string | null }) {
   const [busy, setBusy] = useState(false);
   const [oauthError, setOauthError] = useState<string | null>(null);
 
   async function go(provider: "google" | "apple") {
     setBusy(true);
     setOauthError(null);
-    const r = await signInWithOAuth(provider);
+    const r = await signInWithOAuth(provider, nextParam);
     if (!r.ok) {
       setOauthError(r.error);
       setBusy(false);

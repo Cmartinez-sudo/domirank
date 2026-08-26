@@ -13,6 +13,7 @@ import {
   promoteCoAdmin,
   demoteCoAdmin,
   cancelInvitation,
+  leaveGroup,
 } from "@/lib/groups";
 import type { SearchedUser } from "@/lib/users";
 
@@ -68,6 +69,15 @@ export function MembersPanel({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const [removeTarget, setRemoveTarget] = useState<Member | null>(null);
+  const [leaveOpen, setLeaveOpen] = useState(false);
+
+  const selfMember = members.find((m) => m.user_id === currentUserId);
+  const selfRole = selfMember?.role;
+  const otherActiveCount = members.filter((m) => m.user_id !== currentUserId).length;
+  const isAdmin = selfRole === "admin";
+  const isSoleAdmin = isAdmin && otherActiveCount === 0;
+  const isBlockedAdmin = isAdmin && otherActiveCount > 0;
+  const canLeave = !!selfRole && (!isAdmin || isSoleAdmin);
 
   const excludeIds = [
     ...members.map((m) => m.user_id),
@@ -139,6 +149,25 @@ export function MembersPanel({
         router.refresh();
       }
       setRemoveTarget(null);
+    });
+  }
+
+  function handleLeaveConfirm() {
+    setBusyId(currentUserId);
+    startTransition(async () => {
+      const r = await leaveGroup({ groupId });
+      setBusyId(null);
+      setLeaveOpen(false);
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      if (r.data?.archived) {
+        toast.info("Saliste del grupo y se archivó (eras el último miembro)");
+      } else {
+        toast.info("Saliste del grupo");
+      }
+      router.push("/groups");
     });
   }
 
@@ -277,6 +306,48 @@ export function MembersPanel({
         </section>
       )}
 
+      {/* Salir del grupo — visible para todo miembro. Admin único puede salir
+          y auto-archiva; admin con otros miembros ve un hint para transferir. */}
+      {selfRole && (
+        <section className="card border-danger/20">
+          <h2 className="font-semibold text-sm mb-2">Salir del grupo</h2>
+          {isBlockedAdmin ? (
+            <p className="text-text-mute text-xs">
+              Eres el admin. Para salir, primero transfiere el rol de admin a otro miembro
+              desde <Link href={`/groups/${groupId}/settings`} className="text-primary underline">Ajustes</Link>.
+            </p>
+          ) : isSoleAdmin ? (
+            <>
+              <p className="text-text-mute text-xs mb-3">
+                Eres el último miembro del grupo. Al salir, el grupo se archivará. Tu historial se conserva.
+              </p>
+              <button
+                type="button"
+                onClick={() => setLeaveOpen(true)}
+                disabled={busyId === currentUserId}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
+              >
+                Salir y archivar grupo
+              </button>
+            </>
+          ) : canLeave ? (
+            <>
+              <p className="text-text-mute text-xs mb-3">
+                Dejarás de ver el leaderboard y las partidas nuevas. Tu historial se conserva.
+              </p>
+              <button
+                type="button"
+                onClick={() => setLeaveOpen(true)}
+                disabled={busyId === currentUserId}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
+              >
+                Salir del grupo
+              </button>
+            </>
+          ) : null}
+        </section>
+      )}
+
       <ConfirmDangerDialog
         open={removeTarget !== null}
         onClose={() => setRemoveTarget(null)}
@@ -285,6 +356,20 @@ export function MembersPanel({
         description="Dejará de ver el leaderboard y partidas nuevas. Sus partidas históricas en el grupo se conservan."
         confirmLabel="Sí, quitar"
         pending={busyId === removeTarget?.user_id}
+      />
+
+      <ConfirmDangerDialog
+        open={leaveOpen}
+        onClose={() => setLeaveOpen(false)}
+        onConfirm={handleLeaveConfirm}
+        title={isSoleAdmin ? "¿Salir y archivar el grupo?" : "¿Salir del grupo?"}
+        description={
+          isSoleAdmin
+            ? "Eres el último miembro. Al salir, el grupo se archiva. Tu historial se conserva."
+            : "Dejarás de ver el leaderboard y las partidas nuevas. Tu historial se conserva."
+        }
+        confirmLabel={isSoleAdmin ? "Sí, salir y archivar" : "Sí, salir"}
+        pending={busyId === currentUserId}
       />
     </div>
   );

@@ -51,7 +51,7 @@ const QUESTIONS = [
   },
 ];
 
-type Step = 1 | 2 | "q0" | "q1" | "q2" | "q3" | "summary";
+type Step = "profile" | "q0" | "q1" | "q2" | "q3" | "summary";
 
 const slideVariants = {
   enter: (dir: number) => ({ x: dir > 0 ? 60 : -60, opacity: 0 }),
@@ -66,7 +66,7 @@ export function OnboardingForm({
   initialCountry: CountryCode | null;
   initialModality: ModalityCode | null;
 }) {
-  const [step, setStep] = useState<Step>(initialCountry ? 2 : 1);
+  const [step, setStep] = useState<Step>(initialCountry && initialModality ? "q0" : "profile");
   const [direction, setDirection] = useState(1);
   const [country, setCountry] = useState<CountryCode | null>(initialCountry);
   const [modality, setModality] = useState<ModalityCode | null>(
@@ -128,20 +128,22 @@ export function OnboardingForm({
           exit="exit"
           transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
         >
-          {/* ── Step 1: Country ──────────────────────────────────────────── */}
-          {step === 1 && (
-            <div className="space-y-6">
-              <div className="flex flex-col items-center pt-6 text-center">
+          {/* ── Step: Perfil (país + modalidad, fusionado) ───────────────── */}
+          {step === "profile" && (
+            <div className="space-y-5">
+              <div className="flex items-center gap-3 pt-2">
                 <Image
                   src="/branding/logo-vertical-tagline.svg"
-                  alt="DomiRank · Tu app de dominó"
-                  width={220}
-                  height={260}
+                  alt="DomiRank"
+                  width={64}
+                  height={76}
                   priority
-                  className="w-48 h-auto mb-4"
+                  className="w-12 h-auto"
                 />
-                <h1 className="text-3xl font-bold tracking-tight">¡Bienvenido a DomiRank!</h1>
-                <p className="text-text-dim mt-2">Antes de empezar, cuéntanos un poco sobre ti.</p>
+                <div>
+                  <h1 className="text-2xl font-bold tracking-tight leading-tight">Empecemos</h1>
+                  <p className="text-text-dim text-sm">Tu país y tu modalidad favorita.</p>
+                </div>
               </div>
 
               <div className="card">
@@ -165,24 +167,13 @@ export function OnboardingForm({
                 </div>
               </div>
 
-              <button className="btn-primary w-full" disabled={!country} onClick={() => go(2)}>
-                Continuar →
-              </button>
-            </div>
-          )}
-
-          {/* ── Step 2: Modality ─────────────────────────────────────────── */}
-          {step === 2 && (
-            <div className="space-y-6">
-              <div className="text-center pt-4">
-                <div className="text-5xl mb-2">{cInfo?.flag ?? "🌎"}</div>
-                <h1 className="text-3xl font-bold tracking-tight">¿Qué modalidad juegas?</h1>
-                <p className="text-text-dim mt-2">
-                  Te sugerimos la más común para {cInfo?.name ?? "tu país"}.
-                </p>
-              </div>
-
               <div className="card space-y-2">
+                <div className="mb-1 flex items-baseline justify-between gap-2">
+                  <label className="block text-sm font-medium">¿Qué modalidad juegas?</label>
+                  {cInfo && (
+                    <span className="text-text-mute text-xs">Sugerida para {cInfo.name}</span>
+                  )}
+                </div>
                 {Object.values(MODALIDADES).map((m) => (
                   <label
                     key={m.code}
@@ -190,7 +181,7 @@ export function OnboardingForm({
                       modality === m.code
                         ? "bg-primary/10 border-primary/40"
                         : "bg-surface-2 border-border hover:border-border-strong"
-                    }`}
+                    } ${!country ? "opacity-60 pointer-events-none" : ""}`}
                   >
                     <input
                       type="radio"
@@ -199,6 +190,7 @@ export function OnboardingForm({
                       checked={modality === m.code}
                       onChange={() => setModality(m.code)}
                       className="mt-1"
+                      disabled={!country}
                     />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -213,17 +205,14 @@ export function OnboardingForm({
                 ))}
               </div>
 
-              <div className="flex gap-3">
-                <button type="button" className="btn-ghost" onClick={() => go(1, -1)}>← Atrás</button>
-                <button
-                  type="button"
-                  className="btn-primary flex-1"
-                  disabled={!modality}
-                  onClick={() => go("q0")}
-                >
-                  Continuar →
-                </button>
-              </div>
+              <button
+                type="button"
+                className="btn-primary w-full"
+                disabled={!country || !modality}
+                onClick={() => go("q0")}
+              >
+                Continuar →
+              </button>
             </div>
           )}
 
@@ -233,7 +222,7 @@ export function OnboardingForm({
               {/* Progress */}
               <div className="space-y-2">
                 <div className="flex justify-between text-xs text-text-mute">
-                  <span>Paso 3 de 3 — Nivel</span>
+                  <span>Paso 2 de 2 — Nivel</span>
                   <span>{qIndex + 1} / {QUESTIONS.length}</span>
                 </div>
                 <div className="h-1.5 bg-surface-2 rounded-full overflow-hidden">
@@ -290,7 +279,7 @@ export function OnboardingForm({
                 <button
                   type="button"
                   className="btn-ghost"
-                  onClick={() => go(qIndex === 0 ? 2 : (`q${qIndex - 1}`) as Step, -1)}
+                  onClick={() => go(qIndex === 0 ? "profile" : (`q${qIndex - 1}`) as Step, -1)}
                 >
                   ← Atrás
                 </button>

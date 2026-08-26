@@ -124,12 +124,14 @@ function NotificationCard({ n }: { n: AppNotification }) {
     href = actorUsername ? `/profile/${actorUsername}` : null;
   } else if (n.type === "attest_requested") {
     body = <>Confirma el resultado de tu partida</>;
-    inline = matchHref ? (
-      <Link href={matchHref} className="inline-block text-primary text-sm mt-2 hover:underline">
+    // Deeplink al AttestationPanel para saltar del scorecard directo al botón firmar.
+    const attestHref = matchHref ? `${matchHref}#attestation` : null;
+    inline = attestHref ? (
+      <Link href={attestHref} className="inline-block text-primary text-sm mt-2 hover:underline">
         Ver partida →
       </Link>
     ) : null;
-    href = matchHref;
+    href = attestHref;
   } else if (n.type === "attest_action") {
     const action = (n.payload?.action ?? "") as string;
     if (action === "confirm") {
@@ -139,7 +141,7 @@ function NotificationCard({ n }: { n: AppNotification }) {
     } else {
       body = <><strong>{actorName}</strong> respondió a la partida</>;
     }
-    href = matchHref;
+    href = matchHref ? `${matchHref}#attestation` : null;
   } else if (n.type === "match_confirmed") {
     body = <>Tu partida fue confirmada · rating aplicado</>;
     href = matchHref;

@@ -163,7 +163,9 @@ function scoreLine(input: MatchTemplateInput): string {
    ============================================================ */
 
 export function matchAttestRequestedEmail(input: MatchTemplateInput) {
-  const url = `${getAppUrl()}/matches/${input.matchId}`;
+  // Deeplink al AttestationPanel: la página respeta el hash y scrollea al
+  // panel en mount, evitando que el usuario tenga que buscar el botón.
+  const url = `${getAppUrl()}/matches/${input.matchId}#attestation`;
   return {
     subject: `Confirma el resultado de tu partida`,
     html: shell(

@@ -6,7 +6,18 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
  * Necesario para que server components vean la sesión actualizada.
  */
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  // Exponemos el pathname (+search) al server-side vía header para que
+  // requireUser pueda construir ?next=<url_actual> al redirigir a /login.
+  // Sprint 3 decisión: preservar destino tras sesión expirada.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(
+    "x-pathname",
+    request.nextUrl.pathname + request.nextUrl.search,
+  );
+
+  let response = NextResponse.next({
+    request: { headers: requestHeaders },
+  });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,7 +29,9 @@ export async function middleware(request: NextRequest) {
         },
         setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
+          response = NextResponse.next({
+            request: { headers: requestHeaders },
+          });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           );

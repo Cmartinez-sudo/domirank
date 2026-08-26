@@ -46,8 +46,10 @@ function makeBuilder() {
   const builder: AnyObj = {};
   builder.select = vi.fn(() => builder);
   builder.eq = vi.fn(() => builder);
+  builder.neq = vi.fn(() => builder);
   builder.in = vi.fn(() => builder);
   builder.order = vi.fn(() => builder);
+  builder.limit = vi.fn(() => builder);
   builder.maybeSingle = vi.fn(async () => nextQuery());
   builder.single = vi.fn(async () => nextQuery());
   builder.insert = vi.fn(() => builder);
@@ -294,20 +296,33 @@ describe("leaveGroup", () => {
     if (!r.ok) expect(r.error).toMatch(/no eres miembro/i);
   });
 
-  it("bloquea si el user es admin del grupo (decisión #11)", async () => {
+  it("bloquea si el user es admin y hay otros miembros activos", async () => {
     authAs(USER_ID);
-    enqueueQuery({ id: "x", role: "admin", status: "active" });
+    enqueueQuery({ id: "x", role: "admin", status: "active" }); // self member
+    enqueueMutation([{ id: "other" }]);                          // otros activos
     const r = await leaveGroup({ groupId: GROUP_ID });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toMatch(/transfiere/i);
   });
 
-  it("permite salir si es co_admin o member", async () => {
+  it("admin único: permite salir y auto-archiva el grupo", async () => {
+    authAs(USER_ID);
+    enqueueQuery({ id: "x", role: "admin", status: "active" }); // self member
+    enqueueMutation([]);                                         // no hay otros
+    enqueueMutation();                                           // UPDATE group_members
+    enqueueMutation();                                           // UPDATE groups (archive)
+    const r = await leaveGroup({ groupId: GROUP_ID });
+    expect(r.ok).toBe(true);
+    if (r.ok && r.data) expect(r.data.archived).toBe(true);
+  });
+
+  it("permite salir si es co_admin o member (sin archivar)", async () => {
     authAs(USER_ID);
     enqueueQuery({ id: "x", role: "co_admin", status: "active" });
     enqueueMutation();
     const r = await leaveGroup({ groupId: GROUP_ID });
     expect(r.ok).toBe(true);
+    if (r.ok && r.data) expect(r.data.archived).toBe(false);
   });
 });
 
