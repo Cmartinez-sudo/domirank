@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 import { LoginPanel } from "./LoginPanel";
 
 export const metadata = {
@@ -30,7 +31,12 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
-      <LoginPanel />
+      {/* LoginPanel usa useSearchParams para leer ?next=<url>; el Suspense
+          permite que el shell se prerender estático mientras el panel se
+          hidrata en cliente. Sin él, Next 14 falla el build (CSR bailout). */}
+      <Suspense fallback={<div className="card animate-pulse h-64" />}>
+        <LoginPanel />
+      </Suspense>
     </div>
   );
 }
