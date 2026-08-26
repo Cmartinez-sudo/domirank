@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { ForgotForm } from "./ForgotForm";
 
-export const metadata = { title: "Recuperar contraseña · DomiRank" };
+export const metadata = {
+  title: "Recuperar contraseña",
+  description: "Te enviamos un enlace por correo para restablecer tu contraseña de DomiRank.",
+  robots: { index: false, follow: true },
+};
 
 export default function ForgotPasswordPage() {
   return (

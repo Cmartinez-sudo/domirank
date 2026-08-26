@@ -13,14 +13,15 @@ import { Footer } from "@/components/landing/Footer";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "DomiRank · Ranking oficial de dominó por modalidad",
+  title: "Ranking oficial de dominó por modalidad",
   description:
-    "La primera plataforma para llevar tu nivel real de dominó. Registra partidas, compite con tus amigos y arma torneos en tus modalidades favoritas: Venezolano, Dominicano, Cubano y Puertorriqueño.",
+    "Registra partidas, sigue tu rating real y arma torneos en Venezolano, Dominicano, Cubano y Puertorriqueño. Gratis. Instala la PWA en tu teléfono.",
+  alternates: { canonical: "/" },
   openGraph: {
     title: "DomiRank · Ranking oficial de dominó por modalidad",
     description:
       "Registra partidas, compite con tus amigos y arma torneos con rating real por modalidad.",
-    url: "https://domirank.app",
+    url: "/",
     siteName: "DomiRank",
     locale: "es_LA",
     type: "website",
@@ -39,10 +40,38 @@ export default async function HomePage() {
   const user = await getCurrentUser();
   if (user) redirect("/dashboard");
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        name: "DomiRank",
+        url: "https://domirank.app",
+        logo: "https://domirank.app/branding/logo-vertical-tagline.svg",
+      },
+      {
+        "@type": "WebSite",
+        name: "DomiRank",
+        url: "https://domirank.app",
+        inLanguage: "es",
+      },
+    ],
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-bg">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-black focus:rounded-lg"
+      >
+        Ir al contenido
+      </a>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Topnav />
-      <main className="flex-1">
+      <main id="main" className="flex-1">
         <Hero />
         <Features />
         <HowItWorks />

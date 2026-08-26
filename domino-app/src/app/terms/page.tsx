@@ -1,13 +1,26 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
-export const metadata = { title: "Términos · DomiRank" };
+export const metadata: Metadata = {
+  title: "Términos y Condiciones",
+  description:
+    "Términos de uso de DomiRank: elegibilidad, cuenta, conducta permitida, integridad del rating y responsabilidad del servicio.",
+  alternates: { canonical: "/terms" },
+};
 
 export default function TermsPage() {
   return (
     <article className="max-w-2xl mx-auto py-6 space-y-4">
-      <header>
+      <header className="rounded-2xl border border-border bg-surface-2 px-5 py-4">
         <h1 className="text-3xl font-bold tracking-tight">Términos y Condiciones</h1>
-        <p className="text-text-mute text-sm mt-1">Última actualización: mayo 2026</p>
+        <p className="text-text text-sm mt-2">
+          <strong>Última actualización:</strong> 26 de agosto de 2026
+        </p>
+        <p className="text-text-mute text-xs mt-1">
+          Entidad operadora: [CONFIRMAR: entidad legal] · Contacto:{" "}
+          <a href="mailto:hola@domirank.app" className="underline">hola@domirank.app</a> ·
+          Ley aplicable: [CONFIRMAR: jurisdicción]
+        </p>
       </header>
 
       <section className="space-y-3 text-text-dim leading-relaxed">

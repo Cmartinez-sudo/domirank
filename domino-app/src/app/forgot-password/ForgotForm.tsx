@@ -41,7 +41,7 @@ export function ForgotForm() {
         <label className="label" htmlFor="email">Correo</label>
         <input id="email" name="email" type="email" required className="input" placeholder="tu@correo.com" />
       </div>
-      {error && <div className="p-3 bg-danger/10 border border-danger/30 rounded text-danger text-sm">{error}</div>}
+      {error && <div role="alert" aria-live="assertive" className="p-3 bg-danger/10 border border-danger/30 rounded text-danger text-sm">{error}</div>}
       <button type="submit" className="btn-primary w-full" disabled={pending}>
         {pending ? "Enviando…" : "Enviar enlace de recuperación"}
       </button>

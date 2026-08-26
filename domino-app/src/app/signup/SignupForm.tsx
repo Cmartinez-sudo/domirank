@@ -102,7 +102,7 @@ export function SignupForm() {
         </label>
 
         {error && (
-          <div className="p-3 bg-danger/10 border border-danger/30 rounded text-danger text-sm">
+          <div role="alert" aria-live="assertive" className="p-3 bg-danger/10 border border-danger/30 rounded text-danger text-sm">
             {error}
           </div>
         )}
@@ -145,7 +145,7 @@ function SocialButtons() {
         <GoogleIcon /> {busy ? "Redirigiendo…" : "Continuar con Google"}
       </button>
       {oauthError && (
-        <div className="p-2.5 bg-danger/10 border border-danger/30 rounded text-danger text-xs">
+        <div role="alert" aria-live="assertive" className="p-2.5 bg-danger/10 border border-danger/30 rounded text-danger text-xs">
           {oauthError}
         </div>
       )}

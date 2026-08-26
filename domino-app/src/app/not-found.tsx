@@ -2,7 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 export const metadata = {
-  title: "Página no encontrada · DomiRank",
+  title: "Página no encontrada",
+  robots: { index: false, follow: false },
 };
 
 export default function NotFound() {
@@ -11,7 +12,7 @@ export default function NotFound() {
       <div>
         <Image
           src="/branding/logo-vertical-tagline.svg"
-          alt="DomiRank"
+          alt=""
           width={200}
           height={240}
           className="w-48 mx-auto mb-6"
@@ -20,9 +21,14 @@ export default function NotFound() {
         <p className="text-text-mute mb-6 max-w-md mx-auto">
           La URL que abriste no existe o se movió.
         </p>
-        <Link href="/dashboard" className="btn-primary">
-          Volver al inicio
-        </Link>
+        <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
+          <Link href="/" className="btn-primary">
+            Empezar a jugar
+          </Link>
+          <Link href="/faq" className="text-text-dim hover:text-text underline underline-offset-4 text-sm">
+            Ver preguntas frecuentes
+          </Link>
+        </div>
       </div>
     </div>
   );

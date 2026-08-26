@@ -1,13 +1,26 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
-export const metadata = { title: "Privacidad · DomiRank" };
+export const metadata: Metadata = {
+  title: "Política de Privacidad",
+  description:
+    "Cómo DomiRank recolecta, usa y protege tus datos: cuentas Supabase, historial de partidas, analítica y tus derechos como usuario.",
+  alternates: { canonical: "/privacy" },
+};
 
 export default function PrivacyPage() {
   return (
     <article className="max-w-2xl mx-auto py-6 space-y-4">
-      <header>
+      <header className="rounded-2xl border border-border bg-surface-2 px-5 py-4">
         <h1 className="text-3xl font-bold tracking-tight">Política de Privacidad</h1>
-        <p className="text-text-mute text-sm mt-1">Última actualización: mayo 2026</p>
+        <p className="text-text text-sm mt-2">
+          <strong>Última actualización:</strong> 26 de agosto de 2026
+        </p>
+        <p className="text-text-mute text-xs mt-1">
+          Entidad responsable: [CONFIRMAR: entidad legal] · Contacto:{" "}
+          <a href="mailto:hola@domirank.app" className="underline">hola@domirank.app</a> ·
+          Jurisdicción: [CONFIRMAR: jurisdicción]
+        </p>
       </header>
 
       <section className="space-y-3 text-text-dim leading-relaxed">
@@ -48,10 +61,25 @@ export default function PrivacyPage() {
           días (GDPR / ley de protección de datos local).
         </p>
 
-        <h2 className="text-xl font-semibold text-text mt-6">6. Cookies y sesión</h2>
+        <h2 className="text-xl font-semibold text-text mt-6">6. Cookies y analítica</h2>
         <p>
-          Usamos cookies estrictamente necesarias para mantener tu sesión iniciada (Supabase Auth). No
-          usamos cookies de tracking de terceros ni analítica que comparta tus datos con anunciantes.
+          Usamos dos tipos de tecnologías de almacenamiento en tu navegador:
+        </p>
+        <ul className="list-disc pl-5 space-y-2">
+          <li>
+            <strong>Estrictamente necesarias:</strong> cookies para mantener tu sesión iniciada
+            (Supabase Auth) y una entrada en localStorage con tu decisión sobre el banner de cookies.
+            No requieren consentimiento.
+          </li>
+          <li>
+            <strong>Analítica (PostHog):</strong> solo se carga si aceptas el banner de cookies.
+            Nos ayuda a entender qué funciones se usan más y mejorar el producto. Enmascaramos
+            todos los inputs de los formularios y no compartimos tus datos con anunciantes.
+            Puedes retirar el consentimiento en cualquier momento desde Ajustes → Privacidad.
+          </li>
+        </ul>
+        <p>
+          No usamos cookies publicitarias de terceros ni píxeles de redes sociales.
         </p>
 
         <h2 className="text-xl font-semibold text-text mt-6">7. Menores</h2>

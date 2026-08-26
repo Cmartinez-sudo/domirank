@@ -73,23 +73,23 @@ export function Hero() {
               initial={{ y: 14, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.3, ease: EASE_OUT }}
-              className="mt-7 flex flex-col sm:flex-row gap-3 justify-center md:justify-start"
+              className="mt-7 flex flex-col sm:flex-row gap-3 items-center justify-center md:justify-start"
             >
               <Link
                 href="/signup"
-                className="inline-flex items-center justify-center font-semibold text-black px-6 py-3.5 rounded-xl transition-transform active:scale-95"
+                className="inline-flex items-center justify-center font-semibold text-black px-7 py-4 rounded-xl transition-transform active:scale-95 text-base sm:text-lg"
                 style={{
                   background: "linear-gradient(135deg,#10b981,#059669)",
                   boxShadow: "0 4px 24px rgba(16,185,129,.4)",
                 }}
               >
-                Crear cuenta gratis
+                Instalar la PWA / Empezar a jugar
               </Link>
               <Link
                 href="/login"
-                className="inline-flex items-center justify-center font-semibold px-6 py-3.5 rounded-xl border border-border hover:border-border-strong text-text-dim hover:text-text transition-colors"
+                className="text-text-dim hover:text-text underline underline-offset-4 text-sm px-2 py-2 transition-colors"
               >
-                Iniciar sesión
+                Ya tengo cuenta
               </Link>
             </motion.div>
 
@@ -99,7 +99,7 @@ export function Hero() {
               transition={{ delay: 0.55 }}
               className="text-text-mute text-xs mt-5"
             >
-              Sin tarjeta de crédito · Acceso completo gratuito
+              Gratis · Sin tarjeta · Funciona como app en tu teléfono
             </motion.p>
           </div>
 

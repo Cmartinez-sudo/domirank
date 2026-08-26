@@ -170,9 +170,10 @@ export default function ComoFuncionaPage() {
 
       <div className="text-center pt-4 space-y-3">
         <p className="text-text-mute text-sm">
-          ¿Preguntas? <Link href="/landing#contacto" className="text-primary hover:underline">Escríbenos</Link>.
+          ¿Preguntas? <Link href="/faq" className="text-primary hover:underline">Preguntas frecuentes</Link> o escríbenos a{" "}
+          <a href="mailto:hola@domirank.app" className="text-primary hover:underline">hola@domirank.app</a>.
         </p>
-        <Link href="/dashboard" className="text-text-dim hover:text-text inline-block">
+        <Link href="/" className="text-text-dim hover:text-text inline-block">
           ← Volver al inicio
         </Link>
       </div>
