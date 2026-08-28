@@ -142,7 +142,25 @@ export const PRESETS: Record<PresetId, Preset> = {
   },
 };
 
+/**
+ * Orden canónico de presets ofrecidos al crear partida/torneo.
+ * NOTA: `doble9` NO se lista aquí — el set doble-9 quedó fuera del menú
+ * (los datos históricos con set_size='d9' se ocultan). El preset sigue
+ * existiendo en `PRESETS` únicamente para `matchPreset()` sobre partidas
+ * viejas.
+ */
 export const PRESET_ORDER: PresetId[] = [
+  "rapido",
+  "clasico",
+  "mesa-completa",
+];
+
+/**
+ * Orden extendido para reconstrucción histórica — incluye presets retirados
+ * (doble9) para que `matchPreset()` pueda reconocer partidas viejas.
+ * NO usar para renderizar el menú de creación.
+ */
+const PRESET_HISTORICAL_ORDER: PresetId[] = [
   "rapido",
   "clasico",
   "doble9",
@@ -186,7 +204,7 @@ export function matchPreset(config: {
   if (!count_rule || !set_size || target_points == null || capicua_bonus == null) {
     return null;
   }
-  for (const id of PRESET_ORDER) {
+  for (const id of PRESET_HISTORICAL_ORDER) {
     const p = PRESETS[id];
     if (
       p.countRule === count_rule &&
@@ -239,7 +257,7 @@ export type Country = {
 export const COUNTRIES: Country[] = [
   { code: "VE", name: "Venezuela",         flag: "🇻🇪", suggested: "ven",    suggestedPreset: "rapido" },
   { code: "DO", name: "Rep. Dominicana",   flag: "🇩🇴", suggested: "dom",    suggestedPreset: "clasico" },
-  { code: "CU", name: "Cuba",              flag: "🇨🇺", suggested: "cub",    suggestedPreset: "doble9" },
+  { code: "CU", name: "Cuba",              flag: "🇨🇺", suggested: "cub",    suggestedPreset: "clasico" },
   { code: "PR", name: "Puerto Rico",       flag: "🇵🇷", suggested: "pri",    suggestedPreset: "mesa-completa" },
   { code: "CO", name: "Colombia",          flag: "🇨🇴", suggested: "ven",    suggestedPreset: "rapido" },
   { code: "MX", name: "México",            flag: "🇲🇽", suggested: "dom",    suggestedPreset: "clasico" },

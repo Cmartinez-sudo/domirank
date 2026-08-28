@@ -46,9 +46,9 @@ describe("presetById", () => {
 });
 
 describe("presetsForCountRule", () => {
-  it("devuelve 3 presets nombrados para rival (Rápido/Clásico/Doble-9)", () => {
+  it("devuelve 2 presets nombrados para rival (Rápido/Clásico) — Doble-9 retirado del menú", () => {
     const ps = presetsForCountRule("rival");
-    expect(ps.map((p) => p.id)).toEqual(["rapido", "clasico", "doble9"]);
+    expect(ps.map((p) => p.id)).toEqual(["rapido", "clasico"]);
   });
 
   it("devuelve 1 preset nombrado para mesa (Mesa completa)", () => {
@@ -56,9 +56,11 @@ describe("presetsForCountRule", () => {
     expect(ps.map((p) => p.id)).toEqual(["mesa-completa"]);
   });
 
-  it("no incluye 'personalizado' en el filtrado por regla", () => {
+  it("no incluye 'personalizado' ni 'doble9' en el filtrado por regla (creación)", () => {
     for (const rule of ["rival", "mesa"] as const) {
-      expect(presetsForCountRule(rule).find((p) => p.id === "personalizado")).toBeUndefined();
+      const ids = presetsForCountRule(rule).map((p) => p.id);
+      expect(ids).not.toContain("personalizado");
+      expect(ids).not.toContain("doble9");
     }
   });
 });
@@ -76,7 +78,7 @@ describe("matchPreset — reconstrucción del preset", () => {
     ).toEqual(PRESETS.clasico);
   });
 
-  it("reconoce Doble-9 (rival + d9 + 150 + 30)", () => {
+  it("reconoce Doble-9 en datos históricos (rival + d9 + 150 + 30) aunque el preset esté retirado del menú", () => {
     expect(
       matchPreset({ count_rule: "rival", set_size: "d9", target_points: 150, capicua_bonus: 30 }),
     ).toEqual(PRESETS.doble9);
@@ -134,7 +136,7 @@ describe("COUNTRIES — suggestedPreset por país", () => {
   it.each([
     ["VE", "rapido"],
     ["DO", "clasico"],
-    ["CU", "doble9"],
+    ["CU", "clasico"],
     ["PR", "mesa-completa"],
     ["CO", "rapido"],
     ["AR", "personalizado"],
