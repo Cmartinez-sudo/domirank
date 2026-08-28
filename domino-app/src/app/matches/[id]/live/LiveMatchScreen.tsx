@@ -6,7 +6,9 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { MatchTimer } from "@/components/match/MatchTimer";
-import { MODALIDADES, SETS, type ModalityCode, type SetCode, type FormatCode } from "@/lib/modalidades";
+import Image from "next/image";
+import { MODALIDADES, SETS, type CountRule, type ModalityCode, type SetCode, type FormatCode } from "@/lib/modalidades";
+import { matchLabel } from "@/lib/match-label";
 import { addRound, undoLastRound, cancelLiveMatch, finalizeMatch } from "@/lib/live-match";
 import { validateMatchClosure } from "@/lib/match-validation";
 import { useMatchTimer } from "@/hooks/useMatchTimer";
@@ -25,7 +27,7 @@ type Round = HandRowData & {
 };
 
 export function LiveMatchScreen({
-  matchId, modality, setSize, format, targetPoints, capicuaBonus,
+  matchId, modality, countRule, setSize, format, targetPoints, capicuaBonus,
   startedAt, teamA, teamB, rounds,
   timeLimitMinutes, timerStartedAt,
   isSpectator = false,
@@ -39,6 +41,7 @@ export function LiveMatchScreen({
 }: {
   matchId: string;
   modality: ModalityCode;
+  countRule: CountRule | null;
   setSize: SetCode;
   format: FormatCode;
   targetPoints: number;
@@ -134,6 +137,7 @@ export function LiveMatchScreen({
   const timer = useMatchTimer(timerStartedAt, timeLimitMinutes);
 
   const mod = MODALIDADES[modality] ?? MODALIDADES.custom;
+  const label = matchLabel({ count_rule: countRule, modality, target_points: targetPoints });
   const scoreA = rounds.filter((r) => r.team === 1).reduce((s, r) => s + r.points, 0);
   const scoreB = rounds.filter((r) => r.team === 2).reduce((s, r) => s + r.points, 0);
   const validation = validateMatchClosure(scoreA, scoreB, targetPoints, timer.isExpired);
@@ -321,8 +325,9 @@ export function LiveMatchScreen({
         )}
         <div className="flex-1">
           <h1 className="text-2xl font-bold leading-tight">Partida</h1>
-          <div className="text-text-mute text-xs">
-            {mod.flag} {mod.name} · {SETS[setSize].label} · capicúa +{capicuaBonus}
+          <div className="text-text-mute text-xs flex items-center gap-1.5" title={label.blurb}>
+            <Image src={label.icon} alt="" width={16} height={16} aria-hidden="true" className="inline-block" />
+            <span>{label.chip} · {SETS[setSize].label} · capicúa +{capicuaBonus}</span>
           </div>
         </div>
       </div>

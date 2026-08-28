@@ -125,23 +125,40 @@ describe("ModalityPreferencesSection — toggle OFF (skip=true)", () => {
     expect(screen.getByTestId("default-modality-select")).toBeDefined();
   });
 
-  it("dropdown muestra la modalidad actual seleccionada", () => {
-    mockHook({ skip_modality_prompt: true, default_match_modality: "dom" });
+  it("dropdown muestra el preset actual (Clásico) reconstruido de los 4 defaults", () => {
+    mockHook({
+      skip_modality_prompt: true,
+      default_count_rule: "rival",
+      default_set_size: "d6",
+      default_target_points: 200,
+      default_capicua_bonus: 30,
+    });
     render(<ModalityPreferencesSection />);
 
     const select = screen.getByTestId("default-modality-select") as HTMLSelectElement;
-    expect(select.value).toBe("dom");
+    expect(select.value).toBe("clasico");
   });
 
-  it("cambiar el dropdown llama update({ default_match_modality: 'cub' })", async () => {
-    mockHook({ skip_modality_prompt: true, default_match_modality: "ven" });
+  it("cambiar el dropdown a 'mesa-completa' llama update con los 4 defaults del preset", async () => {
+    mockHook({
+      skip_modality_prompt: true,
+      default_count_rule: "rival",
+      default_set_size: "d6",
+      default_target_points: 100,
+      default_capicua_bonus: 30,
+    });
     render(<ModalityPreferencesSection />);
 
     const select = screen.getByTestId("default-modality-select");
-    fireEvent.change(select, { target: { value: "cub" } });
+    fireEvent.change(select, { target: { value: "mesa-completa" } });
 
     await waitFor(() => {
-      expect(mockUpdate).toHaveBeenCalledWith({ default_match_modality: "cub" });
+      expect(mockUpdate).toHaveBeenCalledWith({
+        default_count_rule: "mesa",
+        default_set_size: "d6",
+        default_target_points: 200,
+        default_capicua_bonus: 50,
+      });
     });
   });
 
@@ -158,18 +175,30 @@ describe("ModalityPreferencesSection — toggle OFF (skip=true)", () => {
   });
 });
 
-describe("ModalityPreferencesSection — OFF sin default_match_modality", () => {
-  it("muestra placeholder 'Elegir modalidad...' cuando no hay default_match_modality", () => {
-    mockHook({ skip_modality_prompt: true, default_match_modality: null });
+describe("ModalityPreferencesSection — OFF sin defaults reconocibles", () => {
+  it("muestra placeholder 'Elegir configuración...' cuando los 4 defaults no matchean ningún preset", () => {
+    mockHook({
+      skip_modality_prompt: true,
+      default_count_rule: null,
+      default_set_size: null,
+      default_target_points: null,
+      default_capicua_bonus: null,
+    });
     render(<ModalityPreferencesSection />);
 
     const select = screen.getByTestId("default-modality-select") as HTMLSelectElement;
     expect(select.value).toBe("");
-    expect(screen.getByText(/Elegir modalidad/)).toBeDefined();
+    expect(screen.getByText(/Elegir configuración/)).toBeDefined();
   });
 
-  it("persiste skip=true aunque no haya modalidad (llama update con skip=true)", async () => {
-    mockHook({ skip_modality_prompt: false, default_match_modality: null });
+  it("persiste skip=true aunque no haya defaults (llama update con skip=true)", async () => {
+    mockHook({
+      skip_modality_prompt: false,
+      default_count_rule: null,
+      default_set_size: null,
+      default_target_points: null,
+      default_capicua_bonus: null,
+    });
     render(<ModalityPreferencesSection />);
 
     fireEvent.click(screen.getByTestId("modality-prompt-toggle"));
@@ -179,8 +208,14 @@ describe("ModalityPreferencesSection — OFF sin default_match_modality", () => 
     });
   });
 
-  it("muestra aviso de 'Elige una modalidad' cuando OFF y sin modalidad", () => {
-    mockHook({ skip_modality_prompt: true, default_match_modality: null });
+  it("muestra aviso 'Elige una configuración' cuando OFF y sin defaults reconocibles", () => {
+    mockHook({
+      skip_modality_prompt: true,
+      default_count_rule: null,
+      default_set_size: null,
+      default_target_points: null,
+      default_capicua_bonus: null,
+    });
     render(<ModalityPreferencesSection />);
 
     expect(screen.getByRole("alert")).toBeDefined();

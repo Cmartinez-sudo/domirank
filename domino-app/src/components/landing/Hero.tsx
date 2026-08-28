@@ -66,7 +66,7 @@ export function Hero() {
               transition={{ duration: 0.5, delay: 0.15, ease: EASE_OUT }}
               className="text-text-dim mt-5 text-base sm:text-lg max-w-xl mx-auto md:mx-0"
             >
-              Lleva el marcador de cada partida, sigue tu rating contra rivales reales y arma torneos con tus amigos. La primera plataforma con rankings respetando las modalidades de cada país: Venezolano, Dominicano, Cubano y Puertorriqueño.
+              Lleva el marcador de cada partida, sigue tu rating contra rivales reales y arma torneos con tus amigos. Rankings respetando la regla de conteo que juega tu mesa: Cuenta rival o Cuenta de mesa.
             </motion.p>
 
             <motion.div

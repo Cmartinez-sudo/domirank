@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/server";
 import { PendingIcon } from "@/components/icons";
+import { matchLabel } from "@/lib/match-label";
 
 type PendingMatch = {
   id: string;
   format: string;
   target_points: number;
   modality: string | null;
+  count_rule: string | null;
   finalized_at: string;
   players: Array<{
     user_id: string;
@@ -102,7 +104,13 @@ export async function PendingAttestationsCard({ userId }: { userId: string }) {
               >
                 <div className="flex-1 min-w-0">
                   <div className="text-xs text-text-mute">
-                    {m.modality ?? "—"} · {new Date(m.finalized_at).toLocaleDateString("es", { day: "numeric", month: "short" })}
+                    {matchLabel({
+                      count_rule: m.count_rule,
+                      modality: m.modality,
+                      target_points: m.target_points,
+                    }).chip}
+                    {" · "}
+                    {new Date(m.finalized_at).toLocaleDateString("es", { day: "numeric", month: "short" })}
                   </div>
                   <div className="text-sm font-medium truncate mt-0.5">
                     {namesA} <span className="font-mono">{scoreA}</span>

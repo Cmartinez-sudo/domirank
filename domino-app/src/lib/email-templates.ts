@@ -15,6 +15,10 @@ type MatchTemplateInput = {
   matchId:        string;
   format:         "doubles";
   setSize:        "d6" | "d9";
+  /** Regla de conteo. Opcional para que callers legacy no rompan. */
+  countRule?:     "rival" | "mesa" | null;
+  /** Meta de tantos de la partida (opcional). Se muestra en el chip si viene. */
+  targetPoints?:  number | null;
   scoreTeam1:     number;
   scoreTeam2:     number;
   team1Label:     string;
@@ -147,8 +151,23 @@ export function friendAcceptedEmail(input: FriendTemplateInput) {
    MATCH HELPERS
    ============================================================ */
 
-function modalityLabel(_format: "doubles", setSize: "d6" | "d9"): string {
-  const s = setSize === "d6" ? "Doble 6" : "Doble 9";
+/**
+ * Etiqueta de "tipo de partida" para subject/body de emails.
+ * Modelo count_rule: incluye la regla si el caller la envía;
+ * si no, degrada a la firma legacy "Pareja · Doble 6/9".
+ */
+function modalityLabel(input: {
+  format: "doubles";
+  setSize: "d6" | "d9";
+  countRule?: "rival" | "mesa" | null;
+  targetPoints?: number | null;
+}): string {
+  const s = input.setSize === "d6" ? "Doble 6" : "Doble 9";
+  if (input.countRule) {
+    const ruleName = input.countRule === "rival" ? "Cuenta rival" : "Cuenta de mesa";
+    const target = input.targetPoints ? ` · ${input.targetPoints} pts` : "";
+    return `${ruleName} · ${s}${target}`;
+  }
   return `Pareja · ${s}`;
 }
 
@@ -173,7 +192,7 @@ export function matchAttestRequestedEmail(input: MatchTemplateInput) {
       `
       <h1 style="margin:0 0 12px 0;font-size:20px;font-weight:700;color:${BRAND.text};">¿El resultado es correcto?</h1>
       <p style="margin:0 0 12px 0;color:${BRAND.textDim};font-size:15px;line-height:1.5;">
-        Acaba de finalizar tu partida (<span style="color:${BRAND.text};">${escapeHtml(modalityLabel(input.format, input.setSize))}</span>).
+        Acaba de finalizar tu partida (<span style="color:${BRAND.text};">${escapeHtml(modalityLabel(input))}</span>).
         El sistema necesita que confirmes el marcador antes de aplicar el rating.
       </p>
       <div style="margin:16px 0;padding:14px 16px;background:${BRAND.bg};border:1px solid ${BRAND.border};border-radius:10px;color:${BRAND.text};font-size:16px;font-weight:700;text-align:center;letter-spacing:0.5px;">
@@ -221,13 +240,13 @@ export function matchConfirmedEmail(input: MatchTemplateInput & { auto?: boolean
         ${scoreLine(input)}
       </div>
       <p style="margin:0;color:${BRAND.textDim};font-size:14px;line-height:1.5;">
-        Modalidad: ${escapeHtml(modalityLabel(input.format, input.setSize))}.
+        Modalidad: ${escapeHtml(modalityLabel(input))}.
         Tu rating ya refleja el resultado en el leaderboard.
       </p>
       `,
       { label: "Ver detalle", href: url }
     ),
-    text: `${headline}\n\n${input.team1Label} ${input.scoreTeam1} — ${input.scoreTeam2} ${input.team2Label}\nModalidad: ${modalityLabel(input.format, input.setSize)}\n\n${subline}\n\nDetalle: ${url}`,
+    text: `${headline}\n\n${input.team1Label} ${input.scoreTeam1} — ${input.scoreTeam2} ${input.team2Label}\nModalidad: ${modalityLabel(input)}\n\n${subline}\n\nDetalle: ${url}`,
   };
 }
 
@@ -298,7 +317,7 @@ export function matchDisputedEmail(input: MatchTemplateInput) {
       <h1 style="margin:0 0 12px 0;font-size:20px;font-weight:700;color:${BRAND.text};">No hay acuerdo sobre el resultado</h1>
       <p style="margin:0 0 12px 0;color:${BRAND.textDim};font-size:15px;line-height:1.5;">
         Dos o más jugadores marcaron como disputado el marcador de tu partida
-        (<span style="color:${BRAND.text};">${escapeHtml(modalityLabel(input.format, input.setSize))}</span>).
+        (<span style="color:${BRAND.text};">${escapeHtml(modalityLabel(input))}</span>).
         El rating queda congelado hasta que un administrador resuelva.
       </p>
       <div style="margin:16px 0;padding:14px 16px;background:${BRAND.bg};border:1px solid ${BRAND.border};border-radius:10px;color:${BRAND.text};font-size:16px;font-weight:700;text-align:center;letter-spacing:0.5px;">
@@ -311,7 +330,7 @@ export function matchDisputedEmail(input: MatchTemplateInput) {
       `,
       { label: "Ver disputa", href: url }
     ),
-    text: `Tu partida en DomiRank entró en disputa.\n\n${input.team1Label} ${input.scoreTeam1} — ${input.scoreTeam2} ${input.team2Label}\nModalidad: ${modalityLabel(input.format, input.setSize)}\n\nVer disputa: ${url}`,
+    text: `Tu partida en DomiRank entró en disputa.\n\n${input.team1Label} ${input.scoreTeam1} — ${input.scoreTeam2} ${input.team2Label}\nModalidad: ${modalityLabel(input)}\n\nVer disputa: ${url}`,
   };
 }
 

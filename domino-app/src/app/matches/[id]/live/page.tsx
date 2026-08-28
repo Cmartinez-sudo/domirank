@@ -141,6 +141,7 @@ export default async function LivePage({
     <LiveMatchScreen
       matchId={id}
       modality={match.modality}
+      countRule={(match as { count_rule?: "rival" | "mesa" | null }).count_rule ?? null}
       setSize={match.set_size}
       format={match.format}
       targetPoints={match.target_points}
