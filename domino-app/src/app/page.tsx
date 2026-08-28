@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Ranking oficial de dominó por modalidad",
   description:
-    "Registra partidas, sigue tu rating real y arma torneos en Venezolano, Dominicano, Cubano y Puertorriqueño. Gratis. Instala la PWA en tu teléfono.",
+    "Registra partidas, sigue tu rating real y arma torneos respetando la regla de conteo (Cuenta rival o Cuenta de mesa). Gratis. Instala la PWA en tu teléfono.",
   alternates: { canonical: "/" },
   openGraph: {
     title: "DomiRank · Ranking oficial de dominó por modalidad",
