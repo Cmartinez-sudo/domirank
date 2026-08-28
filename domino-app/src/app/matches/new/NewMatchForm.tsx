@@ -1,24 +1,36 @@
 "use client";
 
 /**
- * Wizard de nueva partida — 2 pasos:
- *   Step 1 (MODALITY): selección de modalidad + parámetros + checkbox "No volver a preguntar"
- *   Step 2 (PLAYERS):  armado de equipos + badge "Modalidad: X · Cambiar" si se saltó el step 1
+ * Wizard de nueva partida — 2 pasos (Layout 2):
+ *   Step 1 (CONFIG):  count_rule (2 tiles) + chips de preset + selectores meta/capicúa.
+ *   Step 2 (PLAYERS): armado de equipos + badge "Cambiar" si se saltó el step 1.
  *
- * Skip flow (US-05):
- *   Si preferences.skip_modality_prompt === true && preferences.default_match_modality !== null
- *   → montar directamente en step PLAYERS con la modalidad por defecto.
- *   El badge "Cambiar" permite override puntual (solo state local, no toca DB).
+ * Skip flow:
+ *   Si preferences.skip_modality_prompt === true y los 4 defaults del user
+ *   están presentes (count_rule + set + target + capicúa), se monta directo
+ *   en step PLAYERS con esos 4 valores. Legacy fallback: si solo hay
+ *   default_match_modality legacy, se deriva.
+ *
+ * Post-retiro d9: set_size no se muestra en la UI ni se elige. Inserts nuevos
+ * salen con set_size='d6'. La columna sigue en DB por retrocompat de históricos.
  */
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { UserSearch } from "@/components/UserSearch";
 import { RatingBadge } from "@/components/RatingBadge";
 import {
-  MODALIDADES,
+  COUNT_RULES,
+  PRESETS,
+  countRuleFromLegacyModality,
+  matchPreset,
+  presetById,
+  presetsForCountRule,
+  type CountRule,
   type ModalityCode,
+  type PresetId,
   type SetCode,
 } from "@/lib/modalidades";
 import { startLiveMatch } from "@/lib/live-match";
@@ -37,18 +49,71 @@ type Player = {
   total_games?: number | null;
 };
 
-type Step = "modality" | "players";
+type Step = "config" | "players";
+
+/**
+ * Deriva la configuración inicial (count_rule + 3 valores) desde las prefs
+ * del user, con fallback al preset por defecto que le llega como prop.
+ */
+function deriveInitialConfig(
+  prefs: UserPreferences | null | undefined,
+  fallbackPreset: PresetId,
+): {
+  countRule: CountRule;
+  setSize: SetCode;
+  target: number;
+  capicua: number;
+  fromPrefs: boolean;
+} {
+  const p = prefs;
+  if (
+    p?.default_count_rule &&
+    p?.default_target_points != null &&
+    p?.default_capicua_bonus != null
+  ) {
+    return {
+      countRule: p.default_count_rule,
+      setSize: (p.default_set_size as SetCode | null) ?? "d6",
+      target: p.default_target_points,
+      capicua: p.default_capicua_bonus,
+      fromPrefs: true,
+    };
+  }
+  // Legacy fallback: usar default_match_modality si existe.
+  if (p?.default_match_modality) {
+    const legacy = p.default_match_modality;
+    return {
+      countRule: countRuleFromLegacyModality(legacy),
+      setSize: legacy === "cub" ? "d9" : "d6",
+      target:
+        legacy === "ven" ? 100
+        : legacy === "dom" ? 200
+        : legacy === "cub" ? 150
+        : legacy === "pri" ? 200
+        : 100,
+      capicua: legacy === "pri" ? 50 : 30,
+      fromPrefs: true,
+    };
+  }
+  const preset = PRESETS[fallbackPreset];
+  return {
+    countRule: preset.countRule,
+    setSize: preset.set,
+    target: preset.target,
+    capicua: preset.capicua,
+    fromPrefs: false,
+  };
+}
 
 export function NewMatchForm({
   currentUser,
-  defaultModality,
+  defaultPreset,
   initialPreferences,
   frequentPlayers = [],
 }: {
   currentUser: Player;
-  defaultModality: ModalityCode;
+  defaultPreset: PresetId;
   initialPreferences?: UserPreferences | null;
-  /** Top jugadores frecuentes con los que el user ya jugó (Sprint 3). */
   frequentPlayers?: Player[];
 }) {
   const router = useRouter();
@@ -57,106 +122,119 @@ export function NewMatchForm({
   const presetPairingId = searchParams.get("pairing");
 
   const { preferences, update } = useUserPreferences(initialPreferences);
+  const activePrefs = preferences ?? initialPreferences ?? null;
 
-  // Determinar si debemos saltar el step de modalidad
-  const shouldSkipModality =
-    (preferences?.skip_modality_prompt === true &&
-      preferences?.default_match_modality != null) ||
-    (initialPreferences?.skip_modality_prompt === true &&
-      initialPreferences?.default_match_modality != null);
+  const initialConfig = deriveInitialConfig(activePrefs, defaultPreset);
 
-  // Edge case: inconsistent state (skip=true pero default_modality=null)
+  const shouldSkipConfig =
+    activePrefs?.skip_modality_prompt === true && initialConfig.fromPrefs;
+
   const hasInconsistentPreferences =
-    (preferences?.skip_modality_prompt === true &&
-      preferences?.default_match_modality == null) ||
-    (initialPreferences?.skip_modality_prompt === true &&
-      initialPreferences?.default_match_modality == null);
+    activePrefs?.skip_modality_prompt === true && !initialConfig.fromPrefs;
 
   if (hasInconsistentPreferences) {
     console.warn(
-      "[NewMatchForm] Estado inconsistente: skip_modality_prompt=true pero default_match_modality=null. Flow normal.",
-      // TODO: Sentry.captureMessage('modality_skip_inconsistent_state', { level: 'warning' })
+      "[NewMatchForm] skip_modality_prompt=true sin defaults completos. Flow normal.",
     );
   }
 
-  const effectiveDefaultModality =
-    (preferences?.default_match_modality ??
-      initialPreferences?.default_match_modality ??
-      defaultModality) as ModalityCode;
+  const [step, setStep] = useState<Step>(shouldSkipConfig ? "players" : "config");
+  const [arrivedViaSkip, setArrivedViaSkip] = useState(shouldSkipConfig);
 
-  const [step, setStep] = useState<Step>(
-    shouldSkipModality ? "players" : "modality",
-  );
-  // Indica si este render llegó a players via skip (para mostrar badge)
-  const [arrivedViaSkip, setArrivedViaSkip] = useState(shouldSkipModality);
+  const [saveAsDefault, setSaveAsDefault] = useState(false);
 
-  // Checkbox "No volver a preguntar esta modalidad"
-  const [skipNextTime, setSkipNextTime] = useState(false);
+  const [countRule, setCountRule] = useState<CountRule>(initialConfig.countRule);
+  const [setSize] = useState<SetCode>(initialConfig.setSize); // set_size fijo — d9 fuera del menú
+  const [target, setTarget] = useState<number>(initialConfig.target);
+  const [capicua, setCapicua] = useState<number>(initialConfig.capicua);
 
-  // Modalidad + parámetros
-  const [modality, setModality] = useState<ModalityCode>(effectiveDefaultModality);
-  const m = MODALIDADES[modality];
-  const isCustom = modality === "custom";
+  // Preset seleccionado explícitamente (chip). null = "Personalizado" implícito
+  // cuando los 4 valores no coinciden con ningún preset nombrado.
+  const initialPresetId = matchPreset({
+    count_rule: initialConfig.countRule,
+    set_size: initialConfig.setSize,
+    target_points: initialConfig.target,
+    capicua_bonus: initialConfig.capicua,
+  })?.id ?? null;
+  const [selectedPreset, setSelectedPreset] = useState<PresetId | null>(initialPresetId);
 
-  const [setSize, setSetSize] = useState<SetCode>(m.set);
-  const [target, setTarget] = useState<number>(m.target);
-  const [capicua, setCapicua] = useState<number>(m.capicua);
-
-  // Equipos
   const [teamA, setTeamA] = useState<Player[]>([currentUser]);
   const [teamB, setTeamB] = useState<Player[]>([]);
-
-  // Post-Fase-A: toda partida es 2v2.
   const teamSize = 2;
 
-  // Toggle "amistosa" — la partida no afecta el Elo global
   const [friendly, setFriendly] = useState(false);
-
-  // Submit
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // US-09: track modality_step_skipped only on first mount when arrived via skip
   useEffect(() => {
     if (arrivedViaSkip) {
-      analytics.track("modality_step_skipped", { modality });
+      analytics.track("modality_step_skipped", {
+        count_rule: countRule,
+        preset_id: selectedPreset ?? "personalizado",
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function applyModality(code: ModalityCode) {
-    setModality(code);
-    if (code !== "custom") {
-      const x = MODALIDADES[code];
-      setSetSize(x.set);
-      setTarget(x.target);
-      setCapicua(x.capicua);
-      setTeamA((cur) => cur.slice(0, 2));
-      setTeamB((cur) => cur.slice(0, 2));
-    }
+  function applyPreset(id: PresetId) {
+    const p = PRESETS[id];
+    setSelectedPreset(id);
+    setCountRule(p.countRule);
+    setTarget(p.target);
+    setCapicua(p.capicua);
   }
 
-  async function handleModalityContinue() {
-    if (skipNextTime) {
+  function switchCountRule(next: CountRule) {
+    if (next === countRule) return;
+    setCountRule(next);
+    // Cambiar de regla deselecciona el preset (los otros valores se mantienen).
+    setSelectedPreset(null);
+  }
+
+  function editTarget(next: number) {
+    setTarget(next);
+    setSelectedPreset(null);
+  }
+
+  function editCapicua(next: number) {
+    setCapicua(next);
+    setSelectedPreset(null);
+  }
+
+  const presetLabel =
+    matchPreset({ count_rule: countRule, set_size: setSize, target_points: target, capicua_bonus: capicua })?.title
+    ?? "Personalizado";
+
+  async function handleConfigContinue() {
+    if (saveAsDefault) {
       try {
         await update({
-          default_match_modality: modality as Exclude<ModalityCode, "custom">,
+          default_count_rule: countRule,
+          default_set_size: setSize,
+          default_target_points: target,
+          default_capicua_bonus: capicua,
           skip_modality_prompt: true,
         });
-        analytics.track("modality_preference_set", { modality, skip_prompt: true });
+        analytics.track("modality_preference_set", {
+          count_rule: countRule,
+          preset_id: selectedPreset ?? "personalizado",
+          skip_prompt: true,
+        });
       } catch (err) {
-        console.warn("[NewMatchForm] No se pudo persistir la preferencia de modalidad:", err);
+        console.warn("[NewMatchForm] No se pudo persistir la preferencia:", err);
       }
     }
     setArrivedViaSkip(false);
     setStep("players");
   }
 
-  function handleChangeModality() {
-    // Override puntual: vuelve al step de modalidad SIN tocar DB
-    analytics.track("modality_override_used", { original_modality: modality });
+  function handleChangeConfig() {
+    analytics.track("modality_override_used", {
+      count_rule: countRule,
+      preset_id: selectedPreset ?? "personalizado",
+    });
     setArrivedViaSkip(false);
-    setStep("modality");
+    setStep("config");
   }
 
   const excludeIds = [...teamA, ...teamB].map((p) => p.id);
@@ -171,7 +249,7 @@ export function NewMatchForm({
     setPending(true);
     try {
       const res = await startLiveMatch({
-        modality,
+        count_rule: countRule,
         format: "doubles",
         set_size: setSize,
         target_points: target,
@@ -179,9 +257,6 @@ export function NewMatchForm({
         team_a_players: teamA.map((p) => p.id),
         team_b_players: teamB.map((p) => p.id),
         tournament_id: presetTournamentId ?? null,
-        // Quick match: si el toggle "amistosa" está ON, no afecta el Elo.
-        // Si la partida viene de un torneo, el toggle se ignora — el server
-        // hereda tournaments.rated y este flag no llega.
         rated: presetTournamentId ? undefined : !friendly,
       });
       if (!res.ok) {
@@ -192,7 +267,8 @@ export function NewMatchForm({
 
       analytics.track("match_created", {
         format: "doubles",
-        modality,
+        count_rule: countRule,
+        preset_id: selectedPreset ?? "personalizado",
         tournament_id: presetTournamentId ?? null,
       });
 
@@ -213,120 +289,125 @@ export function NewMatchForm({
     }
   }
 
-  if (step === "modality") {
+  if (step === "config") {
+    const availablePresets = presetsForCountRule(countRule);
     return (
       <div className="space-y-5">
-        {/* Modalidad */}
+        {/* Regla de conteo — 2 tarjetas grandes */}
         <section className="card">
-          <label className="label mb-2">Modalidad</label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {Object.values(MODALIDADES).map((mod) => (
-              <label
-                key={mod.code}
-                className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer transition-colors ${
-                  modality === mod.code
-                    ? "bg-primary/10 border-primary/40"
+          <label className="label mb-2">Modalidad de juego</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {(Object.values(COUNT_RULES)).map((rule) => (
+              <button
+                key={rule.code}
+                type="button"
+                onClick={() => switchCountRule(rule.code)}
+                className={`flex flex-col items-start gap-2 p-4 rounded-md border text-left transition-colors ${
+                  countRule === rule.code
+                    ? "bg-primary/10 border-primary/60"
                     : "bg-surface-2 border-border hover:border-border-strong"
                 }`}
+                aria-pressed={countRule === rule.code}
+                data-testid={`count-rule-${rule.code}`}
               >
-                <input
-                  type="radio"
-                  name="modality"
-                  checked={modality === mod.code}
-                  onChange={() => applyModality(mod.code)}
-                  className="mt-1"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold flex items-center gap-2 flex-wrap">
-                    <span>
-                      {mod.flag} {mod.name}
-                    </span>
-                    {mod.code === defaultModality && (
-                      <span className="badge bg-info/15 text-info text-[10px]">
-                        tu default
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-text-mute text-xs mt-0.5">{mod.desc}</div>
+                <div className="flex items-center gap-3">
+                  <Image
+                    src={rule.icon}
+                    alt=""
+                    width={40}
+                    height={40}
+                    aria-hidden="true"
+                  />
+                  <div className="font-semibold text-base">{rule.name}</div>
                 </div>
-              </label>
+                <div className="text-text-mute text-xs">{rule.subtitle}</div>
+                <div className="text-text-dim text-xs italic">{rule.blurb}</div>
+              </button>
             ))}
           </div>
-
-          {/* Checkbox "No volver a preguntar" — discreto, sin emphasis */}
-          <label className="flex items-center gap-2 mt-4 text-sm text-text-mute cursor-pointer">
-            <input
-              type="checkbox"
-              checked={skipNextTime}
-              onChange={(e) => setSkipNextTime(e.target.checked)}
-              className="accent-primary"
-            />
-            No volver a preguntar esta modalidad
-          </label>
         </section>
 
-        {/* Parámetros */}
+        {/* Presets como atajos filtrados por count_rule */}
+        <section className="card">
+          <div className="flex items-baseline justify-between mb-2">
+            <label className="label mb-0">Preset</label>
+            <span className="text-text-mute text-xs">
+              {selectedPreset ? PRESETS[selectedPreset].title : "Personalizado"}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {availablePresets.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => applyPreset(p.id)}
+                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                  selectedPreset === p.id
+                    ? "bg-primary/15 border-primary/60 text-primary"
+                    : "bg-surface-2 border-border text-text-dim hover:border-border-strong"
+                }`}
+                aria-pressed={selectedPreset === p.id}
+                data-testid={`preset-${p.id}`}
+              >
+                {p.title}
+              </button>
+            ))}
+          </div>
+          {availablePresets[0]?.noteCountry && (
+            <p className="text-text-mute text-xs mt-2">
+              Toca un preset para precargar meta y capicúa.
+            </p>
+          )}
+        </section>
+
+        {/* Selectores meta/capicúa siempre visibles */}
         <section className="card">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label">Set de fichas</label>
-              <div className="flex bg-surface-2 rounded-md p-1 border border-border">
-                <button
-                  type="button"
-                  disabled={!isCustom}
-                  onClick={() => isCustom && setSetSize("d6")}
-                  className={`flex-1 py-1.5 rounded text-sm ${setSize === "d6" ? "bg-surface-3" : "text-text-dim"} ${!isCustom ? "opacity-60 cursor-not-allowed" : ""}`}
-                >
-                  6-6
-                </button>
-                <button
-                  type="button"
-                  disabled={!isCustom}
-                  onClick={() => isCustom && setSetSize("d9")}
-                  className={`flex-1 py-1.5 rounded text-sm ${setSize === "d9" ? "bg-surface-3" : "text-text-dim"} ${!isCustom ? "opacity-60 cursor-not-allowed" : ""}`}
-                >
-                  9-9
-                </button>
-              </div>
-            </div>
-            <div>
-              <label className="label">Puntos meta</label>
+              <label className="label" htmlFor="target-points">Puntos meta</label>
               <input
+                id="target-points"
                 type="number"
                 min={50}
                 max={500}
                 step={10}
                 className="input"
                 value={target}
-                readOnly={!isCustom}
-                onChange={(e) => setTarget(parseInt(e.target.value) || 100)}
+                onChange={(e) => editTarget(parseInt(e.target.value) || 100)}
               />
             </div>
             <div>
-              <label className="label">Capicúa bonus</label>
+              <label className="label" htmlFor="capicua-bonus">Capicúa bonus</label>
               <input
+                id="capicua-bonus"
                 type="number"
                 min={0}
                 max={100}
                 step={5}
                 className="input"
                 value={capicua}
-                readOnly={!isCustom}
-                onChange={(e) => setCapicua(parseInt(e.target.value) || 0)}
+                onChange={(e) => editCapicua(parseInt(e.target.value) || 0)}
               />
             </div>
           </div>
-          {!isCustom && (
-            <p className="text-text-mute text-xs mt-2">
-              Set, puntos y capicúa vienen del preset de la modalidad. Para
-              editarlos elige &quot;Personalizado&quot;.
-            </p>
-          )}
+          <p className="text-text-mute text-xs mt-2">
+            Edita cualquier valor y el preset se marcará como Personalizado.
+          </p>
         </section>
+
+        <label className="flex items-center gap-2 text-sm text-text-mute cursor-pointer">
+          <input
+            type="checkbox"
+            checked={saveAsDefault}
+            onChange={(e) => setSaveAsDefault(e.target.checked)}
+            className="accent-primary"
+          />
+          Guardar esta configuración como mi partida por defecto
+        </label>
 
         <button
           type="button"
-          onClick={handleModalityContinue}
+          onClick={handleConfigContinue}
           className="btn-primary w-full"
         >
           Continuar
@@ -338,17 +419,18 @@ export function NewMatchForm({
   // Step: players
   return (
     <form onSubmit={onSubmit} className="space-y-5">
-      {/* Badge "Cambiar" cuando se saltó el step de modalidad */}
       {arrivedViaSkip && (
         <div
           className="flex items-center gap-1.5 text-sm text-text-mute"
           data-testid="modality-skip-badge"
         >
-          <span>Modalidad: {MODALIDADES[modality]?.name ?? modality}</span>
+          <span>
+            {COUNT_RULES[countRule].name} · {presetLabel} · {target} pts
+          </span>
           <span aria-hidden="true">·</span>
           <button
             type="button"
-            onClick={handleChangeModality}
+            onClick={handleChangeConfig}
             className="text-primary underline underline-offset-2"
             data-testid="change-modality-btn"
           >
@@ -357,7 +439,6 @@ export function NewMatchForm({
         </div>
       )}
 
-      {/* Equipos */}
       <div className="grid md:grid-cols-2 gap-4">
         <TeamPicker
           label="Equipo A"
@@ -405,7 +486,7 @@ export function NewMatchForm({
       <div className="flex gap-3">
         <button
           type="button"
-          onClick={() => setStep("modality")}
+          onClick={() => setStep("config")}
           className="btn-secondary"
         >
           Atrás
@@ -522,3 +603,6 @@ function TeamPicker({
     </section>
   );
 }
+
+// Legacy types re-exported for compat — some callers still import them.
+export type { ModalityCode };

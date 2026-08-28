@@ -23,6 +23,10 @@ vi.mock("@/lib/user-preferences-actions", () => ({
 const SAMPLE_PREFERENCES: UserPreferences = {
   user_id: "user-123",
   default_match_modality: "ven",
+  default_count_rule: "rival",
+  default_set_size: "d6",
+  default_target_points: 100,
+  default_capicua_bonus: 30,
   skip_modality_prompt: false,
   notification_settings: {},
   theme: "dark",

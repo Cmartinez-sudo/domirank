@@ -14,10 +14,17 @@ import { matchAttestRequestedEmail } from "@/lib/email-templates";
    ============================================================ */
 
 const StartSchema = z.object({
-  modality: z.enum(["ven","dom","cub","pri","custom"]),
+  /** Nueva identidad de "modalidad": regla de conteo al cerrar mano. */
+  count_rule: z.enum(["rival", "mesa"]),
+  /**
+   * @deprecated Legacy — se conserva por retrocompat. En inserts nuevos
+   * se dual-writea "custom" si el caller no lo pasa (columna matches.modality
+   * se mantiene por histórico).
+   */
+  modality: z.enum(["ven", "dom", "cub", "pri", "custom"]).optional(),
   // Post-Fase-A: solo doubles. Mantenemos el campo para retrocompat.
   format: z.literal("doubles").default("doubles"),
-  set_size: z.enum(["d6","d9"]),
+  set_size: z.enum(["d6", "d9"]).default("d6"),
   target_points: z.number().int().min(50).max(500),
   capicua_bonus: z.number().int().min(0).max(100),
   team_a_players: z.array(z.string().uuid()).length(2),
@@ -90,7 +97,11 @@ export async function startLiveMatch(input: StartLiveMatchInput): Promise<{ ok: 
     .insert({
       format: i.format,
       set_size: i.set_size,
-      modality: i.modality,
+      // Dual-write: la columna legacy `modality` recibe "custom" en inserts
+      // nuevos (o el valor legacy que pase el caller); la identidad real
+      // vive en `count_rule`.
+      modality: i.modality ?? "custom",
+      count_rule: i.count_rule,
       target_points: i.target_points,
       capicua_bonus: i.capicua_bonus,
       status: "in_progress",
