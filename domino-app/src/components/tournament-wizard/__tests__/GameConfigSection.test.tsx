@@ -18,7 +18,7 @@ afterEach(() => {
 
 const baseProps = {
   format: "swiss" as const,
-  modality: "ven" as const,
+  preset: "rapido" as const,
   playerCount: 8,
   roundsCount: 5,
   onRoundsCountChange: () => {},

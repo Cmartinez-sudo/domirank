@@ -24,7 +24,17 @@ export type Format =
   | "round_robin_individual"
   | "single_elim";
 
+/** @deprecated Preferir `PresetId` de modalidades.ts. */
 export type Modality = "ven" | "dom" | "cub" | "pri" | "custom";
+
+export type CountRule = "rival" | "mesa";
+
+export type PresetIdInDraft =
+  | "rapido"
+  | "clasico"
+  | "doble9"
+  | "mesa-completa"
+  | "personalizado";
 
 export type Visibility = "private" | "code";
 
@@ -40,6 +50,11 @@ export type TournamentDraftUI = {
   /** Nombre (3-60 chars). Si vacío, el wizard usa placeholder "Polla del {día}". */
   name?: string;
   format?: Format;
+  /** Nueva identidad: regla de conteo del torneo. */
+  count_rule?: CountRule;
+  /** Preset elegido por el usuario (atajo de UI). */
+  preset?: PresetIdInDraft;
+  /** @deprecated Legacy — se mantiene para no romper drafts persistidos. */
   modality?: Modality;
   /** Cantidad de jugadores objetivo (4..64). Default 4. */
   player_count?: number;

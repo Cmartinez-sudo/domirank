@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { Format, Modality } from "@/hooks/useTournamentDraft";
+import type { Format, Modality, PresetIdInDraft } from "@/hooks/useTournamentDraft";
+import { PRESETS } from "@/lib/modalidades";
 
 const TIME_PRESETS: Array<{ value: number | null; label: string }> = [
   { value: null, label: "Sin límite" },
@@ -28,14 +29,20 @@ const MODALITY_POINTS: Record<Modality, number> = {
   custom: 100,
 };
 
-/** Default sugerido de puntos según la modalidad seleccionada. */
+/** @deprecated Preferir `defaultPointsForPreset`. Se conserva para callers legacy. */
 export function defaultPointsForModality(modality: Modality): number {
   return MODALITY_POINTS[modality] ?? 100;
 }
 
+/** Default de puntos derivado del preset elegido (count_rule model). */
+export function defaultPointsForPreset(preset: PresetIdInDraft): number {
+  return PRESETS[preset]?.target ?? 100;
+}
+
 type Props = {
   format: Format | undefined;
-  modality: Modality;
+  /** Preset actual del wizard. Sustituye a `modality` en el header contextual. */
+  preset: PresetIdInDraft | null;
   /** Cantidad de jugadores — usado en helper text de rondas. */
   playerCount: number;
 
@@ -60,7 +67,7 @@ type Props = {
  */
 export function GameConfigSection({
   format,
-  modality,
+  preset,
   playerCount,
   roundsCount,
   onRoundsCountChange,
@@ -69,6 +76,7 @@ export function GameConfigSection({
   pointsToWin,
   onPointsToWinChange,
 }: Props) {
+  const presetLabel = preset ? PRESETS[preset]?.title ?? "Personalizado" : "Personalizado";
   const showRounds = format === "swiss" || format === "round_robin_individual";
 
   // Solo aplica al Suizo — RR Individual permite repetir el ciclo libremente.
@@ -107,9 +115,7 @@ export function GameConfigSection({
     <div className="rounded-2xl border border-border bg-surface-2 p-4 space-y-5">
       <div className="flex items-center gap-2">
         <h3 className="font-semibold text-sm">Configuración de juego</h3>
-        <span className="text-text-mute text-xs">
-          {modality === "custom" ? "Custom" : `Modalidad ${modality.toUpperCase()}`}
-        </span>
+        <span className="text-text-mute text-xs">{presetLabel}</span>
       </div>
 
       {/* Rondas — solo Suizo */}
@@ -228,8 +234,8 @@ export function GameConfigSection({
           />
         )}
         <p className="mt-1.5 text-text-mute text-xs">
-          Default sugerido para {modality.toUpperCase()}:{" "}
-          {defaultPointsForModality(modality)} pts. Editable.
+          Default sugerido para {presetLabel}:{" "}
+          {preset ? defaultPointsForPreset(preset) : 100} pts. Editable.
         </p>
       </div>
     </div>

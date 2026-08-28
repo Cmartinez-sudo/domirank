@@ -3,7 +3,15 @@
 import { useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { COUNTRIES, MODALIDADES, type CountryCode, type ModalityCode } from "@/lib/modalidades";
+import {
+  COUNTRIES,
+  COUNT_RULES,
+  PRESETS,
+  PRESET_ORDER,
+  type CountryCode,
+  type ModalityCode,
+  type PresetId,
+} from "@/lib/modalidades";
 import { initialRatingFromAssessment } from "@/lib/rating";
 import { saveOnboarding } from "./actions";
 import { analytics } from "@/lib/analytics";
@@ -59,6 +67,24 @@ const slideVariants = {
   exit:  (dir: number) => ({ x: dir > 0 ? -60 : 60, opacity: 0 }),
 };
 
+// Mapeo preset → modality legacy (para dual-write en profiles.default_modality).
+const PRESET_TO_LEGACY_MODALITY: Record<PresetId, ModalityCode> = {
+  rapido: "ven",
+  clasico: "dom",
+  doble9: "cub",
+  "mesa-completa": "pri",
+  personalizado: "custom",
+};
+
+function presetFromLegacyModality(m: ModalityCode | null): PresetId | null {
+  if (!m) return null;
+  if (m === "ven") return "rapido";
+  if (m === "dom") return "clasico";
+  if (m === "cub") return "clasico"; // Cuba post-retiro d9 → Clásico
+  if (m === "pri") return "mesa-completa";
+  return "personalizado";
+}
+
 export function OnboardingForm({
   initialCountry,
   initialModality,
@@ -66,17 +92,23 @@ export function OnboardingForm({
   initialCountry: CountryCode | null;
   initialModality: ModalityCode | null;
 }) {
-  const [step, setStep] = useState<Step>(initialCountry && initialModality ? "q0" : "profile");
+  const initialPreset =
+    presetFromLegacyModality(initialModality) ??
+    (initialCountry
+      ? COUNTRIES.find((c) => c.code === initialCountry)?.suggestedPreset ?? null
+      : null);
+
+  const [step, setStep] = useState<Step>(initialCountry && initialPreset ? "q0" : "profile");
   const [direction, setDirection] = useState(1);
   const [country, setCountry] = useState<CountryCode | null>(initialCountry);
-  const [modality, setModality] = useState<ModalityCode | null>(
-    initialModality ?? (initialCountry ? COUNTRIES.find((c) => c.code === initialCountry)?.suggested ?? null : null)
-  );
+  const [preset, setPreset] = useState<PresetId | null>(initialPreset);
   const [answers, setAnswers] = useState<(number | null)[]>([null, null, null, null]);
   const [pending, setPending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const suggested = country ? COUNTRIES.find((c) => c.code === country)?.suggested : null;
+  const suggestedPreset = country
+    ? COUNTRIES.find((c) => c.code === country)?.suggestedPreset
+    : null;
   const cInfo = country ? COUNTRIES.find((c) => c.code === country) : null;
 
   function go(next: Step, dir = 1) {
@@ -88,13 +120,15 @@ export function OnboardingForm({
   const { estimatedDisplay } = initialRatingFromAssessment(totalPoints);
 
   async function submit(skillPoints?: number) {
-    if (!country || !modality) return;
+    if (!country || !preset) return;
     setErr(null);
     setPending(true);
     try {
       const fd = new FormData();
       fd.set("country", country);
-      fd.set("modality", modality);
+      fd.set("preset", preset);
+      // Dual-write legacy modality para consumidores viejos.
+      fd.set("modality", PRESET_TO_LEGACY_MODALITY[preset]);
       if (skillPoints !== undefined) fd.set("skill_points", String(skillPoints));
       const res = await saveOnboarding(fd);
       if (!res.ok) {
@@ -153,7 +187,7 @@ export function OnboardingForm({
                     <button
                       key={c.code}
                       type="button"
-                      onClick={() => { setCountry(c.code); setModality(c.suggested); }}
+                      onClick={() => { setCountry(c.code); setPreset(c.suggestedPreset); }}
                       className={`flex items-center gap-3 p-3 rounded-xl border transition-colors text-left ${
                         country === c.code
                           ? "bg-primary/10 border-primary/40"
@@ -169,46 +203,55 @@ export function OnboardingForm({
 
               <div className="card space-y-2">
                 <div className="mb-1 flex items-baseline justify-between gap-2">
-                  <label className="block text-sm font-medium">¿Qué modalidad juegas?</label>
+                  <label className="block text-sm font-medium">¿Cómo prefieres jugar?</label>
                   {cInfo && (
-                    <span className="text-text-mute text-xs">Sugerida para {cInfo.name}</span>
+                    <span className="text-text-mute text-xs">Sugerido para {cInfo.name}</span>
                   )}
                 </div>
-                {Object.values(MODALIDADES).map((m) => (
-                  <label
-                    key={m.code}
-                    className={`flex gap-3 items-start p-3 rounded-xl border cursor-pointer transition-colors ${
-                      modality === m.code
-                        ? "bg-primary/10 border-primary/40"
-                        : "bg-surface-2 border-border hover:border-border-strong"
-                    } ${!country ? "opacity-60 pointer-events-none" : ""}`}
-                  >
-                    <input
-                      type="radio"
-                      name="modality"
-                      value={m.code}
-                      checked={modality === m.code}
-                      onChange={() => setModality(m.code)}
-                      className="mt-1"
-                      disabled={!country}
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold">{m.flag} {m.name}</span>
-                        {suggested === m.code && (
-                          <span className="badge bg-primary/15 text-primary">Sugerido</span>
+                {PRESET_ORDER.map((id) => {
+                  const p = PRESETS[id];
+                  const rule = COUNT_RULES[p.countRule];
+                  return (
+                    <label
+                      key={p.id}
+                      className={`flex gap-3 items-start p-3 rounded-xl border cursor-pointer transition-colors ${
+                        preset === p.id
+                          ? "bg-primary/10 border-primary/40"
+                          : "bg-surface-2 border-border hover:border-border-strong"
+                      } ${!country ? "opacity-60 pointer-events-none" : ""}`}
+                    >
+                      <input
+                        type="radio"
+                        name="preset"
+                        value={p.id}
+                        checked={preset === p.id}
+                        onChange={() => setPreset(p.id)}
+                        className="mt-1"
+                        disabled={!country}
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold">{p.title}</span>
+                          {suggestedPreset === p.id && (
+                            <span className="badge bg-primary/15 text-primary">Sugerido</span>
+                          )}
+                        </div>
+                        <div className="text-text-mute text-sm mt-0.5">
+                          {rule.name} · {p.set === "d9" ? "Doble-9" : "Doble-6"} · {p.target} pts · Capicúa +{p.capicua}
+                        </div>
+                        {p.noteCountry && (
+                          <div className="text-text-dim text-xs italic mt-0.5">{p.noteCountry}</div>
                         )}
                       </div>
-                      <div className="text-text-mute text-sm mt-0.5">{m.desc}</div>
-                    </div>
-                  </label>
-                ))}
+                    </label>
+                  );
+                })}
               </div>
 
               <button
                 type="button"
                 className="btn-primary w-full"
-                disabled={!country || !modality}
+                disabled={!country || !preset}
                 onClick={() => go("q0")}
               >
                 Continuar →

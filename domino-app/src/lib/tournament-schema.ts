@@ -24,7 +24,14 @@ export const createTournamentSchema = z
     /** 'public' es legacy del schema viejo; el wizard nuevo usa 'private' | 'code'. */
     visibility: z.enum(["public", "private", "code"]),
     format: z.enum(["single_elim", "round_robin", "round_robin_individual", "swiss"]),
-    modality: z.enum(["ven", "dom", "cub", "pri", "custom"]),
+    /** Regla de conteo — identidad de la modalidad del torneo. */
+    count_rule: z.enum(["rival", "mesa"]),
+    /**
+     * @deprecated Legacy — sigue aceptándose para no romper callers viejos.
+     * El wizard nuevo envía count_rule; el server action dual-writea "custom"
+     * en tournaments.modality cuando no se provee.
+     */
+    modality: z.enum(["ven", "dom", "cub", "pri", "custom"]).optional(),
     custom_goal: z.number().int().min(50).max(500).optional(),
     custom_capicua: z.number().int().min(10).max(100).optional(),
 
@@ -77,7 +84,7 @@ export const createTournamentSchema = z
 
 export type CreateTournamentInput = z.infer<typeof createTournamentSchema>;
 
-/** Puntos default por modalidad — fuente de verdad para el wizard y el server action. */
+/** @deprecated Legacy. Preferir PRESETS de modalidades.ts para nuevos flujos. */
 export const MODALITY_DEFAULT_POINTS: Record<string, number> = {
   ven: 100,
   dom: 200,

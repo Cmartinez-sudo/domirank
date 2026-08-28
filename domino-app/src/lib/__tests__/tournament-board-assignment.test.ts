@@ -70,6 +70,7 @@ const VALID_BASE = {
   name: 'Copa Venezuela 2026',
   visibility: 'public' as const,
   format: 'swiss' as const,
+  count_rule: 'rival' as const,
   modality: 'ven' as const,
   max_players: 8,
   inscription_mode: 'pre_formed' as const,

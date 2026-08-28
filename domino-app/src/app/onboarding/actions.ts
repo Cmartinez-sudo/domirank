@@ -3,17 +3,27 @@
 import { z } from "zod";
 import { supabaseServer } from "@/lib/supabase/server";
 import { initialRatingFromAssessment } from "@/lib/rating";
+import {
+  PRESETS,
+  countRuleFromLegacyModality,
+  type PresetId,
+} from "@/lib/modalidades";
+
+const PRESET_IDS = ["rapido", "clasico", "doble9", "mesa-completa", "personalizado"] as const;
 
 const Schema = z.object({
   country:      z.enum(["VE","DO","CU","PR","CO","MX","PA","ES","US","AR","CL","PE","OT"]),
-  modality:     z.enum(["ven","dom","cub","pri","custom"]),
+  /** @deprecated Se acepta por compat, pero el schema nuevo prefiere `preset`. */
+  modality:     z.enum(["ven","dom","cub","pri","custom"]).optional(),
+  preset:       z.enum(PRESET_IDS).optional(),
   skill_points: z.coerce.number().int().min(0).max(12).optional(),
 });
 
 export async function saveOnboarding(formData: FormData) {
   const parsed = Schema.safeParse({
     country:      formData.get("country"),
-    modality:     formData.get("modality"),
+    modality:     formData.get("modality") || undefined,
+    preset:       formData.get("preset") || undefined,
     skill_points: formData.get("skill_points"),
   });
   if (!parsed.success) {
@@ -30,25 +40,70 @@ export async function saveOnboarding(formData: FormData) {
     ? initialRatingFromAssessment(skillPoints!)
     : { elo: 1500 };
 
-  const update: Record<string, unknown> = {
-    country:          parsed.data.country,
-    default_modality: parsed.data.modality,
-    onboarded:        true,
+  // Resolver preset: prefiere `preset` explícito; si no vino, deriva del legacy `modality`.
+  const presetId: PresetId =
+    parsed.data.preset ??
+    (parsed.data.modality === "ven"    ? "rapido"
+     : parsed.data.modality === "dom"  ? "clasico"
+     : parsed.data.modality === "cub"  ? "clasico" // Cuba post-refactor → Clásico (d9 fuera de menú)
+     : parsed.data.modality === "pri"  ? "mesa-completa"
+     : "rapido");
+
+  const preset = PRESETS[presetId];
+  const legacyModality = parsed.data.modality ?? "custom";
+
+  // 1. Actualizar profiles (país + legacy default_modality + count_rule).
+  const profileUpdate: Record<string, unknown> = {
+    country:              parsed.data.country,
+    default_modality:     legacyModality,           // legacy, dual-write
+    default_count_rule:   preset.countRule,          // nueva identidad
+    onboarded:            true,
   };
 
   if (useAssessment) {
-    update.initial_skill_points = skillPoints;
+    profileUpdate.initial_skill_points = skillPoints;
     // Aplicar Elo inicial a ambos buckets doubles + global.
-    update.doubles_elo    = elo;
-    update.d9_doubles_elo = elo;
-    update.global_elo     = elo;
+    profileUpdate.doubles_elo    = elo;
+    profileUpdate.d9_doubles_elo = elo;
+    profileUpdate.global_elo     = elo;
   }
 
-  const { error } = await supabase
+  const { error: profileErr } = await supabase
     .from("profiles")
-    .update(update)
+    .update(profileUpdate)
     .eq("id", user.id);
 
-  if (error) return { ok: false, error: error.message } as const;
+  if (profileErr) return { ok: false, error: profileErr.message } as const;
+
+  // 2. Upsert user_preferences con los 4 defaults derivados del preset.
+  //    Fuente de verdad del skip flow.
+  const { error: prefErr } = await supabase
+    .from("user_preferences")
+    .upsert(
+      {
+        user_id: user.id,
+        default_count_rule:    preset.countRule,
+        default_set_size:      preset.set,
+        default_target_points: preset.target,
+        default_capicua_bonus: preset.capicua,
+        // legacy dual-write por compat mientras existan lectores viejos.
+        default_match_modality:
+          legacyModality === "custom" || legacyModality == null
+            ? null
+            : legacyModality,
+      },
+      { onConflict: "user_id" },
+    );
+
+  if (prefErr) {
+    console.warn("[saveOnboarding] user_preferences upsert falló:", prefErr.message);
+    // No abortamos: el rating y profiles ya se actualizaron. El usuario puede
+    // seguir con onboarding; el skip flow simplemente no aplicará.
+  }
+
+  // Silence unused import warning — countRuleFromLegacyModality queda disponible
+  // para futuros usos si el schema legacy sigue creciendo.
+  void countRuleFromLegacyModality;
+
   return { ok: true as const, next: "/dashboard" };
 }
