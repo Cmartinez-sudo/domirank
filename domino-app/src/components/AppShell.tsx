@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 import { NavigationLoader } from "@/components/NavigationLoader";
 import { RealtimeNotifications } from "@/components/RealtimeNotifications";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -13,8 +14,12 @@ import { FloatingActionStack } from "@/components/match/FloatingActionStack";
 import { PodiumIcon } from "@/components/icons/PodiumIcon";
 import { TrophyIcon } from "@/components/icons/TrophyIcon";
 import { HamburgerDrawer } from "@/components/HamburgerDrawer";
+import { CreateSheet } from "@/components/CreateSheet";
+import { CreatePopover } from "@/components/CreatePopover";
+import { Avatar } from "@/components/Avatar";
+import type { AdminOrgSummary } from "@/lib/club-pro/auth";
 
-type NavItem = { href: string; label: string; icon: React.ReactNode; isCenter?: boolean; beta?: boolean; badge?: number };
+type NavItem = { href: string; label: string; icon: React.ReactNode; beta?: boolean; badge?: number };
 
 const ICON = {
   home: (
@@ -52,6 +57,12 @@ const ICON = {
   users: (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
   ),
+  user: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+  ),
+  plus: (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  ),
   book: (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
   ),
@@ -64,15 +75,19 @@ export function AppShell({
   user,
   profile,
   counts,
+  adminOrgs = [],
   children,
 }: {
   user: { id: string } | null;
   profile: { username?: string; display_name?: string | null; avatar_url?: string | null } | null;
   counts?: { unread: number } | null;
+  adminOrgs?: AdminOrgSummary[];
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const createTriggerRef = useRef<HTMLButtonElement>(null);
 
   // El landing en "/" renderiza su propio layout (Topnav + Footer). AppShell
   // se hace a un lado para no duplicar chrome.
@@ -100,18 +115,81 @@ export function AppShell({
   }
 
   const isActive = (href: string) => {
-    if (href === "/matches/new") return pathname.startsWith("/matches");
     return pathname === href || pathname.startsWith(href + "/");
   };
 
   const unread = counts?.unread ?? 0;
-  const items: NavItem[] = [
+  // Tabs primarios del bottom-nav mobile (4). En el centro va el FAB Crear,
+  // que es un &lt;button&gt;, no un tab. Torneos vive en el drawer.
+  const primaryTabs: NavItem[] = [
     { href: "/dashboard",    label: "Inicio",   icon: ICON.home },
     { href: "/leaderboard",  label: "Ranking",  icon: ICON.podium },
-    { href: "/matches/new",  label: "Jugar",    icon: ICON.domino, isCenter: true },
-    { href: "/tournaments",  label: "Torneos",  icon: ICON.trophy, beta: true },
     { href: "/groups",       label: "Grupos",   icon: ICON.users },
+    { href: "/profile",      label: "Perfil",   icon: ICON.user },
   ];
+  // Ítem adicional que solo aparece en el sidebar desktop (en mobile va al drawer).
+  const desktopExtras: NavItem[] = [
+    { href: "/tournaments",  label: "Torneos",  icon: ICON.trophy, beta: true },
+  ];
+
+  function renderMobileTab(it: NavItem, active: boolean, avatarProfile?: typeof profile | null) {
+    const showAvatar = it.href === "/profile" && avatarProfile;
+    return (
+      <Link
+        key={it.href}
+        href={it.href}
+        aria-current={active ? "page" : undefined}
+        className={`group flex flex-col items-center justify-center gap-1 transition-all ${
+          active ? "text-primary" : "text-text-mute"
+        }`}
+      >
+        <span className={`relative transition-transform ${active ? "scale-110" : "opacity-70"}`}>
+          {showAvatar ? (
+            <span className={`inline-flex rounded-full ${active ? "ring-2 ring-emerald-500 ring-offset-2 ring-offset-bg" : ""}`}>
+              <Avatar player={avatarProfile as never} size={28} />
+            </span>
+          ) : (
+            it.icon
+          )}
+        </span>
+        {!showAvatar && (
+          <span className={`text-[10px] font-semibold tracking-wide ${active ? "opacity-100" : "opacity-60"}`}>
+            {it.label}
+          </span>
+        )}
+      </Link>
+    );
+  }
+
+  function renderSidebarLink(it: NavItem, active: boolean, avatarProfile?: typeof profile | null) {
+    return (
+      <Link
+        key={it.href}
+        href={it.href}
+        aria-current={active ? "page" : undefined}
+        className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
+          active ? "bg-surface-2 text-text" : "text-text-dim hover:text-text hover:bg-surface-2"
+        }`}
+      >
+        <span className={`relative ${active ? "opacity-100 text-primary" : "opacity-50"}`}>
+          {avatarProfile ? (
+            <Avatar player={avatarProfile as never} size={24} />
+          ) : (
+            it.icon
+          )}
+          {it.badge != null && it.badge > 0 && (
+            <span className="absolute -top-1 -right-1.5 grid place-items-center min-w-[18px] h-[18px] px-1 rounded-full bg-danger text-white text-[10px] font-bold leading-none border border-bg-2">
+              {it.badge > 9 ? "9+" : it.badge}
+            </span>
+          )}
+        </span>
+        <span className={`text-[14px] ${active ? "font-semibold" : ""}`}>{it.label}</span>
+        {it.beta && (
+          <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(251,191,36,.15)", color: "#fbbf24" }}>beta</span>
+        )}
+      </Link>
+    );
+  }
 
   return (
     <div className="min-h-screen md:flex">
@@ -142,34 +220,37 @@ export function AppShell({
             <NotificationBell userId={user.id} initialUnreadCount={unread} />
           </div>
           <nav className="flex-1 px-3 space-y-0.5 py-3">
-            {items.map((it) => {
-              const active = isActive(it.href);
-              return (
-                <Link
-                  key={it.href}
-                  href={it.href}
-                  aria-current={active ? "page" : undefined}
-                  className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
-                    active
-                      ? "bg-surface-2 text-text"
-                      : "text-text-dim hover:text-text hover:bg-surface-2"
-                  }`}
-                >
-                  <span className={`relative ${active ? "opacity-100 text-primary" : "opacity-50"}`}>
-                    {it.icon}
-                    {it.badge != null && it.badge > 0 && (
-                      <span className="absolute -top-1 -right-1.5 grid place-items-center min-w-[18px] h-[18px] px-1 rounded-full bg-danger text-white text-[10px] font-bold leading-none border border-bg-2">
-                        {it.badge > 9 ? "9+" : it.badge}
-                      </span>
-                    )}
-                  </span>
-                  <span className={`text-[14px] ${active ? "font-semibold" : ""}`}>{it.label}</span>
-                  {it.beta && (
-                    <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(251,191,36,.15)", color: "#fbbf24" }}>beta</span>
-                  )}
-                </Link>
-              );
-            })}
+            {/* Inicio, Ranking */}
+            {primaryTabs.slice(0, 2).map((it) => renderSidebarLink(it, isActive(it.href)))}
+
+            {/* Crear (+) — anclado con popover */}
+            <div className="relative">
+              <button
+                ref={createTriggerRef}
+                type="button"
+                onClick={() => setCreateOpen((v) => !v)}
+                aria-label="Crear"
+                aria-haspopup="menu"
+                aria-expanded={createOpen}
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
+                  createOpen ? "bg-surface-2 text-text" : "text-text-dim hover:text-text hover:bg-surface-2"
+                }`}
+              >
+                <span className={`grid place-items-center w-6 h-6 rounded-md bg-emerald-500 text-white transition-transform ${createOpen ? "rotate-45" : ""}`}>
+                  {ICON.plus}
+                </span>
+                <span className="text-[14px] font-semibold">Crear</span>
+              </button>
+              <CreatePopover open={createOpen} onClose={() => setCreateOpen(false)} anchorRef={createTriggerRef} />
+            </div>
+
+            {/* Grupos, Perfil */}
+            {primaryTabs.slice(2).map((it) => renderSidebarLink(it, isActive(it.href), it.href === "/profile" ? profile : null))}
+
+            {/* Torneos (secundario) */}
+            {desktopExtras.map((it) => renderSidebarLink(it, isActive(it.href)))}
+
+            {/* Menú (drawer) */}
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
@@ -237,104 +318,52 @@ export function AppShell({
         )}
       </div>
 
-      {/* BOTTOM NAV mobile */}
+      {/* BOTTOM NAV mobile — 5 celdas: Inicio · Ranking · Crear(+) · Grupos · Perfil */}
       {user && (
         <nav
           className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-bg/90 backdrop-blur-xl border-t border-border"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           <div className="grid grid-cols-5 max-w-md mx-auto h-[62px]">
-            {items.map((it) => {
-              const active = isActive(it.href);
-              return (
-                <Link
-                  key={it.href}
-                  href={it.href}
-                  aria-current={active ? "page" : undefined}
-                  aria-label={it.isCenter ? "Nueva partida" : undefined}
-                  className={`group flex flex-col items-center justify-center gap-1 transition-all ${
-                    it.isCenter ? "" : active ? "text-primary" : "text-text-mute"
-                  }`}
+            {renderMobileTab(primaryTabs[0], isActive(primaryTabs[0].href))}
+            {renderMobileTab(primaryTabs[1], isActive(primaryTabs[1].href))}
+
+            {/* FAB Crear (centro) — NO navega, abre CreateSheet */}
+            <div className="flex items-center justify-center">
+              <button
+                type="button"
+                onClick={() => setCreateOpen((v) => !v)}
+                aria-label="Crear"
+                aria-haspopup="menu"
+                aria-expanded={createOpen}
+                className="relative flex items-center justify-center -mt-7 transition-all duration-200 ease-out hover:scale-105 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400 focus-visible:outline-offset-4 rounded-lg"
+                style={{
+                  filter:
+                    "drop-shadow(0 6px 8px rgba(0,0,0,0.35)) drop-shadow(0 2px 4px rgba(0,0,0,0.25))",
+                }}
+              >
+                <motion.span
+                  animate={{ rotate: createOpen ? 45 : 0 }}
+                  transition={{ type: "spring", damping: 18, stiffness: 320 }}
+                  className="grid place-items-center w-14 h-10 rounded-xl bg-gradient-to-b from-emerald-500 to-emerald-600 border border-emerald-700/40 text-white"
+                  aria-hidden="true"
                 >
-                  {it.isCenter ? (
-                    <span
-                      className="relative flex items-center justify-center -mt-7 transition-all duration-200 ease-out hover:scale-105 active:scale-95 active:[filter:drop-shadow(0_3px_4px_rgba(0,0,0,0.3))] group-focus-visible:[outline:2px_solid_#34d399] group-focus-visible:outline-offset-4 group-focus-visible:rounded-md"
-                      style={{
-                        filter:
-                          "drop-shadow(0 6px 8px rgba(0,0,0,0.35)) drop-shadow(0 2px 4px rgba(0,0,0,0.25))",
-                      }}
-                    >
-                      <svg
-                        width="52"
-                        height="34"
-                        viewBox="0 0 36 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        style={{ transform: "rotate(-15deg)" }}
-                        aria-hidden="true"
-                      >
-                        <defs>
-                          <linearGradient id="domino-tile-gradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#10b981" />
-                            <stop offset="100%" stopColor="#059669" />
-                          </linearGradient>
-                        </defs>
-                        {/* Cuerpo de la ficha — verde DomiRank (emerald-500 → emerald-600) */}
-                        <rect
-                          x="0.5"
-                          y="0.5"
-                          width="35"
-                          height="23"
-                          rx="3"
-                          fill="url(#domino-tile-gradient)"
-                          stroke="rgba(0,0,0,0.25)"
-                          strokeWidth="0.5"
-                        />
-                        {/* Línea divisora central */}
-                        <line
-                          x1="18"
-                          y1="3"
-                          x2="18"
-                          y2="21"
-                          stroke="#1a1a1a"
-                          strokeWidth="0.6"
-                          strokeLinecap="round"
-                        />
-                        {/* Izquierda: 5 pips (X) */}
-                        <circle cx="5"  cy="6"  r="1.3" fill="#1a1a1a" />
-                        <circle cx="13" cy="6"  r="1.3" fill="#1a1a1a" />
-                        <circle cx="9"  cy="12" r="1.3" fill="#1a1a1a" />
-                        <circle cx="5"  cy="18" r="1.3" fill="#1a1a1a" />
-                        <circle cx="13" cy="18" r="1.3" fill="#1a1a1a" />
-                        {/* Derecha: 3 pips (diagonal) */}
-                        <circle cx="23" cy="6"  r="1.3" fill="#1a1a1a" />
-                        <circle cx="27" cy="12" r="1.3" fill="#1a1a1a" />
-                        <circle cx="31" cy="18" r="1.3" fill="#1a1a1a" />
-                      </svg>
-                    </span>
-                  ) : (
-                    <span className={`relative transition-transform ${active ? "scale-110" : "opacity-50"}`}>
-                      {it.icon}
-                      {it.beta && (
-                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-yellow-400 border border-bg" />
-                      )}
-                      {it.badge != null && it.badge > 0 && (
-                        <span className="absolute -top-1.5 -right-2 grid place-items-center min-w-[18px] h-[18px] px-1 rounded-full bg-danger text-white text-[10px] font-bold leading-none border border-bg">
-                          {it.badge > 9 ? "9+" : it.badge}
-                        </span>
-                      )}
-                    </span>
-                  )}
-                  {!it.isCenter && (
-                    <span className={`text-[10px] font-semibold tracking-wide ${active ? "opacity-100" : "opacity-60"}`}>
-                      {it.label}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
+                  {ICON.plus}
+                </motion.span>
+              </button>
+            </div>
+
+            {renderMobileTab(primaryTabs[2], isActive(primaryTabs[2].href))}
+            {renderMobileTab(primaryTabs[3], isActive(primaryTabs[3].href), profile)}
           </div>
         </nav>
+      )}
+
+      {/* Sheet Crear (mobile) — el sidebar desktop usa CreatePopover */}
+      {user && (
+        <div className="md:hidden">
+          <CreateSheet open={createOpen} onClose={() => setCreateOpen(false)} />
+        </div>
       )}
 
       {/* Drawer hamburger (mobile + desktop) */}
@@ -343,6 +372,7 @@ export function AppShell({
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
           profile={profile}
+          adminOrgs={adminOrgs}
         />
       )}
     </div>

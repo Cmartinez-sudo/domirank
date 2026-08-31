@@ -1,19 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { getDisplayRating } from "@/lib/rating";
+import type { AdminOrgSummary } from "@/lib/club-pro/auth";
 
 /**
- * Drawer lateral con items secundarios (Fase C+D #4 — nav global).
+ * Drawer lateral con items secundarios.
  *
  * Contenido:
- *  - Card del perfil (avatar, display_name, @username, DomiRank Global).
+ *  - Card del perfil → /profile.
+ *  - Torneos (badge beta).
  *  - Amigos.
+ *  - Administrar club/org (solo si el user es owner/admin de alguna org).
  *  - Cómo funciona.
- *  - Settings.
+ *  - Ajustes.
  *  - Cerrar sesión.
  *
  * UX: slide-in desde la derecha (mobile + desktop). Backdrop oscuro.
@@ -34,10 +37,12 @@ export function HamburgerDrawer({
   open,
   onClose,
   profile,
+  adminOrgs = [],
 }: {
   open: boolean;
   onClose: () => void;
   profile: DrawerProfile | null;
+  adminOrgs?: AdminOrgSummary[];
 }) {
   const pathname = usePathname();
 
@@ -106,10 +111,10 @@ export function HamburgerDrawer({
           </button>
         </div>
 
-        {/* Card del perfil */}
+        {/* Card del perfil → /profile (destino canónico de "yo") */}
         {profile && (
           <Link
-            href="/settings"
+            href="/profile"
             className="m-3 p-4 rounded-2xl bg-surface-2 border border-border hover:border-border-strong transition-colors flex items-center gap-3"
           >
             <Avatar player={profile as never} size={48} />
@@ -132,7 +137,15 @@ export function HamburgerDrawer({
 
         {/* Items */}
         <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
+          <DrawerLink href="/tournaments" icon={ICON_TROPHY} label="Torneos" beta />
           <DrawerLink href="/friends" icon={ICON_FRIENDS} label="Amigos" />
+          {adminOrgs.length > 0 && (
+            <DrawerLink
+              href={adminOrgs.length === 1 ? `/admin/org/${adminOrgs[0].slug}` : "/admin"}
+              icon={ICON_SHIELD}
+              label="Administrar club/org"
+            />
+          )}
           <DrawerLink href="/como-funciona" icon={ICON_BOOK} label="Cómo funciona" />
           <DrawerLink href="/settings" icon={ICON_SETTINGS} label="Ajustes" />
         </nav>
@@ -158,10 +171,12 @@ function DrawerLink({
   href,
   icon,
   label,
+  beta,
 }: {
   href: string;
   icon: React.ReactNode;
   label: string;
+  beta?: boolean;
 }) {
   return (
     <Link
@@ -169,7 +184,10 @@ function DrawerLink({
       className="flex items-center gap-3 px-3 py-3 rounded-xl text-text-dim hover:text-text hover:bg-surface-2 transition-colors text-sm font-medium"
     >
       <span aria-hidden="true" className="opacity-70">{icon}</span>
-      {label}
+      <span className="flex-1">{label}</span>
+      {beta && (
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(251,191,36,.15)", color: "#fbbf24" }}>beta</span>
+      )}
     </Link>
   );
 }
@@ -183,6 +201,25 @@ const ICON_FRIENDS = (
     <circle cx="9" cy="7" r="4" />
     <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
     <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
+
+const ICON_TROPHY = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+    <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+    <path d="M4 22h16" />
+    <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+  </svg>
+);
+
+const ICON_SHIELD = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
   </svg>
 );
 

@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import { getCurrentUser, getCurrentProfile } from "@/lib/auth";
 import { getNotificationCounts } from "@/lib/notifications";
 import type { NotificationCounts } from "@/lib/notifications-types";
+import { getUserAdminOrgs, type AdminOrgSummary } from "@/lib/club-pro/auth";
 import { AppShell } from "@/components/AppShell";
 import { TournamentPopupGate } from "@/components/tournament/TournamentPopupGate";
 import { ToastProvider } from "@/components/Toast";
@@ -87,6 +88,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   let profile: any = null;
   let counts: NotificationCounts | null = null;
   let pendingTournaments: PendingTournament[] = [];
+  let adminOrgs: AdminOrgSummary[] = [];
 
   try {
     const u = await getCurrentUser();
@@ -95,6 +97,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       fullUser = u;
       try { profile = await getCurrentProfile(); } catch (e) { console.error("[layout] profile failed:", e); }
       try { counts = await getNotificationCounts(u.id); } catch (e) { console.error("[layout] counts failed:", e); }
+      try { adminOrgs = await getUserAdminOrgs(u.id); } catch (e) { console.error("[layout] adminOrgs failed:", e); }
       try {
         const supabase = await (await import("@/lib/supabase/server")).supabaseServer();
         const { data } = await supabase.rpc("get_user_pending_tournaments", {
@@ -133,7 +136,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         >
           <MotionGate>
             <ToastProvider>
-              <AppShell user={user} profile={profile} counts={counts}>
+              <AppShell user={user} profile={profile} counts={counts} adminOrgs={adminOrgs}>
                 {children}
               </AppShell>
             </ToastProvider>
