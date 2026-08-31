@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       friend_requests: {
@@ -784,10 +759,10 @@ export type Database = {
           cancelled_by_user_id: string | null
           capicua_bonus: number
           confirmed_at: string | null
+          count_rule: string | null
           created_at: string
           created_by: string | null
           finalized_at: string | null
-          count_rule: string | null
           finished_at: string | null
           format: string
           id: string
@@ -1416,22 +1391,6 @@ export type Database = {
           doubles_points_won: number
           doubles_sigma: number
           doubles_wins: number
-          mesa_doubles_elo: number
-          mesa_doubles_games: number
-          mesa_doubles_losses: number
-          mesa_doubles_mu: number
-          mesa_doubles_points_lost: number
-          mesa_doubles_points_won: number
-          mesa_doubles_sigma: number
-          mesa_doubles_wins: number
-          rival_doubles_elo: number
-          rival_doubles_games: number
-          rival_doubles_losses: number
-          rival_doubles_mu: number
-          rival_doubles_points_lost: number
-          rival_doubles_points_won: number
-          rival_doubles_sigma: number
-          rival_doubles_wins: number
           email_notifications: boolean
           full_name: string | null
           ghost_created_by_tournament_id: string | null
@@ -1440,6 +1399,14 @@ export type Database = {
           initial_skill_points: number | null
           is_ghost: boolean
           is_rated: boolean | null
+          mesa_doubles_elo: number
+          mesa_doubles_games: number
+          mesa_doubles_losses: number
+          mesa_doubles_mu: number
+          mesa_doubles_points_lost: number
+          mesa_doubles_points_won: number
+          mesa_doubles_sigma: number
+          mesa_doubles_wins: number
           onboarded: boolean
           privacy_accepted_at: string | null
           reliability_attestation: number
@@ -1448,6 +1415,14 @@ export type Database = {
           reliability_score: number
           reliability_updated_at: string | null
           reliability_volume: number
+          rival_doubles_elo: number
+          rival_doubles_games: number
+          rival_doubles_losses: number
+          rival_doubles_mu: number
+          rival_doubles_points_lost: number
+          rival_doubles_points_won: number
+          rival_doubles_sigma: number
+          rival_doubles_wins: number
           role: string
           signup_method: string | null
           terms_accepted_at: string | null
@@ -1481,22 +1456,6 @@ export type Database = {
           doubles_points_won?: number
           doubles_sigma?: number
           doubles_wins?: number
-          mesa_doubles_elo?: number
-          mesa_doubles_games?: number
-          mesa_doubles_losses?: number
-          mesa_doubles_mu?: number
-          mesa_doubles_points_lost?: number
-          mesa_doubles_points_won?: number
-          mesa_doubles_sigma?: number
-          mesa_doubles_wins?: number
-          rival_doubles_elo?: number
-          rival_doubles_games?: number
-          rival_doubles_losses?: number
-          rival_doubles_mu?: number
-          rival_doubles_points_lost?: number
-          rival_doubles_points_won?: number
-          rival_doubles_sigma?: number
-          rival_doubles_wins?: number
           email_notifications?: boolean
           full_name?: string | null
           ghost_created_by_tournament_id?: string | null
@@ -1505,6 +1464,14 @@ export type Database = {
           initial_skill_points?: number | null
           is_ghost?: boolean
           is_rated?: boolean | null
+          mesa_doubles_elo?: number
+          mesa_doubles_games?: number
+          mesa_doubles_losses?: number
+          mesa_doubles_mu?: number
+          mesa_doubles_points_lost?: number
+          mesa_doubles_points_won?: number
+          mesa_doubles_sigma?: number
+          mesa_doubles_wins?: number
           onboarded?: boolean
           privacy_accepted_at?: string | null
           reliability_attestation?: number
@@ -1513,6 +1480,14 @@ export type Database = {
           reliability_score?: number
           reliability_updated_at?: string | null
           reliability_volume?: number
+          rival_doubles_elo?: number
+          rival_doubles_games?: number
+          rival_doubles_losses?: number
+          rival_doubles_mu?: number
+          rival_doubles_points_lost?: number
+          rival_doubles_points_won?: number
+          rival_doubles_sigma?: number
+          rival_doubles_wins?: number
           role?: string
           signup_method?: string | null
           terms_accepted_at?: string | null
@@ -1546,22 +1521,6 @@ export type Database = {
           doubles_points_won?: number
           doubles_sigma?: number
           doubles_wins?: number
-          mesa_doubles_elo?: number
-          mesa_doubles_games?: number
-          mesa_doubles_losses?: number
-          mesa_doubles_mu?: number
-          mesa_doubles_points_lost?: number
-          mesa_doubles_points_won?: number
-          mesa_doubles_sigma?: number
-          mesa_doubles_wins?: number
-          rival_doubles_elo?: number
-          rival_doubles_games?: number
-          rival_doubles_losses?: number
-          rival_doubles_mu?: number
-          rival_doubles_points_lost?: number
-          rival_doubles_points_won?: number
-          rival_doubles_sigma?: number
-          rival_doubles_wins?: number
           email_notifications?: boolean
           full_name?: string | null
           ghost_created_by_tournament_id?: string | null
@@ -1570,6 +1529,14 @@ export type Database = {
           initial_skill_points?: number | null
           is_ghost?: boolean
           is_rated?: boolean | null
+          mesa_doubles_elo?: number
+          mesa_doubles_games?: number
+          mesa_doubles_losses?: number
+          mesa_doubles_mu?: number
+          mesa_doubles_points_lost?: number
+          mesa_doubles_points_won?: number
+          mesa_doubles_sigma?: number
+          mesa_doubles_wins?: number
           onboarded?: boolean
           privacy_accepted_at?: string | null
           reliability_attestation?: number
@@ -1578,6 +1545,14 @@ export type Database = {
           reliability_score?: number
           reliability_updated_at?: string | null
           reliability_volume?: number
+          rival_doubles_elo?: number
+          rival_doubles_games?: number
+          rival_doubles_losses?: number
+          rival_doubles_mu?: number
+          rival_doubles_points_lost?: number
+          rival_doubles_points_won?: number
+          rival_doubles_sigma?: number
+          rival_doubles_wins?: number
           role?: string
           signup_method?: string | null
           terms_accepted_at?: string | null
@@ -2165,6 +2140,7 @@ export type Database = {
           d9_doubles_points_won: number | null
           d9_doubles_sigma: number | null
           d9_doubles_wins: number | null
+          default_count_rule: string | null
           default_modality: string | null
           display_name: string | null
           global_display: number | null
@@ -2174,6 +2150,16 @@ export type Database = {
           global_sigma: number | null
           id: string | null
           is_rated: boolean | null
+          mesa_doubles_display: number | null
+          mesa_doubles_elo: number | null
+          mesa_doubles_games: number | null
+          mesa_doubles_losses: number | null
+          mesa_doubles_mu: number | null
+          mesa_doubles_ordinal: number | null
+          mesa_doubles_points_lost: number | null
+          mesa_doubles_points_won: number | null
+          mesa_doubles_sigma: number | null
+          mesa_doubles_wins: number | null
           onboarded: boolean | null
           reliability_attestation: number | null
           reliability_diversity: number | null
@@ -2181,6 +2167,16 @@ export type Database = {
           reliability_score: number | null
           reliability_updated_at: string | null
           reliability_volume: number | null
+          rival_doubles_display: number | null
+          rival_doubles_elo: number | null
+          rival_doubles_games: number | null
+          rival_doubles_losses: number | null
+          rival_doubles_mu: number | null
+          rival_doubles_ordinal: number | null
+          rival_doubles_points_lost: number | null
+          rival_doubles_points_won: number | null
+          rival_doubles_sigma: number | null
+          rival_doubles_wins: number | null
           total_games: number | null
           total_losses: number | null
           total_points_lost: number | null
@@ -2281,12 +2277,15 @@ export type Database = {
       }
       calc_global_ordinal_v2: {
         Args: {
-          d6_games: number
-          d6_mu: number
-          d6_sigma: number
           d9_games: number
           d9_mu: number
           d9_sigma: number
+          mesa_games: number
+          mesa_mu: number
+          mesa_sigma: number
+          rival_games: number
+          rival_mu: number
+          rival_sigma: number
         }
         Returns: number
       }
@@ -2440,6 +2439,9 @@ export type Database = {
         Returns: {
           avatar_url: string
           display_name: string
+          effectiveness_coefficient: number
+          global_display: number
+          is_rated: boolean
           last5: string[]
           losses: number
           pc: number
@@ -2467,6 +2469,15 @@ export type Database = {
         }[]
       }
       increment_edit_count: { Args: { p_round_id: number }; Returns: undefined }
+      insert_match_round: {
+        Args: {
+          p_kind: string
+          p_match_id: string
+          p_points: number
+          p_team: number
+        }
+        Returns: number
+      }
       is_group_admin: {
         Args: { p_group_id: string; p_user_id: string }
         Returns: boolean
@@ -2672,9 +2683,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },
