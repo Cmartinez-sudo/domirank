@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
 import { computeRatingPayload } from "@/lib/match-rating-compute";
-import { ratingCol } from "@/lib/rating-buckets";
+import { bucketColumn, bucketForMatch } from "@/lib/rating-buckets";
 import type { SetCode, FormatCode } from "@/lib/modalidades";
 import { buildMatchEmailMeta, sendToUserIds } from "@/lib/match-notifications";
 import { matchConfirmedEmail, matchDisputedEmail } from "@/lib/email-templates";
@@ -186,7 +186,7 @@ export async function applyMatchRating(matchId: string): Promise<{ ok: true } | 
 
   const { data: match } = await supabase
     .from("matches")
-    .select("id, status, format, set_size, rated_at, rated")
+    .select("id, status, format, set_size, count_rule, modality, rated_at, rated")
     .eq("id", matchId)
     .single();
   if (!match) return { ok: false, error: "match_not_found" };
@@ -223,8 +223,16 @@ export async function applyMatchRating(matchId: string): Promise<{ ok: true } | 
     .select("team, points")
     .eq("match_id", matchId);
 
-  const eloCol   = ratingCol(match.set_size as SetCode, match.format as FormatCode, "elo");
-  const gamesCol = ratingCol(match.set_size as SetCode, match.format as FormatCode, "games");
+  const countRule = ((match as { count_rule?: string | null }).count_rule ?? null) as
+    | "rival" | "mesa" | null;
+  const modality = (match as { modality?: string | null }).modality ?? null;
+  const bucket = bucketForMatch({
+    set_size: match.set_size as SetCode,
+    count_rule: countRule,
+    modality,
+  });
+  const eloCol   = bucketColumn(bucket, "elo");
+  const gamesCol = bucketColumn(bucket, "games");
   const userIds  = mps.map((r) => r.user_id);
   const { data: profiles, error: pErr } = await supabase
     .from("profiles")
@@ -235,6 +243,8 @@ export async function applyMatchRating(matchId: string): Promise<{ ok: true } | 
   const computed = computeRatingPayload({
     format:        match.format as FormatCode,
     setSize:       match.set_size as SetCode,
+    countRule,
+    modality,
     matchPlayers:  mps,
     matchRounds:   rounds ?? [],
     profiles:      profiles as unknown as Array<{ id: string; [k: string]: string | number }>,
