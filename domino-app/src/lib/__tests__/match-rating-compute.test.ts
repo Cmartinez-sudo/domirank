@@ -1,11 +1,15 @@
 import { describe, it, expect } from "vitest";
 import { computeRatingPayload } from "../match-rating-compute";
 
-// Helper: build a profile row with the expected bucket columns.
-// Post-Fase-A: solo doubles. El set determina qué bucket de columnas se usa.
-function profile(id: string, elo: number, games: number, set: "d6" | "d9" = "d6") {
-  const base = set === "d6" ? "doubles" : "d9_doubles";
-  return { id, [`${base}_elo`]: elo, [`${base}_games`]: games };
+// Helper: build a profile row con las columnas del bucket esperado.
+// Post-0106: rating por count_rule. Default = rival_doubles (matches d6).
+function profile(
+  id: string,
+  elo: number,
+  games: number,
+  bucket: "rival_doubles" | "mesa_doubles" | "d9_doubles" = "rival_doubles",
+) {
+  return { id, [`${bucket}_elo`]: elo, [`${bucket}_games`]: games };
 }
 
 describe("computeRatingPayload — guard clauses", () => {
@@ -42,11 +46,42 @@ describe("computeRatingPayload — guard clauses", () => {
   });
 });
 
-describe("computeRatingPayload — doubles 2v2 (d9 bucket selection)", () => {
-  it("reads elo/games from d9_doubles when setSize=d9", () => {
+describe("computeRatingPayload — bucket selection por count_rule/set", () => {
+  it("route a mesa_doubles cuando count_rule='mesa' (d6)", () => {
+    const r = computeRatingPayload({
+      format: "doubles",
+      setSize: "d6",
+      countRule: "mesa",
+      matchPlayers: [
+        { user_id: "a", team: 1 },
+        { user_id: "b", team: 1 },
+        { user_id: "c", team: 2 },
+        { user_id: "d", team: 2 },
+      ],
+      matchRounds: [
+        { team: 1, points: 200 },
+        { team: 2, points: 150 },
+      ],
+      profiles: [
+        // mesa poblado, rival intencionalmente errado para confirmar bucket.
+        { id: "a", mesa_doubles_elo: 1500, mesa_doubles_games: 10, rival_doubles_elo: 9999, rival_doubles_games: 9999 },
+        { id: "b", mesa_doubles_elo: 1500, mesa_doubles_games: 10, rival_doubles_elo: 9999, rival_doubles_games: 9999 },
+        { id: "c", mesa_doubles_elo: 1500, mesa_doubles_games: 10, rival_doubles_elo: 9999, rival_doubles_games: 9999 },
+        { id: "d", mesa_doubles_elo: 1500, mesa_doubles_games: 10, rival_doubles_elo: 9999, rival_doubles_games: 9999 },
+      ],
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const a = r.payload.find((p) => p.user_id === "a")!;
+    expect(a.elo_before).toBe(1500);
+    expect(a.elo_after).toBeGreaterThan(1500);
+  });
+
+  it("route a d9_doubles cuando set_size='d9' (legacy path)", () => {
     const r = computeRatingPayload({
       format: "doubles",
       setSize: "d9",
+      countRule: "rival",
       matchPlayers: [
         { user_id: "a", team: 1 },
         { user_id: "b", team: 1 },
@@ -58,20 +93,16 @@ describe("computeRatingPayload — doubles 2v2 (d9 bucket selection)", () => {
         { team: 2, points: 120 },
       ],
       profiles: [
-        // d9 columns populated, d6 columns intentionally wrong to assert we
-        // read the right bucket. If the code reads `doubles_elo` (d6) por error,
-        // el engine ve 9999 y la matemática se rompe.
-        { id: "a", d9_doubles_elo: 1500, d9_doubles_games: 10, doubles_elo: 9999, doubles_games: 9999 },
-        { id: "b", d9_doubles_elo: 1500, d9_doubles_games: 10, doubles_elo: 9999, doubles_games: 9999 },
-        { id: "c", d9_doubles_elo: 1500, d9_doubles_games: 10, doubles_elo: 9999, doubles_games: 9999 },
-        { id: "d", d9_doubles_elo: 1500, d9_doubles_games: 10, doubles_elo: 9999, doubles_games: 9999 },
+        { id: "a", d9_doubles_elo: 1500, d9_doubles_games: 10, rival_doubles_elo: 9999, rival_doubles_games: 9999 },
+        { id: "b", d9_doubles_elo: 1500, d9_doubles_games: 10, rival_doubles_elo: 9999, rival_doubles_games: 9999 },
+        { id: "c", d9_doubles_elo: 1500, d9_doubles_games: 10, rival_doubles_elo: 9999, rival_doubles_games: 9999 },
+        { id: "d", d9_doubles_elo: 1500, d9_doubles_games: 10, rival_doubles_elo: 9999, rival_doubles_games: 9999 },
       ],
     });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const a = r.payload.find((p) => p.user_id === "a")!;
-    expect(a.elo_before).toBe(1500); // not 9999 (proves bucket selection works)
-    expect(a.elo_after).toBeGreaterThan(1500);
+    expect(a.elo_before).toBe(1500);
   });
 });
 

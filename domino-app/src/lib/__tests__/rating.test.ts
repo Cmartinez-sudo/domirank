@@ -266,12 +266,13 @@ describe("toDisplayRating", () => {
 // ─── globalRating ─────────────────────────────────────────────────────────────
 
 describe("globalRating", () => {
-  it("weighted average of two active buckets", () => {
-    // d6_doubles: elo=1600, games=20; d9_doubles: elo=1700, games=30
+  it("weighted average of two active buckets (rival + mesa)", () => {
+    // rival: elo=1600, games=20; mesa: elo=1700, games=30; d9 sin partidas
     // weighted = (1600*20 + 1700*30) / 50 = 83000/50 = 1660
     const result = globalRating({
-      d6_doubles: { elo: 1600, games_played: 20 },
-      d9_doubles: { elo: 1700, games_played: 30 },
+      rival_doubles: { elo: 1600, games_played: 20 },
+      mesa_doubles: { elo: 1700, games_played: 30 },
+      d9_doubles: { elo: DEFAULT_ELO, games_played: 0 },
     });
     expect(result.elo).toBe(1660);
     expect(result.games_played).toBe(50);
@@ -280,7 +281,8 @@ describe("globalRating", () => {
 
   it("no buckets played → display is null", () => {
     const result = globalRating({
-      d6_doubles: { elo: DEFAULT_ELO, games_played: 0 },
+      rival_doubles: { elo: DEFAULT_ELO, games_played: 0 },
+      mesa_doubles: { elo: DEFAULT_ELO, games_played: 0 },
       d9_doubles: { elo: DEFAULT_ELO, games_played: 0 },
     });
     expect(result.display).toBeNull();
@@ -289,7 +291,8 @@ describe("globalRating", () => {
 
   it("total games < DOMIRANK_MIN_GAMES → display is null", () => {
     const result = globalRating({
-      d6_doubles: { elo: 1600, games_played: 3 },
+      rival_doubles: { elo: 1600, games_played: 3 },
+      mesa_doubles: { elo: DEFAULT_ELO, games_played: 0 },
       d9_doubles: { elo: DEFAULT_ELO, games_played: 0 },
     });
     expect(result.games_played).toBe(3);
@@ -299,10 +302,23 @@ describe("globalRating", () => {
 
   it("total games >= DOMIRANK_MIN_GAMES → display is a number", () => {
     const result = globalRating({
-      d6_doubles: { elo: 1600, games_played: 5 },
+      rival_doubles: { elo: 1600, games_played: 5 },
+      mesa_doubles: { elo: DEFAULT_ELO, games_played: 0 },
       d9_doubles: { elo: DEFAULT_ELO, games_played: 0 },
     });
     expect(result.display).not.toBeNull();
+  });
+
+  it("d9 legacy bucket cuenta hacia global si tiene partidas históricas", () => {
+    // d9_doubles con juegos previos entra en el weighted avg como bucket legacy.
+    const result = globalRating({
+      rival_doubles: { elo: 1500, games_played: 10 },
+      mesa_doubles: { elo: DEFAULT_ELO, games_played: 0 },
+      d9_doubles: { elo: 1700, games_played: 10 },
+    });
+    // (1500*10 + 1700*10)/20 = 1600
+    expect(result.elo).toBe(1600);
+    expect(result.games_played).toBe(20);
   });
 });
 

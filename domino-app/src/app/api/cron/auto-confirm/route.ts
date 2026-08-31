@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseService } from "@/lib/supabase/service";
 import { computeRatingPayload } from "@/lib/match-rating-compute";
-import { ratingCol } from "@/lib/rating-buckets";
+import { bucketColumn, bucketForMatch } from "@/lib/rating-buckets";
 import type { SetCode, FormatCode } from "@/lib/modalidades";
 import { buildMatchEmailMeta, sendToMatchPlayers } from "@/lib/match-notifications";
 import { matchConfirmedEmail } from "@/lib/email-templates";
@@ -79,7 +79,7 @@ export async function GET(request: Request) {
   // este query las haría aparecer eternamente como pendientes.
   const { data: pending, error: pendingErr } = await supabase
     .from("matches")
-    .select("id, format, set_size, rated")
+    .select("id, format, set_size, count_rule, modality, rated")
     .eq("status", "confirmed")
     .eq("rated", true)
     .is("rated_at", null)
@@ -100,7 +100,15 @@ export async function GET(request: Request) {
 
   for (const m of pending ?? []) {
     try {
-      const ok = await applyRatingForMatch(supabase, m.id, m.format as FormatCode, (m.set_size ?? "d6") as SetCode);
+      const ok = await applyRatingForMatch(
+        supabase,
+        m.id,
+        m.format as FormatCode,
+        (m.set_size ?? "d6") as SetCode,
+        ((m as { count_rule?: string | null }).count_rule ?? null) as
+          | "rival" | "mesa" | null,
+        (m as { modality?: string | null }).modality ?? null,
+      );
       if (ok) ratingsApplied++; else ratingsFailed++;
     } catch (e) {
       console.error(`[cron] applyRating failed for ${m.id}:`, e);
@@ -125,9 +133,12 @@ async function applyRatingForMatch(
   matchId: string,
   format: FormatCode,
   setSize: SetCode,
+  countRule: "rival" | "mesa" | null,
+  modality: string | null,
 ): Promise<boolean> {
-  const eloCol   = ratingCol(setSize, format, "elo");
-  const gamesCol = ratingCol(setSize, format, "games");
+  const bucket = bucketForMatch({ set_size: setSize, count_rule: countRule, modality });
+  const eloCol   = bucketColumn(bucket, "elo");
+  const gamesCol = bucketColumn(bucket, "games");
 
   const { data: mps } = await supabase
     .from("match_players")
@@ -150,6 +161,8 @@ async function applyRatingForMatch(
   const computed = computeRatingPayload({
     format,
     setSize,
+    countRule,
+    modality,
     matchPlayers: mps,
     matchRounds:  rounds ?? [],
     profiles:     profiles as unknown as Array<{ id: string; [k: string]: string | number }>,

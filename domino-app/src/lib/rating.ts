@@ -68,10 +68,16 @@ export type PlayerRatingUpdate = {
   k_used: number;
 };
 
-export type RatingBucketKey = 'd6_doubles' | 'd9_doubles';
+/**
+ * Post-0106: rating por count_rule.
+ * `rival_doubles` + `mesa_doubles` son los buckets primarios.
+ * `d9_doubles` se conserva como bucket legacy — los matches d9 históricos
+ * siguen ahí; en la UI el set d9 está fuera del menú de creación.
+ */
+export type RatingBucketKey = 'rival_doubles' | 'mesa_doubles' | 'd9_doubles';
 
 export const RATING_BUCKETS: RatingBucketKey[] = [
-  'd6_doubles', 'd9_doubles',
+  'rival_doubles', 'mesa_doubles', 'd9_doubles',
 ];
 
 // ─── K-factor ────────────────────────────────────────────────────────────────
@@ -285,19 +291,29 @@ export function winProbability(teamA: Player[], teamB: Player[]): number {
 export type RatedProfileLike = {
   is_rated?: boolean | null;
   reliability_score?: number | null;
+  /** @deprecated legacy alias del bucket d6_doubles (pre-0106). En la vista
+   * `profile_ratings` post-0106, este campo equivale a rival_doubles_games.
+   * Se conserva por retrocompat de callers TS. */
   doubles_games?: number | null;
+  rival_doubles_games?: number | null;
+  mesa_doubles_games?: number | null;
   d9_doubles_games?: number | null;
 };
 
 /**
  * Returns true if the player has reached NR_THRESHOLD confirmed matches.
  * Prefers the DB column `is_rated` (canonical, GENERATED) when present;
- * falls back to summing bucket games for synthetic objects in tests.
+ * falls back to summing bucket games para synthetic objects in tests.
+ *
+ * Post-0106: la fuente de verdad de `is_rated` sigue siendo la columna
+ * generada; el fallback ahora suma rival + mesa + d9 (los 3 buckets vigentes).
  */
 export function isRated(p: RatedProfileLike): boolean {
   if (typeof p.is_rated === "boolean") return p.is_rated;
-  const total = (p.doubles_games ?? 0) + (p.d9_doubles_games ?? 0);
-  return total >= NR_THRESHOLD;
+  const rival = p.rival_doubles_games ?? p.doubles_games ?? 0;
+  const mesa = p.mesa_doubles_games ?? 0;
+  const d9 = p.d9_doubles_games ?? 0;
+  return rival + mesa + d9 >= NR_THRESHOLD;
 }
 
 /**
