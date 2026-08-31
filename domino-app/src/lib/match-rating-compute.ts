@@ -1,6 +1,6 @@
 import { updateRatings, type TeamInput, type PlayerRatingUpdate } from "./rating";
-import { ratingCol } from "./rating-buckets";
-import type { SetCode, FormatCode } from "./modalidades";
+import { bucketColumn, bucketForMatch } from "./rating-buckets";
+import type { CountRule, SetCode, FormatCode } from "./modalidades";
 
 /**
  * Pure rating-computation pipeline shared by `applyMatchRating` (live attest
@@ -42,16 +42,21 @@ export type ComputeResult =
 export function computeRatingPayload(args: {
   format: FormatCode;
   setSize: SetCode;
+  /** Regla de conteo. Requerido para rutear el rating al bucket correcto. */
+  countRule?: CountRule | null;
+  /** Legacy modality del match (para derivar count_rule si no viene poblado). */
+  modality?: string | null;
   matchPlayers: MatchPlayerRow[];
   matchRounds: MatchRoundRow[];
   profiles: ProfileRatingRow[];
 }): ComputeResult {
-  const { format, setSize, matchPlayers, matchRounds, profiles } = args;
+  const { setSize, countRule, modality, matchPlayers, matchRounds, profiles } = args;
 
   if (matchPlayers.length === 0) return { ok: false, error: "no_players" };
 
-  const eloCol   = ratingCol(setSize, format, "elo");
-  const gamesCol = ratingCol(setSize, format, "games");
+  const bucket = bucketForMatch({ set_size: setSize, count_rule: countRule, modality });
+  const eloCol   = bucketColumn(bucket, "elo");
+  const gamesCol = bucketColumn(bucket, "games");
 
   // 1) Aggregate team scores from match_rounds (source of truth, not the
   //    denormalized match_players.score which RLS may have blocked).

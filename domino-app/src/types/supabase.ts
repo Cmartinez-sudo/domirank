@@ -1416,6 +1416,22 @@ export type Database = {
           doubles_points_won: number
           doubles_sigma: number
           doubles_wins: number
+          mesa_doubles_elo: number
+          mesa_doubles_games: number
+          mesa_doubles_losses: number
+          mesa_doubles_mu: number
+          mesa_doubles_points_lost: number
+          mesa_doubles_points_won: number
+          mesa_doubles_sigma: number
+          mesa_doubles_wins: number
+          rival_doubles_elo: number
+          rival_doubles_games: number
+          rival_doubles_losses: number
+          rival_doubles_mu: number
+          rival_doubles_points_lost: number
+          rival_doubles_points_won: number
+          rival_doubles_sigma: number
+          rival_doubles_wins: number
           email_notifications: boolean
           full_name: string | null
           ghost_created_by_tournament_id: string | null
@@ -1465,6 +1481,22 @@ export type Database = {
           doubles_points_won?: number
           doubles_sigma?: number
           doubles_wins?: number
+          mesa_doubles_elo?: number
+          mesa_doubles_games?: number
+          mesa_doubles_losses?: number
+          mesa_doubles_mu?: number
+          mesa_doubles_points_lost?: number
+          mesa_doubles_points_won?: number
+          mesa_doubles_sigma?: number
+          mesa_doubles_wins?: number
+          rival_doubles_elo?: number
+          rival_doubles_games?: number
+          rival_doubles_losses?: number
+          rival_doubles_mu?: number
+          rival_doubles_points_lost?: number
+          rival_doubles_points_won?: number
+          rival_doubles_sigma?: number
+          rival_doubles_wins?: number
           email_notifications?: boolean
           full_name?: string | null
           ghost_created_by_tournament_id?: string | null
@@ -1514,6 +1546,22 @@ export type Database = {
           doubles_points_won?: number
           doubles_sigma?: number
           doubles_wins?: number
+          mesa_doubles_elo?: number
+          mesa_doubles_games?: number
+          mesa_doubles_losses?: number
+          mesa_doubles_mu?: number
+          mesa_doubles_points_lost?: number
+          mesa_doubles_points_won?: number
+          mesa_doubles_sigma?: number
+          mesa_doubles_wins?: number
+          rival_doubles_elo?: number
+          rival_doubles_games?: number
+          rival_doubles_losses?: number
+          rival_doubles_mu?: number
+          rival_doubles_points_lost?: number
+          rival_doubles_points_won?: number
+          rival_doubles_sigma?: number
+          rival_doubles_wins?: number
           email_notifications?: boolean
           full_name?: string | null
           ghost_created_by_tournament_id?: string | null
