@@ -5,14 +5,16 @@ import { useRouter } from "next/navigation";
 import { WizardStepLayout } from "@/components/wizard/WizardStepLayout";
 import {
   useTournamentDraft,
+  type CountRule,
   type Format,
-  type Modality,
+  type PresetIdInDraft,
   type Visibility,
 } from "@/hooks/useTournamentDraft";
 import {
   validateTournamentConfig,
   diaDeSemanaEs,
 } from "@/lib/tournament-validation";
+import { PRESETS } from "@/lib/modalidades";
 import { FormatPickerCards } from "@/components/tournament-wizard/FormatPickerCards";
 import { PlayersCountStepper } from "@/components/tournament-wizard/PlayersCountStepper";
 import { ModalityChips } from "@/components/tournament-wizard/ModalityChips";
@@ -20,7 +22,7 @@ import { AdvancedOptions } from "@/components/tournament-wizard/AdvancedOptions"
 import {
   GameConfigSection,
   DEFAULT_ROUNDS,
-  defaultPointsForModality,
+  defaultPointsForPreset,
 } from "@/components/tournament-wizard/GameConfigSection";
 
 /**
@@ -47,7 +49,21 @@ export function Step1Form({ userId }: { userId: string }) {
   const [name, setName] = useState(draft.name ?? "");
   const [format, setFormat] = useState<Format | undefined>(draft.format);
   const [playerCount, setPlayerCount] = useState<number>(draft.player_count ?? 4);
-  const [modality, setModality] = useState<Modality>(draft.modality ?? "ven");
+  const [countRule, setCountRule] = useState<CountRule>(
+    draft.count_rule ?? (draft.modality === "pri" ? "mesa" : "rival"),
+  );
+  const [preset, setPreset] = useState<PresetIdInDraft | null>(
+    draft.preset ??
+      (draft.modality === "ven"
+        ? "rapido"
+        : draft.modality === "dom"
+        ? "clasico"
+        : draft.modality === "cub"
+        ? "clasico" // Cuba post-retiro d9
+        : draft.modality === "pri"
+        ? "mesa-completa"
+        : "rapido"),
+  );
   const [numBoards, setNumBoards] = useState<number>(draft.num_boards ?? 1);
   const [visibility, setVisibility] = useState<Visibility>(
     draft.visibility ?? "private",
@@ -63,7 +79,8 @@ export function Step1Form({ userId }: { userId: string }) {
     draft.rounds_count ?? DEFAULT_ROUNDS,
   );
   const [pointsToWin, setPointsToWin] = useState<number>(
-    draft.custom_goal ?? defaultPointsForModality(draft.modality ?? "ven"),
+    draft.custom_goal ??
+      (preset ? PRESETS[preset].target : defaultPointsForPreset("rapido")),
   );
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -102,15 +119,28 @@ export function Step1Form({ userId }: { userId: string }) {
     !!format && nameValid && validation.valid;
 
   /**
-   * Al cambiar de modalidad, si el valor actual de puntos coincide con el
-   * default conocido de ALGUNA modalidad (100 o 200), lo actualizamos al
-   * default de la nueva. Si el usuario ingresó un override (ej. 175), lo
-   * mantenemos.
+   * Al elegir un preset, precarga sus 3 valores. El usuario puede editar
+   * después (deselecciona preset → estado "Personalizado" implícito).
    */
-  function handleModalityChange(next: Modality) {
-    setModality(next);
-    if (pointsToWin === 100 || pointsToWin === 200) {
-      setPointsToWin(defaultPointsForModality(next));
+  function handlePresetChange(next: PresetIdInDraft) {
+    const p = PRESETS[next];
+    setPreset(next);
+    setCountRule(p.countRule);
+    setPointsToWin(p.target);
+  }
+
+  /** Cambiar de regla deselecciona el preset actual (Pregunta 11A). */
+  function handleCountRuleChange(next: CountRule) {
+    if (next === countRule) return;
+    setCountRule(next);
+    setPreset(null);
+  }
+
+  function handlePointsToWinChange(next: number) {
+    setPointsToWin(next);
+    // Si el usuario ajusta manualmente, el preset se marca implícitamente como Personalizado.
+    if (preset && PRESETS[preset]?.target !== next) {
+      setPreset(null);
     }
   }
 
@@ -121,7 +151,15 @@ export function Step1Form({ userId }: { userId: string }) {
     setField({
       name: finalName,
       format,
-      modality,
+      count_rule: countRule,
+      preset: preset ?? undefined,
+      // Dual-write legacy modality para consumidores viejos (Step-3, etc).
+      modality:
+        preset === "rapido" ? "ven"
+        : preset === "clasico" ? "dom"
+        : preset === "doble9" ? "cub"
+        : preset === "mesa-completa" ? "pri"
+        : "custom",
       player_count: playerCount,
       num_boards: numBoards,
       visibility,
@@ -220,24 +258,29 @@ export function Step1Form({ userId }: { userId: string }) {
           />
         </section>
 
-        {/* Modalidad */}
+        {/* Modalidad de juego (Layout 2) */}
         <section>
-          <label className="label block mb-2">Modalidad</label>
-          <ModalityChips value={modality} onChange={handleModalityChange} />
+          <label className="label block mb-2">Modalidad de juego</label>
+          <ModalityChips
+            countRule={countRule}
+            onCountRuleChange={handleCountRuleChange}
+            preset={preset}
+            onPresetChange={handlePresetChange}
+          />
         </section>
 
         {/* Configuración de juego (Fase B) */}
         <section>
           <GameConfigSection
             format={format}
-            modality={modality}
+            preset={preset}
             playerCount={playerCount}
             roundsCount={roundsCount}
             onRoundsCountChange={setRoundsCount}
             timeLimitMinutes={timeLimitMinutes}
             onTimeLimitMinutesChange={setTimeLimitMinutes}
             pointsToWin={pointsToWin}
-            onPointsToWinChange={setPointsToWin}
+            onPointsToWinChange={handlePointsToWinChange}
           />
         </section>
 

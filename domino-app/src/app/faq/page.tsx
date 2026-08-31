@@ -22,15 +22,15 @@ const faqs: FaqItem[] = [
     q: "¿Qué es DomiRank?",
     a: (
       <>
-        DomiRank es la primera plataforma de ranking de dominó por modalidad
-        (Venezolano, Dominicano, Cubano y Puertorriqueño). Registras tus
-        partidas reales con amigos y el sistema calcula tu nivel real con un
-        motor de rating tipo Elo. Es una PWA: se instala en tu teléfono y
-        funciona como una app nativa.
+        DomiRank es una plataforma de ranking de dominó que respeta la regla
+        de conteo con la que juegas —Cuenta rival o Cuenta de mesa— y guarda
+        tus partidas para calcular tu nivel real con un motor de rating tipo
+        Elo. Es una PWA: se instala en tu teléfono y funciona como una app
+        nativa.
       </>
     ),
     plainA:
-      "DomiRank es una plataforma de ranking de dominó por modalidad (Venezolano, Dominicano, Cubano y Puertorriqueño). Registras tus partidas reales con amigos y el sistema calcula tu nivel con un motor de rating tipo Elo. Es una PWA que se instala en tu teléfono.",
+      "DomiRank es una plataforma de ranking de dominó que respeta la regla de conteo con la que juegas (Cuenta rival o Cuenta de mesa). Registras tus partidas reales con amigos y el sistema calcula tu nivel con un motor de rating tipo Elo. Es una PWA que se instala en tu teléfono.",
   },
   {
     q: "¿Cómo se juega en DomiRank?",

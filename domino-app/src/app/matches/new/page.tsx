@@ -1,6 +1,7 @@
 import { requireOnboardedUser, getCurrentProfile } from "@/lib/auth";
 import { getUserPreferences } from "@/lib/user-preferences-actions";
 import { supabaseServer } from "@/lib/supabase/server";
+import { COUNTRIES, type PresetId } from "@/lib/modalidades";
 import { NewMatchForm } from "./NewMatchForm";
 import { TournamentFastPath } from "./TournamentFastPath";
 
@@ -106,6 +107,11 @@ export default async function NewMatchPage({
     console.warn("[NewMatchPage] No se pudieron cargar jugadores frecuentes:", err);
   }
 
+  // Derivar defaultPreset a partir del país del onboarding.
+  // Fallback "rapido" para users sin país o país sin mapeo directo.
+  const country = COUNTRIES.find((c) => c.code === profile?.country);
+  const defaultPreset: PresetId = country?.suggestedPreset ?? "rapido";
+
   return (
     <div className="max-w-2xl mx-auto space-y-4">
       <h1 className="text-3xl font-bold">Nueva partida</h1>
@@ -121,7 +127,7 @@ export default async function NewMatchPage({
           avatar_url: profile.avatar_url,
           country: profile.country,
         }}
-        defaultModality={profile?.default_modality ?? "ven"}
+        defaultPreset={defaultPreset}
         initialPreferences={initialPreferences}
         frequentPlayers={frequentPlayers}
       />

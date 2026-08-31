@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { supabaseServer } from "@/lib/supabase/server";
-import { MODALIDADES } from "@/lib/modalidades";
+import { matchLabel } from "@/lib/match-label";
 import { getCurrentUser } from "@/lib/auth";
 import { formatInfo } from "@/lib/tournament-formats";
 import { SecondaryPageShell } from "@/components/SecondaryPageShell";
@@ -406,7 +406,11 @@ export default async function TournamentDetail({
   const allPairsReady = inscribedCount > 0 && pairsCount >= Math.floor(inscribedCount / 2);
 
   // ─── Derived flags ─────────────────────────────────────────
-  const m = MODALIDADES[(tournament as { modality?: string }).modality as keyof typeof MODALIDADES] ?? MODALIDADES.custom;
+  const tournamentLabel = matchLabel({
+    count_rule: (tournament as { count_rule?: string | null }).count_rule ?? null,
+    modality: (tournament as { modality?: string | null }).modality ?? null,
+    target_points: (tournament as { points_to_win?: number | null }).points_to_win ?? null,
+  });
   const fmtInfo = formatInfo((tournament as { format?: string }).format);
   const isOwner = user?.id === (tournament as { created_by?: string }).created_by;
   const hasPairings = (pairings ?? []).length > 0;
@@ -493,7 +497,7 @@ export default async function TournamentDetail({
               </div>
               <h1 className="text-xl font-bold truncate">{(tournament as { name: string }).name}</h1>
               <p className="text-text-mute text-sm mt-0.5">
-                {fmtInfo.name} · {m.name} · {(tournament as { points_to_win?: number }).points_to_win ?? "?"} pts
+                {fmtInfo.name} · {tournamentLabel.chip}
                 {timeLimitMinutes ? ` · ${timeLimitMinutes} min/partida` : ""}
               </p>
               {tournamentStatus === "in_progress" && isIndividualRR && currentCiclo != null && totalCiclos != null && (

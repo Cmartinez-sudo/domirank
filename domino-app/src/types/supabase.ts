@@ -787,6 +787,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           finalized_at: string | null
+          count_rule: string | null
           finished_at: string | null
           format: string
           id: string
@@ -812,6 +813,7 @@ export type Database = {
           cancelled_by_user_id?: string | null
           capicua_bonus?: number
           confirmed_at?: string | null
+          count_rule?: string | null
           created_at?: string
           created_by?: string | null
           finalized_at?: string | null
@@ -840,6 +842,7 @@ export type Database = {
           cancelled_by_user_id?: string | null
           capicua_bonus?: number
           confirmed_at?: string | null
+          count_rule?: string | null
           created_at?: string
           created_by?: string | null
           finalized_at?: string | null
@@ -1402,6 +1405,7 @@ export type Database = {
           d9_doubles_sigma: number
           d9_doubles_wins: number
           date_of_birth: string | null
+          default_count_rule: string | null
           default_modality: string | null
           display_name: string | null
           doubles_elo: number
@@ -1450,6 +1454,7 @@ export type Database = {
           d9_doubles_sigma?: number
           d9_doubles_wins?: number
           date_of_birth?: string | null
+          default_count_rule?: string | null
           default_modality?: string | null
           display_name?: string | null
           doubles_elo?: number
@@ -1498,6 +1503,7 @@ export type Database = {
           d9_doubles_sigma?: number
           d9_doubles_wins?: number
           date_of_birth?: string | null
+          default_count_rule?: string | null
           default_modality?: string | null
           display_name?: string | null
           doubles_elo?: number
@@ -1787,6 +1793,7 @@ export type Database = {
       tournaments: {
         Row: {
           continuous: boolean
+          count_rule: string | null
           created_at: string
           created_by: string | null
           current_round: number
@@ -1816,6 +1823,7 @@ export type Database = {
         }
         Insert: {
           continuous?: boolean
+          count_rule?: string | null
           created_at?: string
           created_by?: string | null
           current_round?: number
@@ -1845,6 +1853,7 @@ export type Database = {
         }
         Update: {
           continuous?: boolean
+          count_rule?: string | null
           created_at?: string
           created_by?: string | null
           current_round?: number
@@ -1877,7 +1886,11 @@ export type Database = {
       user_preferences: {
         Row: {
           created_at: string
+          default_capicua_bonus: number | null
+          default_count_rule: string | null
           default_match_modality: string | null
+          default_set_size: string | null
+          default_target_points: number | null
           notification_settings: Json
           skip_modality_prompt: boolean
           theme: string
@@ -1886,7 +1899,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          default_capicua_bonus?: number | null
+          default_count_rule?: string | null
           default_match_modality?: string | null
+          default_set_size?: string | null
+          default_target_points?: number | null
           notification_settings?: Json
           skip_modality_prompt?: boolean
           theme?: string
@@ -1895,7 +1912,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          default_capicua_bonus?: number | null
+          default_count_rule?: string | null
           default_match_modality?: string | null
+          default_set_size?: string | null
+          default_target_points?: number | null
           notification_settings?: Json
           skip_modality_prompt?: boolean
           theme?: string

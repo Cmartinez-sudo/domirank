@@ -47,8 +47,8 @@ const features = [
   },
   {
     icon: ICON.flag,
-    title: "Modalidades de cada país",
-    body: "Soporte completo para dominó Venezolano, Dominicano, Cubano y Puertorriqueño. Cada uno con sus reglas, sus puntos y su bonus de capicúa.",
+    title: "Cuenta rival o cuenta de mesa",
+    body: "Elige cómo se cuenta al cerrar la mano y ajusta meta y bonus de capicúa. Los presets vienen precargados para cómo se juega en cada país.",
   },
   {
     icon: ICON.users,

@@ -13,14 +13,18 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/lib/email";
 
 export type MatchEmailMeta = {
-  matchId:     string;
-  format:      "doubles";
-  setSize:     "d6" | "d9";
-  scoreTeam1:  number;
-  scoreTeam2:  number;
-  team1Label:  string;
-  team2Label:  string;
-  winningTeam: 1 | 2 | null;
+  matchId:      string;
+  format:       "doubles";
+  setSize:      "d6" | "d9";
+  /** Regla de conteo actual del match (nueva identidad, null en históricos). */
+  countRule:    "rival" | "mesa" | null;
+  /** Meta de tantos del match (para el chip del email). */
+  targetPoints: number | null;
+  scoreTeam1:   number;
+  scoreTeam2:   number;
+  team1Label:   string;
+  team2Label:   string;
+  winningTeam:  1 | 2 | null;
 };
 
 type AnySupabase = SupabaseClient<any, any, any>;
@@ -36,7 +40,7 @@ export async function buildMatchEmailMeta(
 ): Promise<MatchEmailMeta | null> {
   const { data: match, error: mErr } = await supabase
     .from("matches")
-    .select("id, format, set_size")
+    .select("id, format, set_size, count_rule, target_points")
     .eq("id", matchId)
     .single();
   if (mErr || !match) return null;
@@ -82,6 +86,9 @@ export async function buildMatchEmailMeta(
     matchId:    match.id,
     format:     "doubles",
     setSize:    (match.set_size ?? "d6") as "d6" | "d9",
+    countRule:  ((match as { count_rule?: string | null }).count_rule ?? null) as
+      | "rival" | "mesa" | null,
+    targetPoints: (match as { target_points?: number | null }).target_points ?? null,
     scoreTeam1: scores[1] ?? 0,
     scoreTeam2: scores[2] ?? 0,
     team1Label: labelFor(1),

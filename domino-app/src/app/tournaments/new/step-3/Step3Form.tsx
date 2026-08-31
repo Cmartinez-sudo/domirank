@@ -7,6 +7,13 @@ import { WizardStepLayout } from "@/components/wizard/WizardStepLayout";
 import { useTournamentDraft } from "@/hooks/useTournamentDraft";
 import { createTournament } from "@/lib/tournaments";
 import type { CreateTournamentInput } from "@/lib/tournament-schema";
+import {
+  COUNT_RULES,
+  PRESETS,
+  countRuleFromLegacyModality,
+  type CountRule,
+  type PresetId,
+} from "@/lib/modalidades";
 import { analytics } from "@/lib/analytics";
 import { Avatar } from "@/components/Avatar";
 
@@ -31,13 +38,30 @@ const FORMAT_LABELS: Record<string, string> = {
   continuous_league: "Liga continua",
 };
 
-const MODALITY_LABELS: Record<string, { flag: string; name: string }> = {
-  ven: { flag: "🇻🇪", name: "Venezolano" },
-  dom: { flag: "🇩🇴", name: "Dominicano" },
-  cub: { flag: "🇨🇺", name: "Cubano" },
-  pri: { flag: "🇵🇷", name: "Puertorriqueño" },
-  custom: { flag: "⚙", name: "Personalizado" },
-};
+/** Deriva la etiqueta del torneo desde el draft (preset > count_rule > modality legacy). */
+function tournamentConfigLabel(draft: {
+  count_rule?: CountRule;
+  preset?: PresetId;
+  modality?: string;
+  custom_goal?: number;
+}): { title: string; subtitle: string } {
+  if (draft.preset && PRESETS[draft.preset]) {
+    const p = PRESETS[draft.preset];
+    const rule = COUNT_RULES[p.countRule];
+    return {
+      title: `${rule.name} · ${p.title}`,
+      subtitle: `${p.target} pts · Capicúa +${p.capicua}`,
+    };
+  }
+  const rule = draft.count_rule
+    ? COUNT_RULES[draft.count_rule]
+    : COUNT_RULES[countRuleFromLegacyModality(draft.modality)];
+  const target = draft.custom_goal ?? 100;
+  return {
+    title: `${rule.name} · Personalizado`,
+    subtitle: `${target} pts`,
+  };
+}
 
 /**
  * Step 3 — Resumen + iniciar torneo.
@@ -60,7 +84,7 @@ export function Step3Form({ userId, currentUser }: Props) {
     !!draft.name && !!draft.format && !!draft.player_count;
 
   const formatLabel = draft.format ? FORMAT_LABELS[draft.format] : "—";
-  const modalityInfo = draft.modality ? MODALITY_LABELS[draft.modality] : null;
+  const modalityInfo = tournamentConfigLabel(draft);
   const numBoards = draft.num_boards ?? 1;
   const requiresAttestation = draft.requires_attestation ?? true;
   const rated = draft.rated ?? true;
@@ -68,7 +92,18 @@ export function Step3Form({ userId, currentUser }: Props) {
   const totalPlayers = 1 + participants.length;
 
   async function handleStart() {
-    if (!hasMinimumDraft || !draft.format || !draft.modality || !draft.player_count) {
+    // Resolver count_rule + modality legacy (dual-write).
+    const countRule: CountRule =
+      draft.count_rule ??
+      (draft.preset ? PRESETS[draft.preset].countRule : null) ??
+      countRuleFromLegacyModality(draft.modality ?? null);
+
+    if (
+      !hasMinimumDraft ||
+      !draft.format ||
+      !draft.player_count ||
+      !countRule
+    ) {
       setError("Faltan datos del torneo. Volvé al step 1.");
       return;
     }
@@ -80,7 +115,8 @@ export function Step3Form({ userId, currentUser }: Props) {
       const input: CreateTournamentInput = {
         name: draft.name as string,
         format: draft.format,
-        modality: draft.modality,
+        count_rule: countRule,
+        modality: draft.modality, // opcional, dual-write en server
         // Wizard nuevo usa player_count; el server action lo mapea a max_players.
         player_count: draft.player_count,
         max_players: draft.player_count,
@@ -105,7 +141,8 @@ export function Step3Form({ userId, currentUser }: Props) {
       if (result.ok) {
         analytics.track("tournament_created", {
           format: input.format,
-          modality: input.modality,
+          count_rule: countRule,
+          preset_id: draft.preset ?? "personalizado",
           num_boards: input.num_boards,
           player_count: draft.player_count,
         });
@@ -159,11 +196,9 @@ export function Step3Form({ userId, currentUser }: Props) {
           <div>
             <h1 className="text-xl font-bold mb-1 break-words">{draft.name}</h1>
             <p className="text-text-mute text-sm">
-              {formatLabel} · {draft.player_count} jugadores
-              {modalityInfo && (
-                <> · {modalityInfo.flag} {modalityInfo.name}</>
-              )}
+              {formatLabel} · {draft.player_count} jugadores · {modalityInfo.title}
             </p>
+            <p className="text-text-mute text-xs">{modalityInfo.subtitle}</p>
             <p className="text-text-mute text-xs mt-1">
               {numBoards} mesa{numBoards !== 1 ? "s" : ""} · Confirmación:{" "}
               {requiresAttestation ? "ON" : "OFF"} · {rated ? "Rated" : "Amistosa"}

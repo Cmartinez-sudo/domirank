@@ -22,20 +22,45 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { startLiveMatch } from "@/lib/live-match";
 import { linkMatchToPairing } from "@/lib/tournament-pairing-link";
-import { MODALIDADES, type ModalityCode, type SetCode } from "@/lib/modalidades";
+import {
+  MODALIDADES,
+  countRuleFromLegacyModality,
+  type CountRule,
+  type ModalityCode,
+  type SetCode,
+} from "@/lib/modalidades";
 
 // ─── Helpers ────────────────────────────────────────────────
 
-/** Devuelve el set_size apropiado para la modalidad del torneo */
-function resolveSetSize(modality: string): SetCode {
-  if (modality === "cub" || modality === "dom" || modality === "custom") return "d9";
+/**
+ * Set size del match derivado del torneo. Post refactor count_rule: los
+ * torneos nuevos siempre son d6. Torneos legacy con modality='cub' seguían
+ * siendo d9 en tiempos previos — con d9 retirado del menú, cualquier torneo
+ * nuevo aterriza en d6.
+ */
+function resolveSetSize(modality: string | null): SetCode {
+  // Legacy: 'cub' era doble-9. Cualquier torneo pre-refactor con modality='cub'
+  // se conserva como d9 para que sus matches vivan en el bucket histórico.
+  if (modality === "cub") return "d9";
   return "d6";
 }
 
-/** Devuelve el capicua_bonus apropiado para la modalidad del torneo */
-function resolveCapicua(modality: string): number {
+/** Capicúa por defecto del torneo. Deriva de MODALIDADES legacy si aplica. */
+function resolveCapicua(modality: string | null): number {
+  if (!modality) return 30;
   const m = MODALIDADES[modality as ModalityCode];
-  return m?.capicua ?? 0;
+  return m?.capicua ?? 30;
+}
+
+/**
+ * Derivación de count_rule para el fast-path: prefiere la columna nueva
+ * `tournaments.count_rule`; si es null (torneo legacy pre-migración),
+ * cae al mapeo desde `modality`.
+ */
+function resolveCountRule(t: { count_rule?: string | null; modality?: string | null }): CountRule {
+  const raw = t.count_rule;
+  if (raw === "rival" || raw === "mesa") return raw;
+  return countRuleFromLegacyModality(t.modality);
 }
 
 // ─── Error UI ────────────────────────────────────────────────
@@ -92,7 +117,7 @@ export async function TournamentFastPath({
   // ── 1. Leer el torneo ──────────────────────────────────────
   const { data: tournament } = await supabase
     .from("tournaments")
-    .select("id, modality, format, points_to_win, time_limit_minutes, status")
+    .select("id, modality, count_rule, format, points_to_win, time_limit_minutes, status")
     .eq("id", tournamentId)
     .single();
 
@@ -176,7 +201,8 @@ export async function TournamentFastPath({
   }
 
   // ── 3. Determinar parámetros del match desde el torneo ───
-  const modality = (tournament.modality ?? "ven") as ModalityCode;
+  const modality = (tournament.modality ?? null) as string | null;
+  const countRule = resolveCountRule(tournament);
 
   // Post-Fase-A: toda partida es doubles (parejas 2v2).
   const matchFormat = "doubles" as const;
@@ -188,7 +214,8 @@ export async function TournamentFastPath({
 
   // ── 4. Crear el match (startLiveMatch) ────────────────────
   const matchRes = await startLiveMatch({
-    modality,
+    count_rule: countRule,
+    modality: (modality as ModalityCode | null) ?? undefined,
     format: matchFormat,
     set_size: setSize,
     target_points: targetPoints,

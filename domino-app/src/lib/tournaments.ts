@@ -137,7 +137,7 @@ export async function createTournament(input: CreateTournamentInput) {
     joinCode = f.join_code ?? generateJoinCode();
   }
 
-  const pointsToWin = computePointsToWin(f.modality, f.custom_goal);
+  const pointsToWin = computePointsToWin(f.modality ?? "custom", f.custom_goal);
 
   // Status inicial: el wizard nuevo (3 pasos) salta directo a 'in_progress'.
   // Los callers legacy del wizard viejo pueden necesitar 'open' aún; detectamos
@@ -148,7 +148,10 @@ export async function createTournament(input: CreateTournamentInput) {
   const insertPayload: Record<string, unknown> = {
     name: f.name,
     visibility: f.visibility,
-    modality: f.modality,
+    // Dual-write: legacy modality queda "custom" si el caller no la envía;
+    // la identidad real vive en count_rule.
+    modality: f.modality ?? "custom",
+    count_rule: f.count_rule,
     format: f.format,
     points_to_win: pointsToWin,
     status: initialStatus,

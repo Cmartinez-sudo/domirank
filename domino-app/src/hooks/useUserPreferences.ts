@@ -17,6 +17,10 @@ import type { UserPreferences, UserPreferencesInput } from "@/types/user-prefere
 const DEFAULT_PREFERENCES: UserPreferences = {
   user_id: "",
   default_match_modality: null,
+  default_count_rule: null,
+  default_set_size: null,
+  default_target_points: null,
+  default_capicua_bonus: null,
   skip_modality_prompt: false,
   notification_settings: {},
   theme: "dark",

@@ -1,13 +1,13 @@
 /**
- * Component tests for NewMatchForm — US-05 skip modality prompt.
- * Tests the checkbox + persist flow and the "Cambiar" override badge.
+ * Component tests for NewMatchForm — Layout 2 (count_rule + presets).
+ * Cover skip flow, "save as default" checkbox y el badge "Cambiar".
  * Run: pnpm vitest run src/app/matches/new/__tests__/NewMatchForm.test.tsx
  *
  * @vitest-environment jsdom
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor, cleanup, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import { NewMatchForm } from "../NewMatchForm";
 import type { UserPreferences } from "@/types/user-preferences";
 
@@ -50,6 +50,11 @@ vi.mock("@/components/RatingBadge", () => ({
   RatingBadge: () => <div data-testid="rating-badge" />,
 }));
 
+// next/image mock — vitest env doesn't ship SVG loader.
+vi.mock("next/image", () => ({
+  default: (props: Record<string, unknown>) => <img alt="" {...props} />,
+}));
+
 const CURRENT_USER = {
   id: "user-001",
   username: "testplayer",
@@ -58,9 +63,13 @@ const CURRENT_USER = {
   country: "VE",
 };
 
-const PREFERENCES_SKIP_VEN: UserPreferences = {
+const PREFERENCES_SKIP_RAPIDO: UserPreferences = {
   user_id: "user-001",
   default_match_modality: "ven",
+  default_count_rule: "rival",
+  default_set_size: "d6",
+  default_target_points: 100,
+  default_capicua_bonus: 30,
   skip_modality_prompt: true,
   notification_settings: {},
   theme: "dark",
@@ -69,7 +78,7 @@ const PREFERENCES_SKIP_VEN: UserPreferences = {
 };
 
 const PREFERENCES_NO_SKIP: UserPreferences = {
-  ...PREFERENCES_SKIP_VEN,
+  ...PREFERENCES_SKIP_RAPIDO,
   skip_modality_prompt: false,
 };
 
@@ -77,7 +86,7 @@ function renderForm(initialPreferences?: UserPreferences | null) {
   return render(
     <NewMatchForm
       currentUser={CURRENT_USER}
-      defaultModality="ven"
+      defaultPreset="rapido"
       initialPreferences={initialPreferences}
     />,
   );
@@ -85,25 +94,32 @@ function renderForm(initialPreferences?: UserPreferences | null) {
 
 beforeEach(() => {
   vi.resetAllMocks();
-  mockUpdateUserPreferences.mockResolvedValue({ ok: true, data: PREFERENCES_SKIP_VEN });
+  mockUpdateUserPreferences.mockResolvedValue({ ok: true, data: PREFERENCES_SKIP_RAPIDO });
 });
 
 afterEach(() => {
   cleanup();
 });
 
-// ── Tests: checkbox + persist ──────────────────────────────────────────────
+// ── Tests: step de configuración (sin skip) ───────────────────────────────
 
-describe("NewMatchForm — modalidad step (sin skip)", () => {
-  it("muestra el step de modalidad cuando skip_modality_prompt=false", () => {
+describe("NewMatchForm — step config (sin skip)", () => {
+  it("muestra 'Modalidad de juego' y las 2 tarjetas de count_rule", () => {
     renderForm(PREFERENCES_NO_SKIP);
-    expect(screen.getByText(/Venezolano/)).toBeDefined();
-    expect(screen.getByText(/No volver a preguntar esta modalidad/)).toBeDefined();
+    expect(screen.getByText(/Modalidad de juego/)).toBeDefined();
+    expect(screen.getByTestId("count-rule-rival")).toBeDefined();
+    expect(screen.getByTestId("count-rule-mesa")).toBeDefined();
   });
 
-  it("checkbox 'No volver a preguntar' inicialmente desmarcado", () => {
+  it("muestra el toggle 'Guardar esta configuración como mi partida por defecto'", () => {
+    renderForm(PREFERENCES_NO_SKIP);
+    expect(
+      screen.getByText(/Guardar esta configuración como mi partida por defecto/),
+    ).toBeDefined();
+  });
+
+  it("checkbox 'Guardar como default' inicialmente desmarcado", () => {
     const { container } = renderForm(PREFERENCES_NO_SKIP);
-    // Use querySelector to get only the skip-checkbox (not the radio inputs)
     const checkbox = container.querySelector(
       "input[type='checkbox'].accent-primary",
     ) as HTMLInputElement;
@@ -111,7 +127,7 @@ describe("NewMatchForm — modalidad step (sin skip)", () => {
     expect(checkbox.checked).toBe(false);
   });
 
-  it("marcar checkbox + Continuar llama updateUserPreferences con modality + skip=true", async () => {
+  it("marcar checkbox + Continuar llama updateUserPreferences con los 4 defaults + skip=true", async () => {
     const { container } = renderForm(PREFERENCES_NO_SKIP);
 
     const checkbox = container.querySelector(
@@ -124,7 +140,10 @@ describe("NewMatchForm — modalidad step (sin skip)", () => {
 
     await waitFor(() => {
       expect(mockUpdateUserPreferences).toHaveBeenCalledWith({
-        default_match_modality: "ven",
+        default_count_rule: "rival",
+        default_set_size: "d6",
+        default_target_points: 100,
+        default_capicua_bonus: 30,
         skip_modality_prompt: true,
       });
     });
@@ -156,12 +175,12 @@ describe("NewMatchForm — modalidad step (sin skip)", () => {
 
 // ── Tests: skip flow + badge ───────────────────────────────────────────────
 
-describe("NewMatchForm — skip modality flow (skip_modality_prompt=true)", () => {
-  it("salta directamente al step de jugadores cuando skip=true", () => {
-    renderForm(PREFERENCES_SKIP_VEN);
+describe("NewMatchForm — skip flow (skip_modality_prompt=true + defaults)", () => {
+  it("salta directamente al step de jugadores cuando skip=true y hay 4 defaults", () => {
+    renderForm(PREFERENCES_SKIP_RAPIDO);
 
-    // Step de modalidad NO debe estar visible
-    expect(screen.queryByText(/No volver a preguntar esta modalidad/)).toBeNull();
+    // Step config NO debe estar visible
+    expect(screen.queryByText(/Modalidad de juego/)).toBeNull();
 
     // Step de jugadores debe estar visible
     expect(
@@ -169,37 +188,37 @@ describe("NewMatchForm — skip modality flow (skip_modality_prompt=true)", () =
     ).toBeDefined();
   });
 
-  it("muestra badge 'Modalidad: Venezolano · Cambiar' cuando se saltó el step", () => {
-    renderForm(PREFERENCES_SKIP_VEN);
+  it("muestra badge con count_rule + preset + target cuando se saltó el step", () => {
+    renderForm(PREFERENCES_SKIP_RAPIDO);
 
     const badge = screen.getByTestId("modality-skip-badge");
     expect(badge).toBeDefined();
-    expect(badge.textContent).toContain("Venezolano");
+    expect(badge.textContent).toContain("Cuenta rival");
+    expect(badge.textContent).toContain("Rápido");
+    expect(badge.textContent).toContain("100 pts");
 
     const changeBtn = screen.getByTestId("change-modality-btn");
     expect(changeBtn).toBeDefined();
     expect(changeBtn.textContent).toContain("Cambiar");
   });
 
-  it("click 'Cambiar' lleva de vuelta al step de modalidad", () => {
-    renderForm(PREFERENCES_SKIP_VEN);
+  it("click 'Cambiar' lleva de vuelta al step de configuración", () => {
+    renderForm(PREFERENCES_SKIP_RAPIDO);
 
     fireEvent.click(screen.getByTestId("change-modality-btn"));
 
-    expect(
-      screen.getByText(/No volver a preguntar esta modalidad/),
-    ).toBeDefined();
+    expect(screen.getByText(/Modalidad de juego/)).toBeDefined();
   });
 
   it("el override via 'Cambiar' NO llama updateUserPreferences", () => {
-    renderForm(PREFERENCES_SKIP_VEN);
+    renderForm(PREFERENCES_SKIP_RAPIDO);
 
     fireEvent.click(screen.getByTestId("change-modality-btn"));
 
     expect(mockUpdateUserPreferences).not.toHaveBeenCalled();
   });
 
-  it("sin skip: el badge 'Cambiar' NO aparece al avanzar manualmente", async () => {
+  it("sin skip: el badge NO aparece al avanzar manualmente", async () => {
     renderForm(PREFERENCES_NO_SKIP);
 
     fireEvent.click(screen.getByRole("button", { name: /^Continuar$/ }));
@@ -217,24 +236,25 @@ describe("NewMatchForm — skip modality flow (skip_modality_prompt=true)", () =
 // ── Tests: edge case estado inconsistente ──────────────────────────────────
 
 describe("NewMatchForm — edge case: estado inconsistente", () => {
-  it("trata como flow normal cuando skip=true pero default_modality=null", () => {
+  it("trata como flow normal cuando skip=true pero faltan defaults nuevos", () => {
     const inconsistentPrefs: UserPreferences = {
-      ...PREFERENCES_SKIP_VEN,
+      ...PREFERENCES_SKIP_RAPIDO,
+      default_count_rule: null,
       default_match_modality: null,
+      default_set_size: null,
+      default_target_points: null,
+      default_capicua_bonus: null,
     };
 
     renderForm(inconsistentPrefs);
 
-    // Debe mostrar el step de modalidad (flow normal)
-    expect(
-      screen.getByText(/No volver a preguntar esta modalidad/),
-    ).toBeDefined();
+    // Debe mostrar el step de configuración (flow normal)
+    expect(screen.getByText(/Modalidad de juego/)).toBeDefined();
   });
 
-  it("muestra step de modalidad cuando initialPreferences=null (graceful fallback)", () => {
+  it("muestra step de configuración cuando initialPreferences=null (graceful fallback)", () => {
     renderForm(null);
 
-    // Flow normal: step de modalidad visible
-    expect(screen.getByText(/Venezolano/)).toBeDefined();
+    expect(screen.getByText(/Modalidad de juego/)).toBeDefined();
   });
 });

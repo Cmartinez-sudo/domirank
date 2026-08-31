@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { requireUser } from "@/lib/auth";
 import { getGroupDetails, getGroupMatchHistory } from "@/lib/groups-queries";
+import { matchLabel } from "@/lib/match-label";
 import { ImportHistoricalButton } from "./ImportHistoricalButton";
 
 export const dynamic = "force-dynamic";
@@ -57,13 +58,13 @@ export default async function GroupHistoryPage({
                 <div className="flex items-center gap-3 text-xs text-text-mute mb-2 flex-wrap">
                   <span>{date.toLocaleDateString("es")}</span>
                   <span>·</span>
-                  <span>a {m.target_points} pts</span>
-                  {m.modality && (
-                    <>
-                      <span>·</span>
-                      <span className="uppercase">{m.modality}</span>
-                    </>
-                  )}
+                  <span>
+                    {matchLabel({
+                      count_rule: (m as { count_rule?: string | null }).count_rule ?? null,
+                      modality: m.modality ?? null,
+                      target_points: m.target_points,
+                    }).chip}
+                  </span>
                   {!m.rated && (
                     <span className="badge bg-info/15 text-info text-[10px]">
                       Amistosa
