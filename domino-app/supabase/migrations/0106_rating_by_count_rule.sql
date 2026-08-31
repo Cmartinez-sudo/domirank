@@ -69,16 +69,16 @@ update public.profiles
    and doubles_games > 0;
 
 -- ────────────────────────────────────────────────────────────
--- 3. Drop is_rated GENERATED (referencia columnas doubles/d9_doubles).
+-- 3. Drop view profile_ratings PRIMERO (depende de is_rated).
+--    CASCADE limpia dependencias indirectas.
+-- ────────────────────────────────────────────────────────────
+drop view if exists public.profile_ratings cascade;
+
+-- ────────────────────────────────────────────────────────────
+-- 4. Drop is_rated GENERATED (referencia columnas doubles/d9_doubles).
 --    La recrearemos abajo con los 3 buckets (rival + mesa + d9).
 -- ────────────────────────────────────────────────────────────
 alter table public.profiles drop column if exists is_rated;
-
--- ────────────────────────────────────────────────────────────
--- 4. Drop view profile_ratings (referencia is_rated + buckets viejos).
---    Recrear abajo con los buckets nuevos + aliases legacy.
--- ────────────────────────────────────────────────────────────
-drop view if exists public.profile_ratings cascade;
 
 -- ────────────────────────────────────────────────────────────
 -- 5. Recrear GENERATED is_rated con 3 buckets (rival + mesa + d9 legacy).
