@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`AppHeader > matches snapshot for basic render 1`] = `
+exports[`AppHeader — render > matches snapshot for basic render 1`] = `
 <header
   class="sticky top-0 z-20 bg-bg/95 backdrop-blur-md border-b border-border"
 >

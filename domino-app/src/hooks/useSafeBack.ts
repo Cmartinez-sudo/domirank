@@ -9,42 +9,42 @@ export interface UseSafeBackResult {
 }
 
 /**
- * Hook para navegación "back" segura.
- * - Si hay historial del mismo origen, llama router.back().
- * - Si es deep-link sin historial o viene de otro origen, llama router.push(fallbackPath).
- * - Si `forceFallback` es true, siempre hace push (ignora historial) — útil
- *   cuando el historial contiene pasos intermedios (ej. /matches/new) y
- *   queremos saltarlos.
- * - SSR-safe: no toca document/window en el servidor.
+ * Hook para navegación "up-back" — la flecha atrás va SIEMPRE al parent
+ * lógico declarado en `fallbackPath`, NO al screen previo del historial.
+ *
+ * Modelo: up-navigation (iOS/Android nativo). Coherente con la jerarquía
+ * del app, independiente de cómo llegaste (deep-link, notificación, tap
+ * en dashboard, etc.). Cada page/AppHeader declara su parent lógico.
+ *
+ * Ejemplos:
+ * - /tournaments/[id]         → /tournaments
+ * - /matches/[id] (torneo)    → /tournaments/[tournamentId]
+ * - /matches/[id] (casual)    → /dashboard
+ * - /profile/[username] (yo)  → /dashboard
+ * - /profile/[username] (otro)→ /leaderboard
+ * - /tournaments/new/step-2   → /tournaments/new/step-1
+ *
+ * Motivación: el modelo "history" (router.back()) es impredecible — venir
+ * a un torneo desde el dashboard y tocar la flecha te devolvía al home,
+ * no a la lista de torneos. Con up-nav, la flecha siempre significa "un
+ * nivel arriba en la jerarquía del app".
+ *
+ * SSR-safe: no toca document/window.
+ *
+ * @param fallbackPath - Parent lógico de la page actual.
+ * @param options.forceFallback - Deprecated no-op. El default ya es
+ *   up-nav; esta opción existía para el modelo antiguo y se mantiene por
+ *   compat, pero no cambia comportamiento.
  */
 export function useSafeBack(
   fallbackPath: string,
-  options?: { forceFallback?: boolean },
+  _options?: { forceFallback?: boolean },
 ): UseSafeBackResult {
   const router = useRouter();
-  const forceFallback = options?.forceFallback ?? false;
 
   const goBack = useCallback(() => {
-    if (typeof window === "undefined" || forceFallback) {
-      router.push(fallbackPath);
-      return;
-    }
-
-    const referrer = document.referrer;
-    if (referrer !== "") {
-      try {
-        const referrerOrigin = new URL(referrer).origin;
-        if (referrerOrigin === window.location.origin) {
-          router.back();
-          return;
-        }
-      } catch {
-        // URL parse failed — treat as external
-      }
-    }
-
     router.push(fallbackPath);
-  }, [router, fallbackPath, forceFallback]);
+  }, [router, fallbackPath]);
 
   return { goBack, fallbackPath };
 }
