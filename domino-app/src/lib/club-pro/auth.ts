@@ -65,3 +65,38 @@ export async function requireOrgAdmin(orgSlug: string): Promise<OrgMembership> {
   if (m.role !== 'owner' && m.role !== 'admin') notFound();
   return m;
 }
+
+export type AdminOrgSummary = {
+  slug: string;
+  name: string;
+};
+
+/**
+ * Lista de organizaciones donde el usuario es owner o admin (staff NO).
+ * Usada por el shell para decidir si mostrar "Administrar club/org" en el
+ * drawer, y para linkear directo al panel cuando solo administra una.
+ *
+ * Devuelve [] si el usuario no admin ninguna org. Nunca lanza — si la
+ * query falla, el caller decide qué mostrar (el layout envuelve en try/
+ * catch defensivo).
+ */
+export async function getUserAdminOrgs(userId: string): Promise<AdminOrgSummary[]> {
+  const supabase = await supabaseServer();
+  const { data, error } = await supabase
+    .from('organization_members')
+    .select('role, organizations:organization_id(slug, name)')
+    .eq('user_id', userId)
+    .in('role', ['owner', 'admin']);
+
+  if (error || !data) return [];
+
+  const rows = data as unknown as Array<{
+    role: string;
+    organizations: { slug: string; name: string } | null;
+  }>;
+
+  return rows
+    .map((r) => r.organizations)
+    .filter((o): o is { slug: string; name: string } => o != null)
+    .map((o) => ({ slug: o.slug, name: o.name }));
+}
