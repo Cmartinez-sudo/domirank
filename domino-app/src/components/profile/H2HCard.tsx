@@ -25,9 +25,9 @@ export function H2HCard({
 
   return (
     <div className="card">
-      <h2 className="text-xl font-semibold mb-4">Tu vs {themName}</h2>
+      <h2 className="text-xl font-semibold mb-4">Tú vs {themName}</h2>
       {h2h.vs.games === 0 ? (
-        <p className="text-text-mute text-sm">Aun no se han enfrentado en una partida confirmada.</p>
+        <p className="text-text-mute text-sm">Aún no se han enfrentado en una partida confirmada.</p>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-2 text-center mb-4">
@@ -40,7 +40,7 @@ export function H2HCard({
               <div className="text-xs text-text-mute uppercase tracking-wide mt-1">Perdiste</div>
             </div>
           </div>
-          <div className="text-xs text-text-mute text-center mb-4">Delta DomiRank: <span className="font-mono">{deltaFmt}</span></div>
+          <div className="text-xs text-text-mute text-center mb-4">Δ DomiRank: <span className="font-mono">{deltaFmt}</span></div>
           <ul className="divide-y divide-border">
             {rows.map((r) => (
               <li key={r.label} className="flex items-center py-2 text-sm">
@@ -53,7 +53,7 @@ export function H2HCard({
         </>
       )}
       {h2h.together.games > 0 && (
-        <p className="text-xs text-text-mute mt-4">Ademas, jugaron {h2h.together.games} {h2h.together.games === 1 ? "partida" : "partidas"} juntos: <span className="text-primary">{h2h.together.wins}V</span>-<span className="text-danger">{h2h.together.losses}D</span>.</p>
+        <p className="text-xs text-text-mute mt-4">Además, jugaron {h2h.together.games} {h2h.together.games === 1 ? "partida" : "partidas"} juntos: <span className="text-primary">{h2h.together.wins}V</span>-<span className="text-danger">{h2h.together.losses}D</span>.</p>
       )}
     </div>
   );
