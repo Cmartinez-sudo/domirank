@@ -71,7 +71,11 @@ export function BottomSheet({ open, onClose, title, children, labelledById }: Pr
             }
           }}
           style={{ y, paddingBottom: "env(safe-area-inset-bottom)" }}
-          className="fixed left-1/2 -translate-x-1/2 bottom-0 w-full md:max-w-md md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:rounded-2xl rounded-t-2xl bg-bg-2 border border-border shadow-2xl flex flex-col max-h-[90vh] focus:outline-none z-[81]"
+          // OJO: uso inset-x-0 + mx-auto para centrar. NO usar `left-1/2
+          // -translate-x-1/2` — framer-motion escribe su propio `transform:
+          // translateY(...)` inline que pisa la clase Tailwind y el sheet
+          // queda anclado a `left:50%` con w-full → mitad off-screen.
+          className="fixed inset-x-0 bottom-0 mx-auto w-full md:max-w-md md:bottom-8 md:rounded-2xl rounded-t-2xl bg-bg-2 border border-border shadow-2xl flex flex-col max-h-[90vh] focus:outline-none z-[81]"
         >
             <div className="flex justify-center pt-2 pb-1 md:hidden">
               <div className="w-10 h-1 rounded-full bg-border-strong opacity-70" aria-hidden="true" />
