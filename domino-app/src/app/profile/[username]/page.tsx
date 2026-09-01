@@ -28,6 +28,7 @@ import { StatTiles } from "@/components/profile/StatTiles";
 import { EloCurveSection } from "@/components/profile/EloCurveSection";
 import { StreaksSection } from "@/components/profile/StreaksSection";
 import { HistoryList } from "@/components/profile/HistoryList";
+import { FriendsPreview } from "@/components/profile/FriendsPreview";
 import { RingStat } from "@/components/charts/RingStat";
 import { BarStat } from "@/components/charts/BarStat";
 
@@ -170,6 +171,34 @@ export default async function PublicProfile({
     eloLast10 = aggregateEloSeries(eloRaw, "last10");
   } catch (e) {
     console.error("[profile] history failed:", e);
+  }
+
+  let friendsRanking: Array<{ id: string; username: string; display_name: string | null; avatar_url: string | null; global_display: number; win_rate: number }> = [];
+  if (isOwnProfile) {
+    try {
+      const { data: friendships } = await supabase
+        .from("friendships")
+        .select("friend_id")
+        .eq("user_id", p.id);
+      const friendIds = ((friendships ?? []) as any[]).map((f) => f.friend_id as string);
+      if (friendIds.length > 0) {
+        const { data: friendRows } = await supabase
+          .from("profile_ratings")
+          .select("id, username, display_name, avatar_url, global_display, win_rate")
+          .in("id", [...friendIds, p.id])
+          .order("global_display", { ascending: false });
+        friendsRanking = ((friendRows ?? []) as any[]).map((r) => ({
+          id: r.id,
+          username: r.username,
+          display_name: r.display_name,
+          avatar_url: r.avatar_url,
+          global_display: Number(r.global_display ?? 0),
+          win_rate: Number(r.win_rate ?? 0),
+        }));
+      }
+    } catch (e) {
+      console.error("[profile] friends fetch failed:", e);
+    }
   }
 
   const isNovato0 = isOwnProfile && (p.total_games ?? 0) === 0;
@@ -389,6 +418,10 @@ export default async function PublicProfile({
                   <FriendActionButton targetUserId={p.id} targetUsername={p.username} initialStatus={relation} />
                 </div>
               </div>
+            )}
+
+            {isOwnProfile && friendsRanking.length > 1 && (
+              <FriendsPreview rows={friendsRanking} myId={p.id} />
             )}
 
             {canSeeDetail && (
