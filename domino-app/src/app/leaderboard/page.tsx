@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { supabaseServer } from "@/lib/supabase/server";
 import { DOMIRANK_MIN_GAMES } from "@/lib/rating";
 import { PageTransition } from "@/components/Motion";
 import { TierBadge, ColHeader } from "@/components/RatingInfo";
 import { ReliabilityBadge } from "@/components/reliability/ReliabilityBadge";
+import { ScopeToggle } from "@/components/leaderboard/ScopeToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -21,21 +23,47 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function Leaderboard() {
+export default async function Leaderboard({ searchParams }: { searchParams: Promise<{ scope?: string }> }) {
+  const { scope } = await searchParams;
+  const isFriends = scope === "friends";
   const supabase = await supabaseServer();
 
-  const { data } = await supabase
-    .from("profile_ratings")
-    .select("*")
-    .eq("is_rated", true)
-    .order("global_elo", { ascending: false })
-    .limit(100);
-  const rows = data ?? [];
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (isFriends && !user) {
+    redirect("/login?redirectTo=/leaderboard?scope=friends");
+  }
+
+  let rows: any[] = [];
+  if (isFriends && user) {
+    const { data: friendships } = await supabase
+      .from("friendships")
+      .select("friend_id")
+      .eq("user_id", user.id);
+    const friendIds = ((friendships ?? []) as any[]).map((f) => f.friend_id as string);
+    const { data } = await supabase
+      .from("profile_ratings")
+      .select("*")
+      .in("id", [...friendIds, user.id])
+      .order("global_display", { ascending: false });
+    rows = data ?? [];
+  } else {
+    const { data } = await supabase
+      .from("profile_ratings")
+      .select("*")
+      .eq("is_rated", true)
+      .order("global_elo", { ascending: false })
+      .limit(100);
+    rows = data ?? [];
+  }
 
   return (
     <PageTransition>
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Ranking</h1>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h1 className="text-3xl font-bold">{isFriends ? "Ranking entre amigos" : "Ranking"}</h1>
+        <ScopeToggle hasSession={!!user} />
+      </div>
 
       <div className="card overflow-x-auto p-0">
         <table className="w-full">
@@ -86,9 +114,16 @@ export default async function Leaderboard() {
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 ? (
+            {rows.length === 0 || (isFriends && rows.length <= 1) ? (
               <tr><td colSpan={10} className="px-4 py-10 text-center text-text-mute">
-                {`Aún nadie tiene ${DOMIRANK_MIN_GAMES}+ partidas para entrar al ranking.`}
+                {isFriends
+                  ? "Aún no tienes amigos aquí. Agrega personas para verlas en tu ranking."
+                  : `Aún nadie tiene ${DOMIRANK_MIN_GAMES}+ partidas para entrar al ranking.`}
+                {isFriends && (
+                  <div className="mt-3">
+                    <Link href="/friends" className="btn btn-primary inline-block">Buscar amigos</Link>
+                  </div>
+                )}
               </td></tr>
             ) : rows.map((r, i) => {
               const display = r.global_display;
@@ -103,7 +138,7 @@ export default async function Leaderboard() {
                 <tr
                   key={r.id ?? r.username}
                   className={`border-b border-border/50 hover:bg-surface-2/60 transition-colors ${
-                    i === 0 ? "bg-yellow-400/[.025]" : ""
+                    user?.id === r.id ? "bg-primary/10 ring-1 ring-primary/30" : i === 0 ? "bg-yellow-400/[.025]" : ""
                   }`}
                 >
                   <td className="px-4 py-3">
@@ -150,9 +185,11 @@ export default async function Leaderboard() {
         </table>
       </div>
 
-      <p className="text-text-mute text-xs text-center">
-        DomiRank Global = promedio ponderado por partidas de tus buckets activos (d6 + d9 parejas). Mínimo {DOMIRANK_MIN_GAMES} partidas para aparecer aquí.
-      </p>
+      {!isFriends && (
+        <p className="text-text-mute text-xs text-center">
+          DomiRank Global = promedio ponderado por partidas de tus buckets activos (d6 + d9 parejas). Mínimo {DOMIRANK_MIN_GAMES} partidas para aparecer aquí.
+        </p>
+      )}
     </div>
     </PageTransition>
   );
