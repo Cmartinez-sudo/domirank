@@ -18,10 +18,12 @@ import {
   aggregateEloSeries,
   buildHeatmap,
   buildFormStrip,
+  computeHeadToHead,
   type HistoryRow,
   type EloRow,
   type StreakResult,
 } from "@/lib/profile-stats";
+import { H2HCard } from "@/components/profile/H2HCard";
 import { StatTiles } from "@/components/profile/StatTiles";
 import { EloCurveSection } from "@/components/profile/EloCurveSection";
 import { StreaksSection } from "@/components/profile/StreaksSection";
@@ -68,6 +70,49 @@ export default async function PublicProfile({
   }
 
   const canSeeDetail = isOwnProfile || relation.kind === "friends";
+
+  let h2hResult: ReturnType<typeof computeHeadToHead> | null = null;
+  let viewerStat: { display_name: string | null; username: string; global_display: number; win_rate: number; effectiveness: number; total_games: number } | null = null;
+
+  if (!isOwnProfile && canSeeDetail) {
+    try {
+      const { data: { user: viewer } } = await supabase.auth.getUser();
+      if (viewer) {
+        const [{ data: myHistory }, { data: viewerProfile }] = await Promise.all([
+          supabase
+            .from("match_players")
+            .select(`
+              team, rank, created_at,
+              matches!inner(status, match_players(team, user_id, score, profiles(username, display_name)))
+            `)
+            .eq("user_id", viewer.id)
+            .order("created_at", { ascending: false })
+            .limit(200),
+          supabase
+            .from("profile_ratings")
+            .select("display_name, username, global_display, win_rate, effectiveness, total_games")
+            .eq("id", viewer.id)
+            .single(),
+        ]);
+        if (myHistory) {
+          h2hResult = computeHeadToHead(myHistory as any, viewer.id, p.id);
+        }
+        if (viewerProfile) {
+          const vp = viewerProfile as any;
+          viewerStat = {
+            display_name: vp.display_name ?? null,
+            username: vp.username,
+            global_display: Number(vp.global_display ?? 0),
+            win_rate: Number(vp.win_rate ?? 0),
+            effectiveness: Number(vp.effectiveness ?? 0),
+            total_games: Number(vp.total_games ?? 0),
+          };
+        }
+      }
+    } catch (e) {
+      console.error("[profile] h2h fetch failed:", e);
+    }
+  }
 
   let history: any[] = [];
   let favoritePartner: { name: string; games: number; wins: number; losses: number } | null = null;
@@ -315,6 +360,25 @@ export default async function PublicProfile({
                   </div>
                 )}
               </div>
+            )}
+
+            {!isOwnProfile && canSeeDetail && h2hResult && viewerStat && (
+              <H2HCard
+                themName={p.display_name || p.username}
+                meStat={{
+                  display: viewerStat.global_display,
+                  win_rate: viewerStat.win_rate,
+                  effectiveness: viewerStat.effectiveness,
+                  games: viewerStat.total_games,
+                }}
+                themStat={{
+                  display: Number(p.global_display ?? 0),
+                  win_rate: Number(p.win_rate ?? 0),
+                  effectiveness: Number(p.effectiveness ?? 0),
+                  games: Number(p.total_games ?? 0),
+                }}
+                h2h={h2hResult}
+              />
             )}
 
             {!canSeeDetail && !isOwnProfile && (p.total_games ?? 0) >= 1 && (
