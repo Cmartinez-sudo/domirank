@@ -61,14 +61,11 @@ export function buildModalities(p: Record<string, unknown>): ModalityRow[] {
 
 /**
  * Visibility rule for a single modality card.
- *
- * - Owner view (or dashboard): always show. Empty modalities render an
- *   empty-state + CTA to invite the user to play.
- * - Public view (other users' profile): hide modalities with 0 games to
- *   avoid noise. Only relevant data shows.
+ * Hide modalities with 0 games on ALL views (own and public). Users don't
+ * want to see a card for a modality they never play — the CTA to explore
+ * more modalities lives elsewhere (wizard, discovery), not on the profile.
  */
-export function shouldShowModality(games: number, isOwnView: boolean): boolean {
-  if (isOwnView) return true;
+export function shouldShowModality(games: number, _isOwnView: boolean): boolean {
   return games > 0;
 }
 

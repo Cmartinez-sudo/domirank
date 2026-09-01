@@ -91,7 +91,7 @@ export default async function PublicProfile({
             .limit(200),
           supabase
             .from("profile_ratings")
-            .select("display_name, username, global_display, win_rate, effectiveness, total_games")
+            .select("display_name, username, global_display, total_games, total_wins, total_points_won, total_points_lost")
             .eq("id", viewer.id)
             .single(),
         ]);
@@ -100,13 +100,17 @@ export default async function PublicProfile({
         }
         if (viewerProfile) {
           const vp = viewerProfile as any;
+          const vGames = Number(vp.total_games ?? 0);
+          const vWins  = Number(vp.total_wins ?? 0);
+          const vPfor  = Number(vp.total_points_won ?? 0);
+          const vPag   = Number(vp.total_points_lost ?? 0);
           viewerStat = {
             display_name: vp.display_name ?? null,
             username: vp.username,
             global_display: Number(vp.global_display ?? 0),
-            win_rate: Number(vp.win_rate ?? 0),
-            effectiveness: Number(vp.effectiveness ?? 0),
-            total_games: Number(vp.total_games ?? 0),
+            win_rate: vGames > 0 ? vWins / vGames : 0,
+            effectiveness: (vPfor + vPag) > 0 ? vPfor / (vPfor + vPag) : 0,
+            total_games: vGames,
           };
         }
       }
@@ -184,17 +188,21 @@ export default async function PublicProfile({
       if (friendIds.length > 0) {
         const { data: friendRows } = await supabase
           .from("profile_ratings")
-          .select("id, username, display_name, avatar_url, global_display, win_rate")
+          .select("id, username, display_name, avatar_url, global_display, total_games, total_wins")
           .in("id", [...friendIds, p.id])
           .order("global_display", { ascending: false });
-        friendsRanking = ((friendRows ?? []) as any[]).map((r) => ({
-          id: r.id,
-          username: r.username,
-          display_name: r.display_name,
-          avatar_url: r.avatar_url,
-          global_display: Number(r.global_display ?? 0),
-          win_rate: Number(r.win_rate ?? 0),
-        }));
+        friendsRanking = ((friendRows ?? []) as any[]).map((r) => {
+          const g = Number(r.total_games ?? 0);
+          const w = Number(r.total_wins ?? 0);
+          return {
+            id: r.id,
+            username: r.username,
+            display_name: r.display_name,
+            avatar_url: r.avatar_url,
+            global_display: Number(r.global_display ?? 0),
+            win_rate: g > 0 ? w / g : 0,
+          };
+        });
       }
     } catch (e) {
       console.error("[profile] friends fetch failed:", e);
@@ -202,6 +210,15 @@ export default async function PublicProfile({
   }
 
   const isNovato0 = isOwnProfile && (p.total_games ?? 0) === 0;
+
+  // Derived metrics from raw view fields (view exposes total_wins/losses/points_won/points_lost, not win_rate/effectiveness).
+  const totalGames    = Number(p.total_games ?? 0);
+  const totalWins     = Number(p.total_wins ?? 0);
+  const totalLosses   = Number(p.total_losses ?? 0);
+  const totalPtsWon   = Number(p.total_points_won ?? 0);
+  const totalPtsLost  = Number(p.total_points_lost ?? 0);
+  const winRatePct       = totalGames > 0 ? (totalWins / totalGames) * 100 : 0;
+  const effectivenessPct = (totalPtsWon + totalPtsLost) > 0 ? (totalPtsWon / (totalPtsWon + totalPtsLost)) * 100 : 0;
 
   return (
     <SecondaryPageShell
@@ -329,11 +346,11 @@ export default async function PublicProfile({
           </div>
         ) : (
           <>
-            {(p.total_games ?? 0) >= 1 && (
+            {totalGames >= 1 && (
               <StatTiles
-                games={p.total_games ?? 0}
-                winRate={Number(p.win_rate ?? 0) * 100}
-                effectiveness={Number(p.effectiveness ?? 0) * 100}
+                games={totalGames}
+                winRate={winRatePct}
+                effectiveness={effectivenessPct}
                 bestStreak={streaks.best}
               />
             )}
@@ -342,21 +359,21 @@ export default async function PublicProfile({
               <EloCurveSection points={eloAll} points50={eloLast50} points10={eloLast10} />
             )}
 
-            {(p.total_games ?? 0) >= 1 && (
+            {totalGames >= 1 && (
               <div className="card">
                 <h2 className="text-xl font-semibold mb-4">Rendimiento global</h2>
                 <div className="flex flex-col md:flex-row md:items-center gap-6">
                   <RingStat
-                    value={Number(p.win_rate ?? 0) * 100}
+                    value={winRatePct}
                     label="Win rate"
-                    sublabel={`${p.wins ?? 0}V - ${p.losses ?? 0}D`}
-                    ariaLabel={`Win rate ${(Number(p.win_rate ?? 0) * 100).toFixed(0)} por ciento`}
+                    sublabel={`${totalWins}V - ${totalLosses}D`}
+                    ariaLabel={`Win rate ${winRatePct.toFixed(0)} por ciento`}
                   />
                   <div className="flex-1">
                     <BarStat
-                      value={Number(p.effectiveness ?? 0) * 100}
+                      value={effectivenessPct}
                       label="Efectividad"
-                      sublabel={`${Number(p.points_for ?? 0)} puntos a favor / ${Number(p.points_against ?? 0)} en contra`}
+                      sublabel={`${totalPtsWon} puntos a favor · ${totalPtsLost} en contra`}
                       ariaLabel="Efectividad"
                     />
                   </div>
@@ -402,9 +419,9 @@ export default async function PublicProfile({
                 }}
                 themStat={{
                   display: Number(p.global_display ?? 0),
-                  win_rate: Number(p.win_rate ?? 0),
-                  effectiveness: Number(p.effectiveness ?? 0),
-                  games: Number(p.total_games ?? 0),
+                  win_rate: winRatePct / 100,
+                  effectiveness: effectivenessPct / 100,
+                  games: totalGames,
                 }}
                 h2h={h2hResult}
               />

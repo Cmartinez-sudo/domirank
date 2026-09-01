@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import { LineChart } from "@/components/charts/LineChart";
+import { EloChart } from "@/components/charts/EloChart";
 import type { EloPoint } from "@/lib/profile-stats";
 
 type Range = "10" | "50" | "all";
@@ -17,17 +17,18 @@ export function EloCurveSection({
   const [range, setRange] = useState<Range>("50");
   const active = range === "10" ? points10 : range === "50" ? points50 : points;
 
-  const chartPoints = useMemo(() => active.map((p) => ({ x: p.timestamp, y: p.elo })), [active]);
-  const peak = useMemo(() => {
-    if (active.length === 0) return null;
-    const top = active.reduce((a, b) => (b.elo > a.elo ? b : a));
-    return { x: top.timestamp, y: top.elo, label: `${top.elo.toFixed(0)}` };
-  }, [active]);
+  const chartPoints = useMemo(
+    () => active.map((p) => ({ timestamp: p.timestamp, elo: p.elo, day: p.day })),
+    [active]
+  );
 
   return (
     <div className="card">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-xl font-semibold">Evolución de DomiRank</h2>
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div>
+          <h2 className="text-xl font-semibold">Evolución de Elo</h2>
+          <p className="text-text-mute text-xs mt-0.5">Tu rating interno tras cada partida.</p>
+        </div>
         <div className="inline-flex rounded-full bg-white/5 p-1 text-xs">
           {(["10", "50", "all"] as Range[]).map((r) => (
             <button
@@ -41,10 +42,10 @@ export function EloCurveSection({
           ))}
         </div>
       </div>
-      <LineChart
+      <EloChart
         points={chartPoints}
-        peak={peak}
-        ariaLabel={`Curva de DomiRank últimos ${range === "all" ? "todos" : range} partidas`}
+        showDots={range === "10"}
+        ariaLabel={`Curva de Elo últimos ${range === "all" ? "todos" : range} partidas`}
       />
     </div>
   );
