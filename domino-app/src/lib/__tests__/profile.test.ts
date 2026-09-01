@@ -6,18 +6,15 @@ import {
 } from "../profile";
 
 describe("shouldShowModality", () => {
-  it("siempre muestra si isOwnView=true (incluso con 0 partidas)", () => {
-    expect(shouldShowModality(0, true)).toBe(true);
-    expect(shouldShowModality(5, true)).toBe(true);
-  });
-
-  it("oculta modalidades con 0 partidas en vista pública", () => {
+  it("oculta modalidades con 0 partidas en ambas vistas", () => {
+    expect(shouldShowModality(0, true)).toBe(false);
     expect(shouldShowModality(0, false)).toBe(false);
   });
 
-  it("muestra modalidades con games > 0 en vista pública", () => {
+  it("muestra modalidades con games > 0 en ambas vistas", () => {
     expect(shouldShowModality(1, false)).toBe(true);
     expect(shouldShowModality(100, false)).toBe(true);
+    expect(shouldShowModality(5, true)).toBe(true);
   });
 });
 
@@ -57,25 +54,16 @@ describe("getVisibleModalities", () => {
     d9_doubles_games: 0,
   });
 
-  it("isOwnView=true: retorna las 2", () => {
-    expect(getVisibleModalities(sample, true)).toHaveLength(2);
+  it("filtra modalidades con 0 partidas en ambas vistas", () => {
+    expect(getVisibleModalities(sample, true)).toHaveLength(1);
+    expect(getVisibleModalities(sample, true)[0].key).toBe("d6_doubles");
+    expect(getVisibleModalities(sample, false)).toHaveLength(1);
+    expect(getVisibleModalities(sample, false)[0].key).toBe("d6_doubles");
   });
 
-  it("isOwnView=false: retorna solo las que tienen games > 0", () => {
-    const v = getVisibleModalities(sample, false);
-    expect(v).toHaveLength(1);
-    expect(v[0].key).toBe("d6_doubles");
-  });
-
-  it("usuario sin partidas (sample vacío) + vista pública: vacío", () => {
+  it("usuario sin partidas en ninguna modalidad: vacío en ambas vistas", () => {
     const empty = buildModalities({});
     expect(getVisibleModalities(empty, false)).toHaveLength(0);
-  });
-
-  it("usuario sin partidas + vista propia: las 2 con emptyCopy", () => {
-    const empty = buildModalities({});
-    const v = getVisibleModalities(empty, true);
-    expect(v).toHaveLength(2);
-    v.forEach((m) => expect(m.emptyCopy).toMatch(/Aún no/));
+    expect(getVisibleModalities(empty, true)).toHaveLength(0);
   });
 });
