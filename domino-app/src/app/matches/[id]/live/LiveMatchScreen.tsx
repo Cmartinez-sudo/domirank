@@ -308,21 +308,24 @@ export function LiveMatchScreen({
         </div>
       )}
 
-      {/* Header */}
+      {/* Header — flecha atrás = up-nav (torneo o dashboard). NO cancela la
+          partida; el active-match chip queda para retomar. Cancelar vive en
+          "Abandonar partida" al pie. */}
       <div className="flex items-center gap-3 mb-4">
-        {isSpectator ? (
-          <Link
-            href={tournamentId ? `/tournaments/${tournamentId}` : "/dashboard"}
-            className="grid place-items-center w-10 h-10 rounded-md bg-surface border border-border hover:bg-surface-2"
-            aria-label="Volver"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          </Link>
-        ) : (
-          <button onClick={doCancel} disabled={pending} className="grid place-items-center w-10 h-10 rounded-md bg-surface border border-border hover:bg-surface-2" aria-label="Cancelar partida">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => {
+            const backPath = tournamentId ? `/tournaments/${tournamentId}` : "/dashboard";
+            if (!isSpectator) {
+              toast.info("Partida pausada — retomala desde el chip flotante cuando quieras.");
+            }
+            router.push(backPath);
+          }}
+          className="grid place-items-center w-10 h-10 rounded-md bg-surface border border-border hover:bg-surface-2"
+          aria-label="Volver"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold leading-tight">Partida</h1>
           <div className="text-text-mute text-xs flex items-center gap-1.5" title={label.blurb}>
