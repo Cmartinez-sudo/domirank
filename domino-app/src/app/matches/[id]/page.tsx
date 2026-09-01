@@ -49,6 +49,19 @@ export default async function MatchDetail({
     cancelledByProfile = prof as { username: string; display_name: string | null } | null;
   }
 
+  // Si el match es de un torneo con requires_attestation=false, el resultado
+  // es autoritativo (el org es el árbitro) — no mostramos el panel de attest,
+  // solo el resumen informativo del match.
+  let tournamentRequiresAttestation = true;
+  if (matchExtra?.tournament_id) {
+    const { data: t } = await supabase
+      .from("tournaments")
+      .select("requires_attestation")
+      .eq("id", matchExtra.tournament_id)
+      .maybeSingle();
+    tournamentRequiresAttestation = (t?.requires_attestation ?? true) as boolean;
+  }
+
   // Viewer is a participant?
   const viewerIsParticipant = currentUserId
     ? ((match.players ?? []) as any[]).some((p) => p.user_id === currentUserId)
@@ -88,7 +101,11 @@ export default async function MatchDetail({
   }
 
   const status = match.status as AttestationStatus | "in_progress" | "cancelled";
-  const showAttestation = ["pending_attestation", "confirmed", "disputed", "void"].includes(status);
+  // Show attest panel: solo si el match tiene un status en el flujo de
+  // attestation Y no es un torneo con confirmación deshabilitada.
+  const showAttestation =
+    ["pending_attestation", "confirmed", "disputed", "void"].includes(status) &&
+    tournamentRequiresAttestation;
   const isVoid    = status === "void";
   const isCreator = currentUserId && match.created_by === currentUserId;
   const canVoid   = isCreator && status === "confirmed";
@@ -107,11 +124,19 @@ export default async function MatchDetail({
     >
     <div className="max-w-4xl mx-auto px-4 py-5 space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
+        <div className="space-y-2">
           <div className="text-text-mute text-sm">
             Parejas · a {match.target_points} pts ·{" "}
             {new Date(match.created_at).toLocaleString("es")}
           </div>
+          {tournamentId && !tournamentRequiresAttestation && status === "confirmed" && (
+            <div className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/30">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Resultado oficial del torneo
+            </div>
+          )}
         </div>
         {canVoid && <VoidMatchButton matchId={id} />}
       </div>
