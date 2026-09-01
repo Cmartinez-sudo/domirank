@@ -12,6 +12,7 @@ import { BACK_FALLBACKS } from "@/lib/back-fallbacks";
 import { RemoveFriendAction } from "./RemoveFriendAction";
 import { ModalityCard } from "@/components/ModalityCard";
 import { buildModalities, getVisibleModalities } from "@/lib/profile";
+import { computePartnerRivalStats, type HistoryRow } from "@/lib/profile-stats";
 
 export const dynamic = "force-dynamic";
 
@@ -77,48 +78,15 @@ export default async function PublicProfile({
       const st = r.matches?.status;
       if (isOwnProfile) return ["confirmed","pending_attestation","disputed","void"].includes(st);
       return st === "confirmed";
-    });
+    }) as HistoryRow[];
 
     // Render: 20 más recientes
     history = allRows.slice(0, 20);
 
-    // Aggregate pareja favorita + rival principal (solo matches confirmed)
-    const partnerStats = new Map<string, { name: string; games: number; wins: number; losses: number }>();
-    const rivalStats   = new Map<string, { name: string; games: number; my_wins: number; my_losses: number }>();
-    for (const r of allRows) {
-      if (r.matches?.status !== "confirmed") continue;
-      const myTeam = r.team as number;
-      const won = r.rank === 1;
-      const players = (r.matches?.match_players ?? []) as Array<{ team: number; user_id: string; profiles: { username: string; display_name: string | null } | null }>;
-
-      for (const mp of players) {
-        if (mp.user_id === p.id) continue;
-        const name = mp.profiles?.display_name?.split(" ")[0] ?? mp.profiles?.username ?? "?";
-        if (mp.team === myTeam) {
-          // Partner
-          const cur = partnerStats.get(mp.user_id) ?? { name, games: 0, wins: 0, losses: 0 };
-          cur.games += 1;
-          if (won) cur.wins += 1; else cur.losses += 1;
-          partnerStats.set(mp.user_id, cur);
-        } else {
-          // Rival
-          const cur = rivalStats.get(mp.user_id) ?? { name, games: 0, my_wins: 0, my_losses: 0 };
-          cur.games += 1;
-          if (won) cur.my_wins += 1; else cur.my_losses += 1;
-          rivalStats.set(mp.user_id, cur);
-        }
-      }
-    }
-
-    // Pareja favorita: más juegos juntos (con tie-break por wins). Mínimo 2 juegos.
-    favoritePartner = [...partnerStats.values()]
-      .filter((s) => s.games >= 2)
-      .sort((a, b) => b.games - a.games || b.wins - a.wins)[0] ?? null;
-
-    // Rival principal: el que más me ganó. Mínimo 2 juegos.
-    toughestRival = [...rivalStats.values()]
-      .filter((s) => s.games >= 2)
-      .sort((a, b) => b.my_losses - a.my_losses || b.games - a.games)[0] ?? null;
+    // Pareja favorita + rival principal via helper
+    const { favoritePartner: fp, toughestRival: tr } = computePartnerRivalStats(allRows, p.id);
+    favoritePartner = fp ? { name: fp.name, games: fp.games, wins: fp.wins, losses: fp.losses } : null;
+    toughestRival   = tr ? { name: tr.name, games: tr.games, my_wins: tr.my_wins, my_losses: tr.my_losses } : null;
   } catch (e) {
     console.error("[profile] history failed:", e);
   }
