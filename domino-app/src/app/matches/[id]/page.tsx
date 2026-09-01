@@ -28,10 +28,13 @@ export default async function MatchDetail({
 
   if (!match) return notFound();
 
-  // Carga campos extra de matches no expuestos por match_feed
+  // Carga campos extra de matches no expuestos por match_feed. Ojo:
+  // match_feed no incluye tournament_id (el view es previo a los torneos),
+  // por eso lo leemos acá — sino la flecha atrás cae a /dashboard incluso
+  // cuando el match pertenece a un torneo.
   const { data: matchExtra } = await supabase
     .from("matches")
-    .select("scorekeeper_id, finalized_at, confirmed_at, rated_at, set_size, cancelled_at, cancelled_by_user_id, cancellation_reason, cancellation_undo_until")
+    .select("scorekeeper_id, finalized_at, confirmed_at, rated_at, set_size, cancelled_at, cancelled_by_user_id, cancellation_reason, cancellation_undo_until, tournament_id")
     .eq("id", id)
     .single();
 
@@ -91,8 +94,10 @@ export default async function MatchDetail({
   const canVoid   = isCreator && status === "confirmed";
 
   // Back button: si la partida pertenece a un torneo, volver al torneo.
-  const backPath = match.tournament_id
-    ? `/tournaments/${match.tournament_id}`
+  // tournament_id vive en `matches`, no en `match_feed` — leemos de matchExtra.
+  const tournamentId = matchExtra?.tournament_id ?? null;
+  const backPath = tournamentId
+    ? `/tournaments/${tournamentId}`
     : BACK_FALLBACKS.match_detail;
 
   return (
