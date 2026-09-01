@@ -28,10 +28,13 @@ export default async function MatchDetail({
 
   if (!match) return notFound();
 
-  // Carga campos extra de matches no expuestos por match_feed
+  // Carga campos extra de matches no expuestos por match_feed. Ojo:
+  // match_feed no incluye tournament_id (el view es previo a los torneos),
+  // por eso lo leemos acá — sino la flecha atrás cae a /dashboard incluso
+  // cuando el match pertenece a un torneo.
   const { data: matchExtra } = await supabase
     .from("matches")
-    .select("scorekeeper_id, finalized_at, confirmed_at, rated_at, set_size, cancelled_at, cancelled_by_user_id, cancellation_reason, cancellation_undo_until")
+    .select("scorekeeper_id, finalized_at, confirmed_at, rated_at, set_size, cancelled_at, cancelled_by_user_id, cancellation_reason, cancellation_undo_until, tournament_id")
     .eq("id", id)
     .single();
 
@@ -44,6 +47,19 @@ export default async function MatchDetail({
       .eq("id", matchExtra.cancelled_by_user_id)
       .maybeSingle();
     cancelledByProfile = prof as { username: string; display_name: string | null } | null;
+  }
+
+  // Si el match es de un torneo con requires_attestation=false, el resultado
+  // es autoritativo (el org es el árbitro) — no mostramos el panel de attest,
+  // solo el resumen informativo del match.
+  let tournamentRequiresAttestation = true;
+  if (matchExtra?.tournament_id) {
+    const { data: t } = await supabase
+      .from("tournaments")
+      .select("requires_attestation")
+      .eq("id", matchExtra.tournament_id)
+      .maybeSingle();
+    tournamentRequiresAttestation = (t?.requires_attestation ?? true) as boolean;
   }
 
   // Viewer is a participant?
@@ -85,29 +101,42 @@ export default async function MatchDetail({
   }
 
   const status = match.status as AttestationStatus | "in_progress" | "cancelled";
-  const showAttestation = ["pending_attestation", "confirmed", "disputed", "void"].includes(status);
+  // Show attest panel: solo si el match tiene un status en el flujo de
+  // attestation Y no es un torneo con confirmación deshabilitada.
+  const showAttestation =
+    ["pending_attestation", "confirmed", "disputed", "void"].includes(status) &&
+    tournamentRequiresAttestation;
   const isVoid    = status === "void";
   const isCreator = currentUserId && match.created_by === currentUserId;
   const canVoid   = isCreator && status === "confirmed";
 
   // Back button: si la partida pertenece a un torneo, volver al torneo.
-  const backPath = match.tournament_id
-    ? `/tournaments/${match.tournament_id}`
+  // tournament_id vive en `matches`, no en `match_feed` — leemos de matchExtra.
+  const tournamentId = matchExtra?.tournament_id ?? null;
+  const backPath = tournamentId
+    ? `/tournaments/${tournamentId}`
     : BACK_FALLBACKS.match_detail;
 
   return (
     <SecondaryPageShell
       title="Partida"
       fallbackPath={backPath}
-      forceFallback={!!match.tournament_id}
     >
     <div className="max-w-4xl mx-auto px-4 py-5 space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
+        <div className="space-y-2">
           <div className="text-text-mute text-sm">
             Parejas · a {match.target_points} pts ·{" "}
             {new Date(match.created_at).toLocaleString("es")}
           </div>
+          {tournamentId && !tournamentRequiresAttestation && status === "confirmed" && (
+            <div className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/30">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Resultado oficial del torneo
+            </div>
+          )}
         </div>
         {canVoid && <VoidMatchButton matchId={id} />}
       </div>

@@ -126,7 +126,7 @@ export default async function PublicProfile({
   return (
     <SecondaryPageShell
       title={p.display_name || p.username}
-      fallbackPath={BACK_FALLBACKS.profile}
+      fallbackPath={isOwnProfile ? "/dashboard" : BACK_FALLBACKS.profile}
     >
     <div className="max-w-4xl mx-auto px-4 py-5 space-y-6">
       <div className="card">

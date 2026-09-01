@@ -11,7 +11,7 @@ export default async function SettingsPage() {
   const profile: any = await getCurrentProfile();
   const initialPrefs = await getUserPreferences().catch(() => null);
   return (
-    <SecondaryPageShell title="Ajustes" fallbackPath={BACK_FALLBACKS.settings_subpage}>
+    <SecondaryPageShell title="Ajustes" fallbackPath="/dashboard">
       <div className="max-w-xl mx-auto px-4 py-5 space-y-4">
         <SettingsForm
           email={user.email ?? ""}

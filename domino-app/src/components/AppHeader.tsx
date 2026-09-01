@@ -6,7 +6,11 @@ export interface AppHeaderProps {
   title?: string;
   fallbackPath: string;
   rightSlot?: React.ReactNode;
-  /** Si true, el back siempre va a fallbackPath (ignora historial). */
+  /**
+   * @deprecated Con el modelo up-nav actual, la flecha SIEMPRE va a
+   * fallbackPath. Esta prop existía para el modelo antiguo (history-first)
+   * y se mantiene por compat, pero es no-op.
+   */
   forceFallback?: boolean;
 }
 
