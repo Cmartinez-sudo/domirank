@@ -137,21 +137,27 @@ html, body {
            rounded-lg font-semibold text-sm transition-all duration-150 cursor-pointer select-none;
   }
   .btn-primary {
-    @apply btn bg-primary text-primary-ink hover:bg-primary-2 active:scale-[.97]
+    @apply btn bg-primary text-primary-ink hover:bg-primary-2 active:scale-[.94]
            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50
            shadow-[0_2px_12px_rgba(16,185,129,.35)];
   }
   .btn-ghost {
-    @apply btn bg-surface-2 text-text hover:bg-surface-3 border border-border active:scale-[.97]
+    @apply btn bg-surface-2 text-text hover:bg-surface-3 border border-border active:scale-[.94]
            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30;
   }
   .btn-secondary {
-    @apply btn bg-surface-2 text-text hover:bg-surface-3 border border-border active:scale-[.97]
+    @apply btn bg-surface-2 text-text hover:bg-surface-3 border border-border active:scale-[.94]
            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30;
   }
 
   .card {
     @apply bg-surface border border-border rounded-2xl shadow-card p-4 md:p-5;
+  }
+  /* Interactive card — lifts on hover with GPU-only transform. Pair with
+     Link/button when the whole card is tappable. Reduced-motion clients
+     get a non-moving hover (see @media block below). */
+  .card-hover {
+    @apply transition-transform duration-200 ease-out hover:-translate-y-1 hover:shadow-pop;
   }
 
   .input {
@@ -204,5 +210,7 @@ html, body {
   .animate-slide-up-fade { animation: none; opacity: 1; transform: none; }
   .animate-spin-fast { animation-duration: 1.5s; }
   .animate-fade-in { animation: none; opacity: 1; transform: none; }
+  .card-hover { transition: none; }
+  .card-hover:hover { transform: none; }
   html, body { transition: none; }
 }

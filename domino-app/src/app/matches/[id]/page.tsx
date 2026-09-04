@@ -7,6 +7,7 @@ import { AttestationPanel, type AttestationStatus, type AttestPlayer, type Attes
 import { SecondaryPageShell } from "@/components/SecondaryPageShell";
 import { BACK_FALLBACKS } from "@/lib/back-fallbacks";
 import { CancellationUndoBanner } from "@/components/match/CancellationUndoBanner";
+import { WinCelebrationTrigger } from "@/components/celebration/WinCelebrationTrigger";
 
 export const dynamic = "force-dynamic";
 
@@ -93,11 +94,13 @@ export default async function MatchDetail({
 
   // Delta de rating Elo del viewer si confirmed
   let viewerDelta: number | null = null;
+  let viewerWon = false;
   if (match.status === "confirmed" && currentUserId) {
     const me = (match.players as any[]).find((p) => p.user_id === currentUserId);
     if (me?.elo_before != null && me?.elo_after != null) {
       viewerDelta = Number(me.elo_after) - Number(me.elo_before);
     }
+    viewerWon = me?.rank === 1;
   }
 
   const status = match.status as AttestationStatus | "in_progress" | "cancelled";
@@ -123,6 +126,13 @@ export default async function MatchDetail({
       fallbackPath={backPath}
     >
     <div className="max-w-4xl mx-auto px-4 py-5 space-y-6">
+      {status === "confirmed" && (
+        <WinCelebrationTrigger
+          matchId={id}
+          viewerWon={viewerWon}
+          hasRating={viewerDelta != null}
+        />
+      )}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="space-y-2">
           <div className="text-text-mute text-sm">

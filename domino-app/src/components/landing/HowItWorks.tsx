@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useRef } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
 
 const EASE_OUT: [number, number, number, number] = [0.25, 0.46, 0.45, 0.94];
 
@@ -23,8 +24,16 @@ const steps = [
 ];
 
 export function HowItWorks() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end center"],
+  });
+  // The connector line "draws itself" as the section scrolls through view.
+  const lineScaleX = useTransform(scrollYProgress, [0.15, 0.85], [0, 1]);
+
   return (
-    <section className="py-16 sm:py-24" id="como-funciona">
+    <section ref={sectionRef} className="py-16 sm:py-24" id="como-funciona">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -38,12 +47,13 @@ export function HowItWorks() {
         </motion.div>
 
         <div className="grid md:grid-cols-3 gap-6 md:gap-8 relative">
-          {/* connecting line on desktop */}
-          <div
+          {/* connecting line — scroll-linked draw across the section */}
+          <motion.div
             aria-hidden
-            className="hidden md:block absolute top-[44px] left-[16%] right-[16%] h-px"
+            className="hidden md:block absolute top-[44px] left-[16%] right-[16%] h-px origin-left"
             style={{
-              background: "linear-gradient(90deg, transparent, rgba(16,185,129,.3) 20%, rgba(59,130,246,.3) 80%, transparent)",
+              scaleX: lineScaleX,
+              background: "linear-gradient(90deg, transparent, rgba(16,185,129,.35) 20%, rgba(59,130,246,.35) 80%, transparent)",
             }}
           />
 

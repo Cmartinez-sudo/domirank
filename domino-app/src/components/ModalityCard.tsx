@@ -74,7 +74,7 @@ function DetailedCard({ title, display, elo, games, wins, losses }: {
   const winRate = games > 0 ? Math.round((wins / games) * 100) : null;
   const isProvisional = games > 0 && games < 10;
   return (
-    <div className="card">
+    <div className="card card-hover">
       <div className="text-text-mute text-sm">{title}</div>
       <div className="flex items-center gap-2 mt-1 flex-wrap">
         <span className="text-4xl font-bold text-primary font-mono tabular-nums leading-none">

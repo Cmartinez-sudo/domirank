@@ -4,6 +4,8 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { NR_THRESHOLD, isRated } from "@/lib/rating";
 import { PageTransition, StaggerChildren, StaggerItem } from "@/components/Motion";
 import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
+import { RatingNumberHero } from "@/components/RatingNumber";
+import { TierUpCelebration } from "@/components/celebration/TierUpCelebration";
 import { ReliabilityBadge } from "@/components/reliability/ReliabilityBadge";
 import { NROnboardingCard } from "@/components/reliability/NROnboardingCard";
 import { PendingAttestationsCard } from "@/components/dashboard/PendingAttestationsCard";
@@ -77,21 +79,9 @@ export default async function Dashboard() {
             <div className="flex items-center justify-between gap-4 mt-1">
               {rated ? (
                 <>
-                  <span
-                    className="font-mono font-extrabold tabular-nums shrink-0"
-                    style={{
-                      fontSize: "3.5rem",
-                      lineHeight: 1,
-                      backgroundImage: "linear-gradient(135deg,#10b981,#3b82f6)",
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                      backgroundClip: "text",
-                    }}
-                  >
-                    {globalDisplay.toFixed(1)}
-                  </span>
+                  <RatingNumberHero value={globalDisplay} fontSize="3.5rem" />
                   <div className="flex flex-col items-end gap-2 shrink-0 min-w-0">
-                    <TierBadge display={globalDisplay} size="md" />
+                    <TierUpCelebration userId={user.id} display={globalDisplay} />
                     <ReliabilityBadge
                       score={profile.reliability_score ?? 0}
                       size="md"

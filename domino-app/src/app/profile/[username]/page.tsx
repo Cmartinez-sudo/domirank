@@ -4,6 +4,8 @@ import { Avatar } from "@/components/Avatar";
 import { supabaseServer } from "@/lib/supabase/server";
 import { NR_THRESHOLD, isRated } from "@/lib/rating";
 import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
+import { RatingNumberHero } from "@/components/RatingNumber";
+import { TierUpCelebration } from "@/components/celebration/TierUpCelebration";
 import { ReliabilityBadge } from "@/components/reliability/ReliabilityBadge";
 import { FriendActionButton } from "@/components/FriendActionButton";
 import { getRelationStatus, type RelationStatus } from "@/lib/friends";
@@ -259,21 +261,15 @@ export default async function PublicProfile({
               </div>
               {rated ? (
                 <>
-                  <div
-                    className="font-mono font-extrabold tabular-nums mt-1"
-                    style={{
-                      fontSize: "2.75rem",
-                      lineHeight: 1,
-                      backgroundImage: "linear-gradient(135deg,#10b981,#3b82f6)",
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                      backgroundClip: "text",
-                    }}
-                  >
-                    {globalDisplay.toFixed(1)}
+                  <div className="mt-1">
+                    <RatingNumberHero value={globalDisplay} fontSize="2.75rem" />
                   </div>
                   <div className="flex justify-center gap-2 items-center mt-2 flex-wrap">
-                    <TierBadge display={globalDisplay} />
+                    {isOwnProfile ? (
+                      <TierUpCelebration userId={p.id} display={globalDisplay} />
+                    ) : (
+                      <TierBadge display={globalDisplay} />
+                    )}
                     <ReliabilityBadge
                       score={p.reliability_score ?? 0}
                       showScore

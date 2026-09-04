@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { Topnav } from "@/components/landing/Topnav";
 import { Hero } from "@/components/landing/Hero";
+import { ScrollProgress } from "@/components/Motion";
 import { Features } from "@/components/landing/Features";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { Modalities } from "@/components/landing/Modalities";
@@ -70,6 +71,7 @@ export default async function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <ScrollProgress />
       <Topnav />
       <main id="main" className="flex-1">
         <Hero />
