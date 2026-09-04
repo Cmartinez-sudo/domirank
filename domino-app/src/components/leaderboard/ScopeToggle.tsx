@@ -16,12 +16,12 @@ export function ScopeToggle({ hasSession }: { hasSession: boolean }) {
   };
 
   return (
-    <div className="inline-flex rounded-full bg-white/5 p-1 text-sm">
-      <Link href={linkFor("global")} className={`px-4 py-1.5 rounded-full transition-colors ${scope === "global" ? "bg-primary text-black font-semibold" : "text-text-mute"}`}>
+    <div className="inline-flex rounded-full bg-surface-2 border border-border p-1 text-sm">
+      <Link href={linkFor("global")} className={`px-4 py-1.5 rounded-full transition-colors ${scope === "global" ? "bg-primary text-primary-ink font-semibold" : "text-text-mute"}`}>
         Global
       </Link>
       {hasSession ? (
-        <Link href={linkFor("friends")} className={`px-4 py-1.5 rounded-full transition-colors ${scope === "friends" ? "bg-primary text-black font-semibold" : "text-text-mute"}`}>
+        <Link href={linkFor("friends")} className={`px-4 py-1.5 rounded-full transition-colors ${scope === "friends" ? "bg-primary text-primary-ink font-semibold" : "text-text-mute"}`}>
           Amigos
         </Link>
       ) : (

@@ -35,7 +35,7 @@ export function MatchTimer({ startedAt, timeLimitMinutes }: MatchTimerProps) {
   const timeTextClass = timer.isExpired
     ? "text-red-400"
     : timer.isWarning
-    ? "text-yellow-400 motion-safe:animate-pulse"
+    ? "text-warning motion-safe:animate-pulse"
     : "text-text";
 
   // Anuncio "polite" SOLO para transiciones significativas (warning, expirado).
@@ -68,7 +68,7 @@ export function MatchTimer({ startedAt, timeLimitMinutes }: MatchTimerProps) {
             Tiempo terminado
           </span>
         ) : timer.isWarning ? (
-          <span className="text-yellow-400 text-sm">
+          <span className="text-warning text-sm">
             Quedan menos de 2 min
           </span>
         ) : timer.state.kind === 'not_started' ? (

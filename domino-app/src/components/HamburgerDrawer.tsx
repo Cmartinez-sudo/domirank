@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { getDisplayRating } from "@/lib/rating";
 import type { AdminOrgSummary } from "@/lib/club-pro/auth";
 
@@ -147,6 +148,14 @@ export function HamburgerDrawer({
             />
           )}
           <DrawerLink href="/como-funciona" icon={ICON_BOOK} label="Cómo funciona" />
+
+          {/* Tema: no-nav row con el toggle a la derecha */}
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-text-dim">
+            <span aria-hidden="true" className="opacity-70">{ICON_THEME}</span>
+            <span className="flex-1 text-sm font-medium">Tema</span>
+            <ThemeToggle className="w-9 h-9" />
+          </div>
+
           <DrawerLink href="/settings" icon={ICON_SETTINGS} label="Ajustes" />
         </nav>
 
@@ -186,7 +195,7 @@ function DrawerLink({
       <span aria-hidden="true" className="opacity-70">{icon}</span>
       <span className="flex-1">{label}</span>
       {beta && (
-        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(251,191,36,.15)", color: "#fbbf24" }}>beta</span>
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-warning/15 text-warning">beta</span>
       )}
     </Link>
   );
@@ -236,6 +245,14 @@ const ICON_SETTINGS = (
     strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="3" />
     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+);
+
+const ICON_THEME = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 3a9 9 0 0 0 0 18" fill="currentColor" opacity="0.35" />
   </svg>
 );
 

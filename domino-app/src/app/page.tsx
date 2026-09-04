@@ -62,7 +62,7 @@ export default async function HomePage() {
     <div className="min-h-screen flex flex-col bg-bg">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-black focus:rounded-lg"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-ink focus:rounded-lg"
       >
         Ir al contenido
       </a>

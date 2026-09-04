@@ -106,7 +106,7 @@ exports[`AppShell bottom nav — snapshot > matches snapshot del bottom nav 1`] 
         aria-expanded="false"
         aria-haspopup="menu"
         aria-label="Crear"
-        class="relative flex items-center justify-center -mt-7 transition-all duration-200 ease-out hover:scale-105 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400 focus-visible:outline-offset-4 rounded-lg"
+        class="relative flex items-center justify-center -mt-7 transition-all duration-200 ease-out hover:scale-105 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 rounded-lg"
         style="filter: drop-shadow(0 6px 8px rgba(0,0,0,0.35)) drop-shadow(0 2px 4px rgba(0,0,0,0.25));"
         type="button"
       >

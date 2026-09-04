@@ -400,7 +400,7 @@ export function LiveMatchScreen({
         </div>
       ) : validation.status === 'time_expired_finishable' && validation.winnerTeam === null ? (
         <div className="space-y-3">
-          <div className="p-4 rounded-md text-center font-medium" style={{ background: "rgba(245,158,11,.12)", border: "1px solid rgba(245,158,11,.3)", color: "#f59e0b" }}>
+          <div className="p-4 rounded-md text-center font-medium bg-warning/10 border border-warning/30 text-warning">
             Tiempo agotado y empate — jueguen una mano adicional para desempatar
           </div>
           <button className="btn-ghost w-full" disabled={pending} onClick={doUndo}>
@@ -423,8 +423,8 @@ export function LiveMatchScreen({
             <span className="text-text-mute text-sm">¿Quién suma?</span>
           </div>
           <div className="flex bg-surface-2 border border-border rounded-md p-1 gap-1 mb-3">
-            <button type="button" onClick={() => setActiveTeam(1)} className={`flex-1 py-2 rounded text-sm font-medium ${activeTeam === 1 ? "bg-teamA/20 text-teamA" : "text-text-dim"}`} style={activeTeam === 1 ? { boxShadow: "inset 0 0 0 1px rgba(59,130,246,.5)" } : {}}>{nameA}</button>
-            <button type="button" onClick={() => setActiveTeam(2)} className={`flex-1 py-2 rounded text-sm font-medium ${activeTeam === 2 ? "bg-teamB/20 text-teamB" : "text-text-dim"}`} style={activeTeam === 2 ? { boxShadow: "inset 0 0 0 1px rgba(239,68,68,.5)" } : {}}>{nameB}</button>
+            <button type="button" onClick={() => setActiveTeam(1)} className={`flex-1 py-2 rounded text-sm font-medium ${activeTeam === 1 ? "bg-teamA/20 text-teamA ring-1 ring-teamA/50 ring-inset" : "text-text-dim"}`}>{nameA}</button>
+            <button type="button" onClick={() => setActiveTeam(2)} className={`flex-1 py-2 rounded text-sm font-medium ${activeTeam === 2 ? "bg-teamB/20 text-teamB ring-1 ring-teamB/50 ring-inset" : "text-text-dim"}`}>{nameB}</button>
           </div>
           <div className={`h-14 bg-surface-2 border border-border-strong rounded-lg flex items-center justify-end px-4 mb-3 font-mono text-2xl font-semibold ${input === 0 ? "text-text-mute font-normal text-base" : ""}`}>
             {input === 0 ? "Ingresa los puntos" : input}
@@ -441,8 +441,7 @@ export function LiveMatchScreen({
             </button>
             <button
               type="button"
-              className="flex-1 py-2 rounded-md font-medium border"
-              style={{ background: "rgba(245,158,11,.12)", borderColor: "rgba(245,158,11,.3)", color: "#f59e0b" }}
+              className="flex-1 py-2 rounded-md font-medium border bg-warning/10 border-warning/30 text-warning"
               disabled={pending}
               onClick={doCapicua}
             >
@@ -560,9 +559,10 @@ function TeamTile({
   players: PublicUser[];
 }) {
   const isA = color === "A";
-  const baseBg = isA ? "rgba(59,130,246,.10)" : "rgba(239,68,68,.10)";
-  const borderCol = active ? (isA ? "rgba(59,130,246,.7)" : "rgba(239,68,68,.7)") : (isA ? "rgba(59,130,246,.25)" : "rgba(239,68,68,.25)");
-  const ring = active ? (isA ? "0 0 0 3px rgba(59,130,246,.15)" : "0 0 0 3px rgba(239,68,68,.15)") : "none";
+  const teamVar = isA ? "var(--color-team-a)" : "var(--color-team-b)";
+  const baseBg = `rgb(${teamVar} / 0.10)`;
+  const borderCol = active ? `rgb(${teamVar} / 0.7)` : `rgb(${teamVar} / 0.25)`;
+  const ring = active ? `0 0 0 3px rgb(${teamVar} / 0.15)` : "none";
   return (
     <button
       type="button"
@@ -571,17 +571,16 @@ function TeamTile({
       style={{ background: `linear-gradient(180deg, ${baseBg}, transparent 80%)`, border: `1px solid ${borderCol}`, boxShadow: ring }}
     >
       <span
-        className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold tracking-widest uppercase mb-2"
-        style={{ background: isA ? "rgba(59,130,246,.15)" : "rgba(239,68,68,.15)", color: isA ? "#3b82f6" : "#ef4444" }}
+        className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold tracking-widest uppercase mb-2 ${isA ? "bg-teamA/15 text-teamA" : "bg-teamB/15 text-teamB"}`}
       >
         {players.length === 1 ? `Jugador ${color}` : `Pareja ${color}`}
       </span>
       <div className="font-semibold text-base leading-tight truncate">{name || "—"}</div>
       <div className="text-4xl font-extrabold mt-2 font-mono">{score}</div>
-      <div className="absolute left-4 right-4 bottom-2 h-1 bg-white/5 rounded">
+      <div className="absolute left-4 right-4 bottom-2 h-1 bg-surface-3 rounded">
         <span
-          className="block h-full rounded transition-all"
-          style={{ width: `${pct}%`, background: isA ? "#3b82f6" : "#ef4444" }}
+          className={`block h-full rounded transition-all ${isA ? "bg-teamA" : "bg-teamB"}`}
+          style={{ width: `${pct}%` }}
         />
       </div>
     </button>

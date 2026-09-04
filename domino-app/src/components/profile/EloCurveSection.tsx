@@ -29,13 +29,13 @@ export function EloCurveSection({
           <h2 className="text-xl font-semibold">Evolución de Elo</h2>
           <p className="text-text-mute text-xs mt-0.5">Tu rating interno tras cada partida.</p>
         </div>
-        <div className="inline-flex rounded-full bg-white/5 p-1 text-xs">
+        <div className="inline-flex rounded-full bg-surface-2 border border-border p-1 text-xs">
           {(["10", "50", "all"] as Range[]).map((r) => (
             <button
               key={r}
               type="button"
               onClick={() => setRange(r)}
-              className={`px-3 py-1 rounded-full transition-colors ${range === r ? "bg-primary text-black font-semibold" : "text-text-mute"}`}
+              className={`px-3 py-1 rounded-full transition-colors ${range === r ? "bg-primary text-primary-ink font-semibold" : "text-text-mute"}`}
             >
               {r === "all" ? "Todas" : r}
             </button>

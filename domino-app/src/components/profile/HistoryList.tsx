@@ -78,7 +78,7 @@ function HistoryRow({ row: r }: { row: Row }) {
           <span>{new Date(r.created_at).toLocaleDateString("es", { day: "numeric", month: "short" })}</span>
           <span className="opacity-50">·</span>
           <span>Parejas · {r.matches?.target_points} pts</span>
-          {isPending && <span className="badge bg-yellow-400/15 text-yellow-400 ml-auto">Pendiente</span>}
+          {isPending && <span className="badge bg-warning/15 text-warning ml-auto">Pendiente</span>}
           {isDisputed && <span className="badge bg-danger/15 text-danger ml-auto">Disputa</span>}
           {isVoid && <span className="badge bg-surface-3 text-text-mute ml-auto">Anulada</span>}
           {isConfirmed && hasRating && (

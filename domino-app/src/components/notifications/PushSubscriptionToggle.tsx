@@ -86,7 +86,7 @@ export function PushSubscriptionToggle() {
             aria-pressed={subscribed}
             aria-busy={busy}
             className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:opacity-60 ${
-              subscribed ? "bg-primary" : "bg-surface-3"
+              subscribed ? "bg-primary" : "bg-slate-300 dark:bg-surface-3"
             } before:absolute before:inset-0 before:-m-2 before:content-['']`}
           >
             <span className="sr-only">

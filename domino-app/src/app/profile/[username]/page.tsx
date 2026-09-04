@@ -295,7 +295,7 @@ export default async function PublicProfile({
                   >
                     NR
                   </span>
-                  <span className="inline-flex items-center bg-amber-400/15 text-amber-400 text-xs uppercase tracking-wider font-semibold px-2.5 py-1 rounded-full">
+                  <span className="inline-flex items-center bg-warning/15 text-warning text-xs uppercase tracking-wider font-semibold px-2.5 py-1 rounded-full">
                     Calibrando
                   </span>
                 </div>

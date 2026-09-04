@@ -7,6 +7,7 @@ import { COUNTRIES, MODALIDADES, type ModalityCode, type CountryCode } from "@/l
 import { updateProfile, uploadAvatar, removeAvatar, signOut } from "@/lib/settings";
 import { PushSubscriptionToggle } from "@/components/notifications/PushSubscriptionToggle";
 import { ModalityPreferencesSection } from "./ModalityPreferencesSection";
+import { AppearanceSection } from "./AppearanceSection";
 import type { UserPreferences } from "@/types/user-preferences";
 
 type Profile = {
@@ -158,6 +159,9 @@ export function SettingsForm({
 
       {/* ── Preferencias de partida ─────────────────────────────────────── */}
       <ModalityPreferencesSection initialPreferences={initialPreferences} />
+
+      {/* ── Apariencia ──────────────────────────────────────────────────── */}
+      <AppearanceSection />
 
       {msg && (
         <div className={`p-3 rounded-md text-sm ${msg.kind === "ok" ? "bg-primary/10 border border-primary/30 text-primary" : "bg-danger/10 border border-danger/30 text-danger"}`}>
