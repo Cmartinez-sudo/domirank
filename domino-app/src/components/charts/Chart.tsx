@@ -136,7 +136,7 @@ export function Chart({ option, height, ariaLabel, className, onReady }: Props) 
 
     (async () => {
       const echarts = await import("echarts/core");
-      const { LineChart, BarChart, HeatmapChart, GaugeChart } = await import("echarts/charts");
+      const { LineChart, BarChart, HeatmapChart, GaugeChart, EffectScatterChart } = await import("echarts/charts");
       const {
         GridComponent,
         TooltipComponent,
@@ -151,6 +151,7 @@ export function Chart({ option, height, ariaLabel, className, onReady }: Props) 
         BarChart,
         HeatmapChart,
         GaugeChart,
+        EffectScatterChart,
         GridComponent,
         TooltipComponent,
         VisualMapComponent,
