@@ -138,7 +138,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
                 <tr
                   key={r.id ?? r.username}
                   className={`border-b border-border/50 hover:bg-surface-2/60 transition-colors ${
-                    user?.id === r.id ? "bg-primary/10 ring-1 ring-primary/30" : i === 0 ? "bg-yellow-400/[.025]" : ""
+                    user?.id === r.id ? "bg-primary/10 ring-1 ring-primary/30" : i === 0 ? "bg-warning/[.04]" : ""
                   }`}
                 >
                   <td className="px-4 py-3">
@@ -198,21 +198,21 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
 function RankCell({ rank }: { rank: number }) {
   if (rank === 1) {
     return (
-      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-yellow-400/15 text-yellow-400 font-bold text-sm">
+      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 font-bold text-sm">
         1
       </span>
     );
   }
   if (rank === 2) {
     return (
-      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-300/15 text-slate-300 font-bold text-sm">
+      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-400/15 text-slate-600 dark:text-slate-300 font-bold text-sm">
         2
       </span>
     );
   }
   if (rank === 3) {
     return (
-      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-600/15 text-amber-500 font-bold text-sm">
+      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-700/15 text-amber-800 dark:text-amber-500 font-bold text-sm">
         3
       </span>
     );

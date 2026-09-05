@@ -67,7 +67,7 @@ export function CreatePopover({ open, onClose, anchorRef }: Props) {
               onClick={onClose}
               className={
                 a.featured
-                  ? "flex items-center gap-3 rounded-xl border border-emerald-500/40 bg-gradient-to-br from-emerald-600/25 to-emerald-500/10 px-3 py-2.5 hover:from-emerald-600/35 hover:to-emerald-500/20 transition-colors"
+                  ? "flex items-center gap-3 rounded-xl border border-primary/40 bg-gradient-to-br from-primary/25 to-primary/10 px-3 py-2.5 hover:from-primary/35 hover:to-primary/20 transition-colors"
                   : "flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-surface-2 transition-colors mt-1"
               }
             >
@@ -75,13 +75,13 @@ export function CreatePopover({ open, onClose, anchorRef }: Props) {
                 aria-hidden="true"
                 className={
                   a.featured
-                    ? "grid place-items-center w-9 h-9 rounded-lg bg-emerald-500 text-white shrink-0"
+                    ? "grid place-items-center w-9 h-9 rounded-lg bg-primary text-primary-ink shrink-0"
                     : "grid place-items-center w-9 h-9 rounded-lg bg-surface text-text-dim shrink-0"
                 }
               >
                 {a.icon}
               </span>
-              <span className={a.featured ? "font-semibold text-emerald-100" : "font-semibold text-text"}>
+              <span className={a.featured ? "font-semibold text-text" : "font-semibold text-text"}>
                 {a.label}
               </span>
             </Link>

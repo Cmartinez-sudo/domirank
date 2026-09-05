@@ -114,7 +114,7 @@ export default async function Dashboard() {
                   >
                     NR
                   </span>
-                  <span className="badge bg-amber-400/15 text-amber-400 text-xs uppercase tracking-wider font-semibold px-2.5 py-1 shrink-0">
+                  <span className="badge bg-warning/15 text-warning text-xs uppercase tracking-wider font-semibold px-2.5 py-1 shrink-0">
                     Calibrando
                   </span>
                 </>
@@ -183,7 +183,7 @@ export default async function Dashboard() {
                       </div>
                       <div className="flex items-center gap-2 text-sm flex-shrink-0">
                         {isPending && (
-                          <span className="badge bg-yellow-400/15 text-yellow-400">Pendiente</span>
+                          <span className="badge bg-warning/15 text-warning">Pendiente</span>
                         )}
                         {isDisputed && (
                           <span className="badge bg-danger/15 text-danger">Disputa</span>

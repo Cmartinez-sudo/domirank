@@ -81,7 +81,7 @@ export function HandRow({ hand, nameA, nameB, onEdit, canEdit = true }: Props) {
         {/* Edited indicator — siempre visible si fue editada */}
         {wasEdited && (
           <span
-            className="ml-2 text-amber-400 shrink-0"
+            className="ml-2 text-warning shrink-0"
             title={`Editada ${hand.edit_count} ${hand.edit_count === 1 ? "vez" : "veces"}`}
             aria-label="Mano editada"
           >
@@ -147,7 +147,7 @@ function AttributionLine({ prefix, profile, when, edited = false }: {
   return (
     <div className="flex items-center gap-2">
       <Avatar player={profile} size={18} />
-      <span className={edited ? "text-amber-400" : "text-text-dim"}>{prefix}</span>
+      <span className={edited ? "text-warning" : "text-text-dim"}>{prefix}</span>
       <strong className="text-text">{profile.display_name ?? profile.username}</strong>
       <span className="text-text-mute">·</span>
       <span className="text-text-mute font-mono tabular-nums">{formatRelative(when)}</span>

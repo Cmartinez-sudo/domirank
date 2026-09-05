@@ -11,7 +11,7 @@ export function StreaksSection({
     const { kind, count } = streaks.current;
     if (kind === "none" || count < 2) return null;
     if (kind === "wins")   return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/20 text-primary text-sm font-semibold">🔥 {count} victorias seguidas</span>;
-    return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 text-text-mute text-sm font-semibold">Racha: {count} derrotas</span>;
+    return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-3 text-text-mute text-sm font-semibold">Racha: {count} derrotas</span>;
   })();
 
   return (

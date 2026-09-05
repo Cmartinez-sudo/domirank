@@ -145,7 +145,7 @@ export function AppShell({
       >
         <span className={`relative transition-transform ${active ? "scale-110" : "opacity-70"}`}>
           {showAvatar ? (
-            <span className={`inline-flex rounded-full ${active ? "ring-2 ring-emerald-500 ring-offset-2 ring-offset-bg" : ""}`}>
+            <span className={`inline-flex rounded-full ${active ? "ring-2 ring-primary ring-offset-2 ring-offset-bg" : ""}`}>
               <Avatar player={avatarProfile as never} size={28} />
             </span>
           ) : (
@@ -178,14 +178,14 @@ export function AppShell({
             it.icon
           )}
           {it.badge != null && it.badge > 0 && (
-            <span className="absolute -top-1 -right-1.5 grid place-items-center min-w-[18px] h-[18px] px-1 rounded-full bg-danger text-white text-[10px] font-bold leading-none border border-bg-2">
+            <span className="absolute -top-1 -right-1.5 grid place-items-center min-w-[18px] h-[18px] px-1 rounded-full bg-danger text-white text-[10px] font-bold leading-none border-2 border-bg">
               {it.badge > 9 ? "9+" : it.badge}
             </span>
           )}
         </span>
         <span className={`text-[14px] ${active ? "font-semibold" : ""}`}>{it.label}</span>
         {it.beta && (
-          <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(251,191,36,.15)", color: "#fbbf24" }}>beta</span>
+          <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-warning/15 text-warning">beta</span>
         )}
       </Link>
     );
@@ -236,7 +236,7 @@ export function AppShell({
                   createOpen ? "bg-surface-2 text-text" : "text-text-dim hover:text-text hover:bg-surface-2"
                 }`}
               >
-                <span className={`grid place-items-center w-6 h-6 rounded-md bg-emerald-500 text-white transition-transform ${createOpen ? "rotate-45" : ""}`}>
+                <span className={`grid place-items-center w-6 h-6 rounded-md bg-primary text-primary-ink transition-transform ${createOpen ? "rotate-45" : ""}`}>
                   {ICON.plus}
                 </span>
                 <span className="text-[14px] font-semibold">Crear</span>
@@ -336,7 +336,7 @@ export function AppShell({
                 aria-label="Crear"
                 aria-haspopup="menu"
                 aria-expanded={createOpen}
-                className="relative flex items-center justify-center -mt-7 transition-all duration-200 ease-out hover:scale-105 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400 focus-visible:outline-offset-4 rounded-lg"
+                className="relative flex items-center justify-center -mt-7 transition-all duration-200 ease-out hover:scale-105 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 rounded-lg"
                 style={{
                   filter:
                     "drop-shadow(0 6px 8px rgba(0,0,0,0.35)) drop-shadow(0 2px 4px rgba(0,0,0,0.25))",

@@ -127,7 +127,7 @@ export function ModalityPreferencesSection({ initialPreferences }: Props) {
           onClick={handleToggle}
           data-testid="modality-prompt-toggle"
           className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:opacity-60 ${
-            toggleOn ? "bg-primary" : "bg-surface-3"
+            toggleOn ? "bg-primary" : "bg-slate-300 dark:bg-surface-3"
           }`}
         >
           <span className="sr-only">

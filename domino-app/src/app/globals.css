@@ -2,11 +2,102 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+/* ---------------------------------------------------------------- */
+/* Theme tokens                                                      */
+/* ---------------------------------------------------------------- */
+/* Dark is the default. next-themes toggles `class="light"` on <html> */
+/* for light mode. Selector `:root, .dark` covers both the initial   */
+/* render (no class yet) and explicit dark override.                 */
+/* All color-only vars are stored as `R G B` triples so Tailwind's   */
+/* `<alpha-value>` interpolation works (e.g. bg-bg/50).              */
+/* Border vars keep their alpha baked in — they're rendered directly.*/
+
+:root,
+.dark {
   color-scheme: dark;
+
+  --color-bg:            10 16 32;      /* #0a1020 */
+  --color-bg-2:          15 23 41;      /* #0f1729 */
+  --color-surface:       19 28 48;      /* #131c30 */
+  --color-surface-2:     24 35 60;      /* #18233c */
+  --color-surface-3:     31 44 73;      /* #1f2c49 */
+
+  --color-border:        rgba(255, 255, 255, 0.07);
+  --color-border-strong: rgba(255, 255, 255, 0.14);
+
+  --color-text:          238 242 255;   /* #eef2ff */
+  --color-text-dim:      166 176 200;   /* #a6b0c8 */
+  --color-text-mute:     138 147 176;   /* #8a93b0  ~5.3:1 on surface */
+
+  --color-primary:       16 185 129;    /* #10b981 */
+  --color-primary-2:     5 150 105;     /* #059669 */
+  --color-primary-ink:   0 0 0;         /* text on top of primary fills */
+
+  --color-danger:        239 68 68;     /* #ef4444 */
+  --color-warning:       245 158 11;    /* #f59e0b */
+  --color-info:          59 130 246;    /* #3b82f6 */
+
+  --color-team-a:        59 130 246;    /* blue-500 */
+  --color-team-a-soft:   30 58 138;     /* blue-900, used with alpha via /X */
+  --color-team-b:        239 68 68;     /* red-500 */
+  --color-team-b-soft:   127 29 29;     /* red-900, used with alpha via /X */
+
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+                 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+  --shadow-pop:  0 24px 60px -16px rgba(0, 0, 0, 0.6),
+                 0 8px 18px rgba(0, 0, 0, 0.35);
+
+  --body-gradient:
+    radial-gradient(1200px 800px at 15% -10%, rgba(16, 185, 129, 0.10), transparent 60%),
+    radial-gradient(900px 700px at 110% 10%, rgba(59, 130, 246, 0.08), transparent 60%),
+    radial-gradient(800px 600px at 50% 120%, rgba(245, 158, 11, 0.05), transparent 60%);
+
+  --focus-ring: rgba(16, 185, 129, 0.6);
 }
 
-/* Native mobile feel */
+.light {
+  color-scheme: light;
+
+  --color-bg:            248 250 252;   /* #f8fafc slate-50 */
+  --color-bg-2:          241 245 249;   /* #f1f5f9 slate-100 */
+  --color-surface:       255 255 255;   /* #ffffff */
+  --color-surface-2:     248 250 252;   /* #f8fafc */
+  --color-surface-3:     241 245 249;   /* #f1f5f9 */
+
+  --color-border:        rgba(15, 23, 42, 0.08);   /* slate-900 @ 8% */
+  --color-border-strong: rgba(15, 23, 42, 0.16);   /* slate-900 @ 16% */
+
+  --color-text:          15 23 42;      /* #0f172a slate-900 */
+  --color-text-dim:      71 85 105;     /* #475569 slate-600  ~7.3:1 on white */
+  --color-text-mute:     100 116 139;   /* #64748b slate-500  ~5.6:1 on white */
+
+  --color-primary:       16 185 129;    /* emerald-500 (fill only) */
+  --color-primary-2:     4 120 87;      /* emerald-700 — hover/text usage */
+  --color-primary-ink:   255 255 255;   /* text on top of primary fills */
+
+  --color-danger:        220 38 38;     /* red-600  ~5.1:1 on white */
+  --color-warning:       180 83 9;      /* amber-700 for text; amber-500 as fill */
+  --color-info:          37 99 235;     /* blue-600 */
+
+  --color-team-a:        37 99 235;     /* blue-600  ~5.2:1 on white */
+  --color-team-a-soft:   219 234 254;   /* blue-100 */
+  --color-team-b:        220 38 38;     /* red-600  ~5.1:1 on white */
+  --color-team-b-soft:   254 226 226;   /* red-100 */
+
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04),
+                 0 8px 24px -12px rgba(15, 23, 42, 0.12);
+  --shadow-pop:  0 20px 50px -18px rgba(15, 23, 42, 0.25),
+                 0 6px 14px rgba(15, 23, 42, 0.08);
+
+  --body-gradient:
+    radial-gradient(1400px 900px at 20% -10%, rgba(16, 185, 129, 0.05), transparent 65%);
+
+  --focus-ring: rgba(4, 120, 87, 0.55);
+}
+
+/* ---------------------------------------------------------------- */
+/* Native mobile feel                                                */
+/* ---------------------------------------------------------------- */
 * {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
@@ -16,60 +107,53 @@ input, textarea, select, button {
   appearance: none;
 }
 
-/* Smooth scrolling */
 html {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }
 
 html, body {
-  background-color: #0a1020;
-  color: #eef2ff;
-  background-image:
-    radial-gradient(1200px 800px at 15% -10%, rgba(16,185,129,.10), transparent 60%),
-    radial-gradient(900px 700px at 110% 10%, rgba(59,130,246,.08), transparent 60%),
-    radial-gradient(800px 600px at 50% 120%, rgba(245,158,11,.05), transparent 60%);
+  background-color: rgb(var(--color-bg));
+  color: rgb(var(--color-text));
+  background-image: var(--body-gradient);
   background-attachment: fixed;
   min-height: 100dvh;
+  transition: background-color 200ms ease, color 200ms ease;
 }
 
 /* Keyboard focus ring — focus-visible only (no global outline removal) */
 *:focus-visible {
-  outline: 2px solid rgba(16, 185, 129, 0.6);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
   border-radius: 6px;
 }
-/* Hide outline only when focused via pointer (not keyboard) */
 *:focus:not(:focus-visible) {
   outline: none;
 }
 
 @layer components {
-  /* Buttons — min 44px touch target */
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 min-h-[44px]
            rounded-lg font-semibold text-sm transition-all duration-150 cursor-pointer select-none;
   }
   .btn-primary {
-    @apply btn bg-primary text-black hover:bg-primary-2 active:scale-[.97]
+    @apply btn bg-primary text-primary-ink hover:bg-primary-2 active:scale-[.97]
            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50
            shadow-[0_2px_12px_rgba(16,185,129,.35)];
   }
   .btn-ghost {
     @apply btn bg-surface-2 text-text hover:bg-surface-3 border border-border active:scale-[.97]
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/15;
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30;
   }
   .btn-secondary {
     @apply btn bg-surface-2 text-text hover:bg-surface-3 border border-border active:scale-[.97]
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/15;
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30;
   }
 
-  /* Cards — rounder, more breathing room on mobile */
   .card {
     @apply bg-surface border border-border rounded-2xl shadow-card p-4 md:p-5;
   }
 
-  /* Inputs — taller for easy tap */
   .input {
     @apply w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-text text-[15px]
            placeholder:text-text-mute focus:outline-none focus:border-primary
@@ -120,4 +204,5 @@ html, body {
   .animate-slide-up-fade { animation: none; opacity: 1; transform: none; }
   .animate-spin-fast { animation-duration: 1.5s; }
   .animate-fade-in { animation: none; opacity: 1; transform: none; }
+  html, body { transition: none; }
 }

@@ -217,7 +217,7 @@ function ToggleRow({
         aria-label={label}
         onClick={() => onChange(!checked)}
         className={`relative shrink-0 w-11 h-6 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
-          checked ? "bg-primary" : "bg-surface-3"
+          checked ? "bg-primary" : "bg-slate-300 dark:bg-surface-3"
         }`}
       >
         <span

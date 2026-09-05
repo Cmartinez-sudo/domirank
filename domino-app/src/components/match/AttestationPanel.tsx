@@ -280,7 +280,7 @@ function StatusHeader({
   if (status === "pending_attestation") {
     return (
       <div>
-        <div className="flex items-center gap-2 text-yellow-400">
+        <div className="flex items-center gap-2 text-warning">
           <PendingIcon size={20} />
           <h3 className="font-semibold">Pendiente de confirmación</h3>
         </div>
@@ -345,7 +345,7 @@ function StatusBanner({ status, hideDetail }: { status: AttestationStatus; hideD
   if (status === "pending_attestation") {
     return (
       <div className="card">
-        <div className="flex items-center gap-2 text-yellow-400">
+        <div className="flex items-center gap-2 text-warning">
           <PendingIcon size={20} />
           <h3 className="font-semibold">Pendiente de confirmación</h3>
         </div>

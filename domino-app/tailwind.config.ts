@@ -1,31 +1,33 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: [
     "./src/**/*.{ts,tsx}",
   ],
   theme: {
     extend: {
       colors: {
-        bg:        "#0a1020",
-        "bg-2":    "#0f1729",
-        surface:   "#131c30",
-        "surface-2": "#18233c",
-        "surface-3": "#1f2c49",
-        border:    "rgba(255,255,255,.07)",
-        "border-strong": "rgba(255,255,255,.14)",
-        text:      "#eef2ff",
-        "text-dim":"#a6b0c8",
-        // text-mute: subido de #6b7490 (3.7:1) a #8a93b0 (~5.3:1) sobre bg-surface
-        // para cumplir WCAG AA en texto pequeño (4.5:1 mínimo).
-        "text-mute":"#8a93b0",
-        primary:   "#10b981",
-        "primary-2":"#059669",
-        danger:    "#ef4444",
-        warning:   "#f59e0b",
-        info:      "#3b82f6",
-        teamA:     "#3b82f6",
-        teamB:     "#ef4444",
+        bg:               "rgb(var(--color-bg) / <alpha-value>)",
+        "bg-2":           "rgb(var(--color-bg-2) / <alpha-value>)",
+        surface:          "rgb(var(--color-surface) / <alpha-value>)",
+        "surface-2":      "rgb(var(--color-surface-2) / <alpha-value>)",
+        "surface-3":      "rgb(var(--color-surface-3) / <alpha-value>)",
+        border:           "var(--color-border)",
+        "border-strong":  "var(--color-border-strong)",
+        text:             "rgb(var(--color-text) / <alpha-value>)",
+        "text-dim":       "rgb(var(--color-text-dim) / <alpha-value>)",
+        "text-mute":      "rgb(var(--color-text-mute) / <alpha-value>)",
+        primary:          "rgb(var(--color-primary) / <alpha-value>)",
+        "primary-2":      "rgb(var(--color-primary-2) / <alpha-value>)",
+        "primary-ink":    "rgb(var(--color-primary-ink) / <alpha-value>)",
+        danger:           "rgb(var(--color-danger) / <alpha-value>)",
+        warning:          "rgb(var(--color-warning) / <alpha-value>)",
+        info:             "rgb(var(--color-info) / <alpha-value>)",
+        teamA:            "rgb(var(--color-team-a) / <alpha-value>)",
+        "teamA-soft":     "rgb(var(--color-team-a-soft) / <alpha-value>)",
+        teamB:            "rgb(var(--color-team-b) / <alpha-value>)",
+        "teamB-soft":     "rgb(var(--color-team-b-soft) / <alpha-value>)",
       },
       borderRadius: {
         sm: "10px",
@@ -37,8 +39,8 @@ const config: Config = {
         "3xl": "36px",
       },
       boxShadow: {
-        card: "0 1px 0 rgba(255,255,255,.04) inset, 0 10px 30px -12px rgba(0,0,0,.6)",
-        pop:  "0 24px 60px -16px rgba(0,0,0,.6),0 8px 18px rgba(0,0,0,.35)",
+        card: "var(--shadow-card)",
+        pop:  "var(--shadow-pop)",
       },
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
