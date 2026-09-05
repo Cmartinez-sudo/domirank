@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase/server';
 import type { User } from '@supabase/supabase-js';
-import type { Database } from '@/types/supabase';
+import type { Database } from '@domirank/shared/supabase';
 
 type OrganizationRow = Database['public']['Tables']['organizations']['Row'];
 type OrgRole = 'owner' | 'admin' | 'staff';
