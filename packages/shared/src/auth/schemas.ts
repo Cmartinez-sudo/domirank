@@ -54,8 +54,8 @@ export const signupSchema = z.object({
       (v) => isAtLeastYearsOld(v, MIN_SIGNUP_AGE_YEARS),
       `Debes tener al menos ${MIN_SIGNUP_AGE_YEARS} años`,
     ),
-  terms_accepted: z.literal(true, {
-    errorMap: () => ({ message: "Debes aceptar los términos" }),
+  terms_accepted: z.boolean().refine((v) => v === true, {
+    message: "Debes aceptar los términos",
   }),
 });
 
