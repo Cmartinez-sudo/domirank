@@ -63,6 +63,7 @@ if (process.env.NODE_ENV === "production") {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  transpilePackages: ["@domirank/shared"],
   experimental: {
     typedRoutes: false,
   },

@@ -1,5 +1,5 @@
 {
-  "name": "domirank",
+  "name": "@domirank/web",
   "version": "0.1.0",
   "private": true,
   "engines": {
@@ -37,12 +37,6 @@
     "react-dom": "^18.3.1",
     "serwist": "^9.5.11",
     "zod": "^3.23.8"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "unrs-resolver"
-    ]
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
