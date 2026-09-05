@@ -169,3 +169,64 @@ priorizar upgrade Pro o configurar cron externo. Mientras tanto, el
 zombie cleanup one-shot (mig 0068-0071) limpia el inventario histórico.
 
 ---
+
+## RN Port · Semana 1 (monorepo pnpm)
+
+### TD-019: `typescript.ignoreBuildErrors: true` en `apps/web/next.config.mjs`
+
+**Descripción**: Durante el port a monorepo (feat/rn-port), Vercel corrió
+un build limpio (sin `.next/cache/` de deploys previos) y salieron a la
+luz type errors en código de producción existente que la cache venía
+disimulando en `main`. Para no expandir el scope del port a limpieza de
+tipos, se activó `typescript.ignoreBuildErrors: true` en `next.config.mjs`
+como escape hatch documentada de Next. El comportamiento de deploy es
+el mismo que teníamos antes (los errores tampoco frenaban prod), pero
+ahora es explícito en config en vez de accidente de caché.
+
+**Categorías de errores enterrados** (auditadas al momento del port):
+
+1. **`startTransition` async callback** (39 usos).
+   - `Argument of type '() => Promise<void>' is not assignable to
+     parameter of type 'TransitionFunction'.`
+   - Mitigado parcialmente con module augmentation en
+     `apps/web/src/types/react-transition.d.ts` (relaja el tipo a
+     `() => void | Promise<void>`). La augmentation cubre este patrón
+     específico pero no las otras categorías.
+   - Archivos: `OrgAssetUploader.tsx`, `OrgEditForm.tsx`,
+     `CreateTournamentWizard.tsx`, `AssetUploader.tsx`, `EditForm.tsx`,
+     `WithdrawButton.tsx`, `MatchScoreCard.tsx`,
+     `SendInvitationsButton.tsx`, `QuickActions.tsx`,
+     `NewGroupForm.tsx`, `InvitationCard.tsx`, `SettingsPanel.tsx`,
+     `ImportHistoricalButton.tsx`, `MembersPanel.tsx`, y más
+     (grep `startTransition(async` para lista completa).
+
+2. **`LegacyRef` vs `Ref` en spread de `SVGProps`**.
+   - `Type 'LegacyRef<SVGSVGElement>' is not assignable to
+     Ref<SVGSVGElement>. Type 'string' is not assignable...`
+   - Se dispara al hacer `<svg {...rest}>` donde `rest` es
+     `SVGProps<SVGSVGElement>`. React 18's `SVGProps.ref` incluye
+     `string` legacy pero JSX intrinsic no.
+   - Archivo confirmado: `apps/web/src/components/icons/index.tsx`.
+     Posiblemente otros que sigan el mismo patrón de icon base.
+
+3. **Probables más categorías**: al desactivar `ignoreBuildErrors`
+   aparecerán. No las enumeramos porque el build se cortó en el
+   primero.
+
+**Impacto**: Bajo en runtime (Next genera el mismo JS con o sin
+type-check). Alto en DX: perdemos safety-net de CI para regresiones de
+tipo hasta que se limpie.
+
+**Acción pendiente**: branch dedicado `chore/type-cleanup` post-merge
+del port. Pasos:
+1. Comentar `typescript.ignoreBuildErrors` en `next.config.mjs`.
+2. `pnpm --filter @domirank/web build` — enumerar errores.
+3. Fix por categoría (patrón consistente por categoría, no por archivo).
+4. Considerar si la module augmentation puede eliminarse migrando a
+   `startTransition(() => { void (async () => { ... })(); })` una vez y
+   consistente.
+5. Re-habilitar `ignoreBuildErrors: false`.
+6. Enforcement CI: agregar `pnpm --filter @domirank/web typecheck` como
+   step en la pipeline de PRs.
+
+---
