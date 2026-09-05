@@ -26,8 +26,8 @@ export function EloCurveSection({
     <div className="card">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <div>
-          <h2 className="text-xl font-semibold">Evolución de Elo</h2>
-          <p className="text-text-mute text-xs mt-0.5">Tu rating interno tras cada partida.</p>
+          <h2 className="text-xl font-semibold">Evolución de tu DomiRank</h2>
+          <p className="text-text-mute text-xs mt-0.5">Cómo cambia tu nivel con cada partida jugada.</p>
         </div>
         <div className="inline-flex rounded-full bg-surface-2 border border-border p-1 text-xs">
           {(["10", "50", "all"] as Range[]).map((r) => (

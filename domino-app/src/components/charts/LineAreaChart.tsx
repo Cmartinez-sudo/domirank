@@ -10,6 +10,8 @@ export type LineAreaChartMarkLine = {
   y: number;
   label: string;
   color: string;
+  /** When true the line renders solid + bold label — meant for the user's current tier. */
+  highlight?: boolean;
   opacity?: number;
 };
 
@@ -19,6 +21,14 @@ export type LineAreaChartMarkPoint = {
   color: string;
   label?: string;
   ring?: boolean;
+  /** Renders the label as a filled pill instead of plain text. */
+  pill?: boolean;
+};
+
+export type LineAreaChartXAxisTick = {
+  /** Data-space x value where the tick sits. */
+  x: number;
+  label: string;
 };
 
 type Props = {
@@ -27,11 +37,20 @@ type Props = {
   fillGradientAlpha?: number;
   markLines?: LineAreaChartMarkLine[];
   markPoints?: LineAreaChartMarkPoint[];
+  /** If provided, renders a categorical-looking X axis with these labels at their x positions. */
+  xAxisTicks?: LineAreaChartXAxisTick[];
+  /** Position for `markLine` labels. `insideStartTop` floats them above the line, inside the chart area. */
+  markLineLabelPosition?: "end" | "insideStartTop" | "insideEndTop" | "middle";
+  /** Adds a pulsing ripple over the given point (typically the last one). */
+  currentPoint?: { x: number; y: number; color: string };
   yDomain?: [number, number];
   showDots?: boolean;
   height?: number;
   ariaLabel: string;
   tooltipFormatter?: (params: { xValue: number; yValue: number; index: number }) => string;
+  /** Extra pixels reserved for the plot area — bump when Y labels are wide. */
+  leftPadding?: number;
+  rightPadding?: number;
 };
 
 /**
@@ -46,29 +65,61 @@ export function LineAreaChart({
   fillGradientAlpha = 0.35,
   markLines = [],
   markPoints = [],
+  xAxisTicks,
+  markLineLabelPosition = "end",
+  currentPoint,
   yDomain,
   showDots = false,
   height = 240,
   ariaLabel,
   tooltipFormatter,
+  leftPadding = 44,
+  rightPadding = 16,
 }: Props) {
   const option = useMemo<EChartsOption>(() => {
     const seriesData = data.map((p) => [p.x, p.y]);
+    const bottomPadding = xAxisTicks && xAxisTicks.length > 0 ? 28 : 8;
 
     return {
-      grid: { top: 12, right: 16, bottom: 8, left: 44, containLabel: false },
+      grid: { top: 12, right: rightPadding, bottom: bottomPadding, left: leftPadding, containLabel: false },
       xAxis: {
         type: "value",
-        show: false,
+        show: !!(xAxisTicks && xAxisTicks.length),
         min: data.length ? data[0].x : undefined,
         max: data.length ? data[data.length - 1].x : undefined,
+        axisLine: { show: false },
+        axisTick: { show: false },
+        splitLine: { show: false },
+        axisLabel: xAxisTicks
+          ? {
+              interval: 0,
+              fontSize: 10,
+              showMinLabel: true,
+              showMaxLabel: true,
+              formatter: (value: number) => {
+                const match = xAxisTicks.find((t) => Math.abs(t.x - value) < 1);
+                return match ? match.label : "";
+              },
+            }
+          : undefined,
+        // ECharts respects `interval` when we hand-pick the tick values via `data`-like config.
+        // For type="value" we approximate by pinning min/max/data ticks:
+        ...(xAxisTicks
+          ? {
+              interval:
+                xAxisTicks.length >= 2
+                  ? (xAxisTicks[xAxisTicks.length - 1].x - xAxisTicks[0].x) /
+                    Math.max(1, xAxisTicks.length - 1)
+                  : undefined,
+            }
+          : {}),
       },
       yAxis: {
         type: "value",
         min: yDomain?.[0],
         max: yDomain?.[1],
         splitNumber: 4,
-        axisLabel: { formatter: (v: number) => String(Math.round(v)) },
+        axisLabel: { formatter: (v: number) => formatYValue(v) },
       },
       tooltip: {
         trigger: "axis",
@@ -117,11 +168,23 @@ export function LineAreaChart({
             ? {
                 symbol: "none",
                 silent: true,
-                lineStyle: { type: "dashed" },
                 data: markLines.map((m) => ({
                   yAxis: m.y,
-                  label: { formatter: m.label, color: m.color, fontSize: 10, opacity: 0.85 },
-                  lineStyle: { color: m.color, opacity: m.opacity ?? 0.35 },
+                  lineStyle: {
+                    color: m.color,
+                    opacity: m.opacity ?? (m.highlight ? 0.9 : 0.35),
+                    type: m.highlight ? "solid" : "dashed",
+                    width: m.highlight ? 2 : 1,
+                  },
+                  label: {
+                    formatter: m.label,
+                    color: m.color,
+                    fontSize: m.highlight ? 11 : 10,
+                    fontWeight: m.highlight ? 700 : 400,
+                    opacity: m.highlight ? 1 : 0.85,
+                    position: markLineLabelPosition as never,
+                    padding: markLineLabelPosition === "insideStartTop" ? [0, 6, 3, 6] : undefined,
+                  },
                 })),
               }
             : undefined,
@@ -135,18 +198,61 @@ export function LineAreaChart({
                     ? { color: "transparent", borderColor: p.color, borderWidth: 2 }
                     : { color: p.color, borderColor: "rgba(0,0,0,0.6)", borderWidth: 2 },
                   label: p.label
-                    ? { formatter: p.label, color: p.color, fontSize: 10, position: "top" as const }
+                    ? p.pill
+                      ? {
+                          formatter: p.label,
+                          color: "#fff",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          position: "top" as const,
+                          padding: [3, 8, 3, 8],
+                          borderRadius: 999,
+                          backgroundColor: p.color,
+                        }
+                      : { formatter: p.label, color: p.color, fontSize: 10, position: "top" as const }
                     : { show: false },
                 })),
               }
             : undefined,
           animationDuration: 600,
         },
+        ...(currentPoint
+          ? [
+              {
+                type: "effectScatter" as const,
+                data: [[currentPoint.x, currentPoint.y]],
+                symbolSize: 10,
+                itemStyle: { color: currentPoint.color, borderColor: "#fff", borderWidth: 2 },
+                rippleEffect: { period: 3, scale: 3.5, brushType: "stroke" as const },
+                zlevel: 2,
+              },
+            ]
+          : []),
       ],
     };
-  }, [data, color, fillGradientAlpha, markLines, markPoints, yDomain, showDots, tooltipFormatter]);
+  }, [
+    data,
+    color,
+    fillGradientAlpha,
+    markLines,
+    markPoints,
+    xAxisTicks,
+    markLineLabelPosition,
+    currentPoint,
+    yDomain,
+    showDots,
+    tooltipFormatter,
+    leftPadding,
+    rightPadding,
+  ]);
 
   return <Chart option={option} height={height} ariaLabel={ariaLabel} />;
+}
+
+function formatYValue(v: number): string {
+  // Integers show as-is; small decimals keep 1 place (DomiRank display is 1.0–20.0).
+  if (Number.isInteger(v)) return String(v);
+  return v.toFixed(1);
 }
 
 // Accepts #rrggbb; ignores rgb() / var(). Alpha in [0, 1].
