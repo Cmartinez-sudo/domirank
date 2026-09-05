@@ -1,16 +1,29 @@
 "use client";
 
-import { MotionConfig } from "framer-motion";
+import { MotionConfig, type Transition } from "framer-motion";
 import type { ReactNode } from "react";
+import { useMotionPreference } from "@/hooks/useMotionPreference";
 
 /**
- * Respeta `prefers-reduced-motion` globalmente. Cuando el usuario tiene la
- * preferencia activa (iOS Low Power Mode, accessibility settings de macOS/Android,
- * o Windows reduce motion), framer-motion automáticamente desactiva todas las
- * animaciones de toda la app — sin tocar componente por componente.
+ * Root motion gate. Respects `prefers-reduced-motion` via `MotionConfig`,
+ * but lets the user override the OS choice from Settings ("always" / "reduced").
  *
- * `reducedMotion="user"` significa: respeta lo que el usuario eligió en su SO.
+ * Spring defaults are DomiRank-flavored: enough character for celebratory
+ * moments without cartoony overshoot on interactions.
  */
+const DEFAULT_TRANSITION: Transition = {
+  type: "spring",
+  damping: 22,
+  stiffness: 320,
+  mass: 0.9,
+};
+
 export function MotionGate({ children }: { children: ReactNode }) {
-  return <MotionConfig reducedMotion="user">{children}</MotionConfig>;
+  const [pref] = useMotionPreference();
+  const reducedMotion = pref === "reduced" ? "always" : pref === "always" ? "never" : "user";
+  return (
+    <MotionConfig reducedMotion={reducedMotion} transition={DEFAULT_TRANSITION}>
+      {children}
+    </MotionConfig>
+  );
 }
