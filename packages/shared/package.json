@@ -9,7 +9,8 @@
     "./rating": "./src/rating/index.ts",
     "./matches": "./src/matches/index.ts",
     "./tournaments": "./src/tournaments/index.ts",
-    "./supabase": "./src/supabase/index.ts"
+    "./supabase": "./src/supabase/index.ts",
+    "./auth": "./src/auth/index.ts"
   },
   "scripts": {
     "test": "vitest run",
@@ -19,5 +20,8 @@
   "devDependencies": {
     "typescript": "^5.6.2",
     "vitest": "^4.1.7"
+  },
+  "dependencies": {
+    "zod": "^4.5.4"
   }
 }
