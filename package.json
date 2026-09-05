@@ -1,0 +1,14 @@
+{
+  "name": "domirank-monorepo",
+  "private": true,
+  "packageManager": "pnpm@11.1.1",
+  "scripts": {
+    "web:dev": "pnpm --filter @domirank/web dev",
+    "web:build": "pnpm --filter @domirank/web build",
+    "web:test": "pnpm --filter @domirank/web test",
+    "mobile:start": "pnpm --filter @domirank/mobile start",
+    "mobile:ios": "pnpm --filter @domirank/mobile ios",
+    "mobile:android": "pnpm --filter @domirank/mobile android",
+    "shared:test": "pnpm --filter @domirank/shared test"
+  }
+}
