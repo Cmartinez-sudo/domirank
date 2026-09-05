@@ -1,5 +1,5 @@
 "use client";
-import { motion, useReducedMotion } from "framer-motion";
+import { GaugeChart } from "./GaugeChart";
 
 type Props = {
   value: number;
@@ -9,33 +9,18 @@ type Props = {
   ariaLabel: string;
 };
 
-export function RingStat({ value, label, sublabel, size = 140, ariaLabel }: Props) {
-  const reduced = useReducedMotion();
-  const clamp = Math.max(0, Math.min(100, value));
-  const stroke = 12;
-  const r = (size - stroke) / 2;
-  const C = 2 * Math.PI * r;
-  const cx = size / 2, cy = size / 2;
-  const offset = C * (1 - clamp / 100);
+const PRIMARY = "#10b981";
 
+/**
+ * Circular progress stat. Refactored to use `GaugeChart` (ECharts). Same
+ * external API — callers pass `value`, `label`, optional `sublabel`,
+ * `size`. The gauge itself is centered inside a fixed-size box so
+ * layout stays stable next to sibling cards.
+ */
+export function RingStat({ value, label, sublabel, size = 140, ariaLabel }: Props) {
   return (
-    <div className="inline-flex flex-col items-center" role="img" aria-label={ariaLabel}>
-      <svg width={size} height={size}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="currentColor" strokeOpacity={0.12} strokeWidth={stroke} />
-        <motion.circle
-          cx={cx} cy={cy} r={r}
-          fill="none" stroke="#10b981" strokeWidth={stroke}
-          strokeLinecap="round"
-          transform={`rotate(-90 ${cx} ${cy})`}
-          strokeDasharray={C}
-          initial={reduced ? { strokeDashoffset: offset } : { strokeDashoffset: C }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: reduced ? 0 : 0.8, ease: "easeOut" }}
-        />
-        <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" className="fill-current" fontSize={size * 0.25} fontWeight={700}>
-          {clamp.toFixed(0)}%
-        </text>
-      </svg>
+    <div className="inline-flex flex-col items-center" style={{ width: size }}>
+      <GaugeChart value={value} color={PRIMARY} size={size} ariaLabel={ariaLabel} />
       <div className="mt-2 text-center">
         <div className="text-sm font-semibold">{label}</div>
         {sublabel && <div className="text-xs text-text-mute mt-0.5">{sublabel}</div>}

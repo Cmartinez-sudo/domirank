@@ -1,10 +1,8 @@
 "use client";
+
 import { useMemo } from "react";
-import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer,
-  CartesianGrid, ReferenceDot,
-} from "recharts";
 import { SKILL_TIERS, displayToElo } from "@/lib/rating";
+import { LineAreaChart } from "./LineAreaChart";
 
 export type EloChartPoint = {
   timestamp: number;
@@ -20,34 +18,57 @@ type Props = {
 };
 
 const BRAND = "#10b981";
-const PEAK  = "#fbbf24";
+const PEAK = "#fbbf24";
 
+/**
+ * Elo evolution line/area with tier reference lines and peak marker.
+ * Refactored on top of `LineAreaChart` — no more recharts. Same visual
+ * contract as before (colors, dot behavior, peak marker); tooltip is
+ * richer because ECharts handles the axis pointer natively.
+ */
 export function EloChart({ points, showDots = false, ariaLabel, height = 240 }: Props) {
-  const data = useMemo(() => {
-    const withDelta: Array<EloChartPoint & { delta: number | null }> = [];
-    for (let i = 0; i < points.length; i++) {
-      const prev = i > 0 ? points[i - 1].elo : null;
-      withDelta.push({ ...points[i], delta: prev == null ? null : points[i].elo - prev });
+  const data = useMemo(() => points.map((p) => ({ x: p.timestamp, y: p.elo })), [points]);
+
+  const stats = useMemo(() => {
+    if (points.length === 0) return { peak: null as EloChartPoint | null, minElo: 0, maxElo: 0, last: null as EloChartPoint | null };
+    let maxE = points[0].elo;
+    let minE = points[0].elo;
+    let peakPoint = points[0];
+    for (const p of points) {
+      if (p.elo > maxE) { maxE = p.elo; peakPoint = p; }
+      if (p.elo < minE) minE = p.elo;
     }
-    return withDelta;
+    return { peak: peakPoint, minElo: minE, maxElo: maxE, last: points[points.length - 1] };
   }, [points]);
 
-  const { peak, minElo, maxElo, last } = useMemo(() => {
-    if (data.length === 0) return { peak: null, minElo: 0, maxElo: 0, last: null };
-    const eloOnly = data.map((d) => d.elo);
-    const maxE = Math.max(...eloOnly);
-    const minE = Math.min(...eloOnly);
-    const peakPoint = data.find((d) => d.elo === maxE) ?? null;
-    return { peak: peakPoint, minElo: minE, maxElo: maxE, last: data[data.length - 1] };
-  }, [data]);
+  const markLines = useMemo(
+    () =>
+      SKILL_TIERS
+        .map((t) => ({ y: Math.round(displayToElo(t.min)), label: t.name, color: t.color, opacity: 0.35 }))
+        .filter((t) => t.y > stats.minElo && t.y < stats.maxElo),
+    [stats.minElo, stats.maxElo],
+  );
 
-  const tierRefs = useMemo(() => {
-    return SKILL_TIERS
-      .map((t) => ({ name: t.name, color: t.color, elo: Math.round(displayToElo(t.min)) }))
-      .filter((t) => t.elo > minElo && t.elo < maxElo);
-  }, [minElo, maxElo]);
+  const markPoints = useMemo(() => {
+    const out: { x: number; y: number; color: string; label?: string; ring?: boolean }[] = [];
+    if (stats.peak && stats.last && stats.peak.timestamp !== stats.last.timestamp) {
+      out.push({ x: stats.peak.timestamp, y: stats.peak.elo, color: PEAK, label: `pico ${stats.peak.elo}`, ring: true });
+    }
+    if (stats.last) {
+      out.push({ x: stats.last.timestamp, y: stats.last.elo, color: BRAND });
+    }
+    return out;
+  }, [stats]);
 
-  if (data.length < 2) {
+  const deltaByIndex = useMemo(() => {
+    const arr: (number | null)[] = [];
+    for (let i = 0; i < points.length; i++) {
+      arr.push(i === 0 ? null : points[i].elo - points[i - 1].elo);
+    }
+    return arr;
+  }, [points]);
+
+  if (points.length < 2) {
     return (
       <div className="text-text-mute text-sm py-8 text-center" role="img" aria-label={ariaLabel}>
         Aún no hay suficientes partidas para dibujar la curva.
@@ -55,83 +76,34 @@ export function EloChart({ points, showDots = false, ariaLabel, height = 240 }: 
     );
   }
 
-  const pad = Math.max(15, Math.round((maxElo - minElo) * 0.15));
-  const yDomain: [number, number] = [Math.max(1000, minElo - pad), maxElo + pad];
+  const pad = Math.max(15, Math.round((stats.maxElo - stats.minElo) * 0.15));
+  const yDomain: [number, number] = [Math.max(1000, stats.minElo - pad), stats.maxElo + pad];
 
   return (
-    <div className="w-full" role="img" aria-label={ariaLabel}>
-      <ResponsiveContainer width="100%" height={height}>
-        <AreaChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
-          <defs>
-            <linearGradient id="eloFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"  stopColor={BRAND} stopOpacity={0.35} />
-              <stop offset="100%" stopColor={BRAND} stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid stroke="#ffffff" strokeOpacity={0.05} vertical={false} />
-          <XAxis dataKey="timestamp" hide />
-          <YAxis
-            domain={yDomain}
-            width={44}
-            tick={{ fill: "#94a3b8", fontSize: 11 }}
-            axisLine={false}
-            tickLine={false}
-            tickCount={4}
-            tickFormatter={(v) => String(Math.round(Number(v)))}
-          />
-          {tierRefs.map((t) => (
-            <ReferenceLine
-              key={t.name}
-              y={t.elo}
-              stroke={t.color}
-              strokeOpacity={0.35}
-              strokeDasharray="3 3"
-              label={{ value: t.name, position: "insideTopRight", fill: t.color, fontSize: 10, opacity: 0.7 }}
-            />
-          ))}
-          <Tooltip
-            cursor={{ stroke: BRAND, strokeOpacity: 0.4, strokeWidth: 1 }}
-            content={<CustomTooltip />}
-          />
-          <Area
-            type="monotone"
-            dataKey="elo"
-            stroke={BRAND}
-            strokeWidth={2.5}
-            fill="url(#eloFill)"
-            dot={showDots ? { r: 3, fill: BRAND, stroke: "transparent" } : false}
-            activeDot={{ r: 5, fill: BRAND, stroke: "#0b1220", strokeWidth: 2 }}
-            isAnimationActive
-            animationDuration={600}
-          />
-          {peak && last && peak.timestamp !== last.timestamp && (
-            <ReferenceDot x={peak.timestamp} y={peak.elo} r={4} fill="none" stroke={PEAK} strokeWidth={2}
-              label={{ value: `pico ${peak.elo}`, position: "top", fill: PEAK, fontSize: 10 }}
-            />
-          )}
-          {last && (
-            <ReferenceDot x={last.timestamp} y={last.elo} r={5} fill={BRAND} stroke="#0b1220" strokeWidth={2} />
-          )}
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
-
-function CustomTooltip({ active, payload }: any) {
-  if (!active || !payload || payload.length === 0) return null;
-  const p = payload[0].payload as EloChartPoint & { delta: number | null };
-  const date = new Date(p.timestamp).toLocaleDateString("es", { day: "numeric", month: "short" });
-  const delta = p.delta;
-  return (
-    <div className="rounded-md bg-surface-2 border border-border px-3 py-2 shadow-lg text-xs">
-      <div className="font-mono font-bold text-sm">Elo {p.elo}</div>
-      <div className="text-text-mute mt-0.5">{date}</div>
-      {delta != null && (
-        <div className={`font-mono mt-1 ${delta >= 0 ? "text-primary" : "text-danger"}`}>
-          {delta >= 0 ? "+" : ""}{delta} vs anterior
-        </div>
-      )}
-    </div>
+    <LineAreaChart
+      data={data}
+      color={BRAND}
+      yDomain={yDomain}
+      showDots={showDots}
+      height={height}
+      ariaLabel={ariaLabel}
+      markLines={markLines}
+      markPoints={markPoints}
+      tooltipFormatter={({ xValue, yValue, index }) => {
+        const date = new Date(xValue).toLocaleDateString("es", { day: "numeric", month: "short" });
+        const delta = deltaByIndex[index];
+        const deltaLine =
+          delta == null
+            ? ""
+            : `<div style="font-family:ui-monospace,SFMono-Regular,monospace;margin-top:4px;color:${delta >= 0 ? "#10b981" : "#ef4444"}">
+                 ${delta >= 0 ? "+" : ""}${delta} vs anterior
+               </div>`;
+        return `
+          <div style="font-family:ui-monospace,SFMono-Regular,monospace;font-weight:700;font-size:13px">Elo ${yValue}</div>
+          <div style="opacity:0.7;margin-top:2px">${date}</div>
+          ${deltaLine}
+        `;
+      }}
+    />
   );
 }
