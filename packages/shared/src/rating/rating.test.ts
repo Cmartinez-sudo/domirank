@@ -14,7 +14,7 @@ import {
   initialRatingFromAssessment,
   DEFAULT_ELO,
   DOMIRANK_MIN_GAMES,
-} from "../rating";
+} from "./rating";
 
 // ─── kFactorFor ───────────────────────────────────────────────────────────────
 

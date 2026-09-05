@@ -1,6 +1,6 @@
 import { updateRatings, type TeamInput, type PlayerRatingUpdate } from "./rating";
 import { bucketColumn, bucketForMatch } from "./rating-buckets";
-import type { CountRule, SetCode, FormatCode } from "./modalidades";
+import type { CountRule, SetCode, FormatCode } from "../matches/modalidades";
 
 /**
  * Pure rating-computation pipeline shared by `applyMatchRating` (live attest

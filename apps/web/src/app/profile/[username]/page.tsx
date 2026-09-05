@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { supabaseServer } from "@/lib/supabase/server";
-import { NR_THRESHOLD, isRated } from "@/lib/rating";
+import { NR_THRESHOLD, isRated } from "@domirank/shared/rating";
 import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
 import { RatingNumberHero } from "@/components/RatingNumber";
 import { TierUpCelebration } from "@/components/celebration/TierUpCelebration";

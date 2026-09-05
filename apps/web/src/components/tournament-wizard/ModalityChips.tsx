@@ -6,7 +6,7 @@ import {
   PRESET_ORDER,
   type CountRule,
   type PresetId,
-} from "@/lib/modalidades";
+} from "@domirank/shared/matches";
 
 type Props = {
   /** Regla de conteo actualmente seleccionada — determina qué chips se muestran. */

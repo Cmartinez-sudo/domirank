@@ -14,7 +14,7 @@ import {
   COUNT_RULES,
   countRuleFromLegacyModality,
   type CountRule,
-} from "./modalidades";
+} from "@domirank/shared/matches";
 
 export type MatchLabelInput = {
   count_rule?: CountRule | string | null;

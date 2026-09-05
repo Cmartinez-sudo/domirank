@@ -13,7 +13,7 @@ import {
   countRuleFromLegacyModality,
   type CountRule,
   type PresetId,
-} from "@/lib/modalidades";
+} from "@domirank/shared/matches";
 import { analytics } from "@/lib/analytics";
 import { Avatar } from "@/components/Avatar";
 

@@ -6,9 +6,9 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { UserSearch } from "@/components/UserSearch";
 import { RatingBadge } from "@/components/RatingBadge";
-import { MODALIDADES, type ModalityCode } from "@/lib/modalidades";
+import { MODALIDADES, type ModalityCode } from "@domirank/shared/matches";
 
-import { TOURNAMENT_FORMATS, FORMAT_LIST, type TournamentFormat } from "@/lib/tournament-formats";
+import { TOURNAMENT_FORMATS, FORMAT_LIST, type TournamentFormat } from "@domirank/shared/tournaments";
 
 type PublicUser = {
   id: string;

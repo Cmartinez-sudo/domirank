@@ -1,0 +1,22 @@
+{
+  "name": "@domirank/shared",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./rating": "./src/rating/index.ts",
+    "./matches": "./src/matches/index.ts",
+    "./tournaments": "./src/tournaments/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.2",
+    "vitest": "^4.1.7"
+  }
+}

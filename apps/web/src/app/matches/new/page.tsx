@@ -1,7 +1,7 @@
 import { requireOnboardedUser, getCurrentProfile } from "@/lib/auth";
 import { getUserPreferences } from "@/lib/user-preferences-actions";
 import { supabaseServer } from "@/lib/supabase/server";
-import { COUNTRIES, type PresetId } from "@/lib/modalidades";
+import { COUNTRIES, type PresetId } from "@domirank/shared/matches";
 import { NewMatchForm } from "./NewMatchForm";
 import { TournamentFastPath } from "./TournamentFastPath";
 

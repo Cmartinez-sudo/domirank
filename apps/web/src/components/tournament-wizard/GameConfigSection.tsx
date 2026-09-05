@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Format, Modality, PresetIdInDraft } from "@/hooks/useTournamentDraft";
-import { PRESETS } from "@/lib/modalidades";
+import { PRESETS } from "@domirank/shared/matches";
 
 const TIME_PRESETS: Array<{ value: number | null; label: string }> = [
   { value: null, label: "Sin límite" },

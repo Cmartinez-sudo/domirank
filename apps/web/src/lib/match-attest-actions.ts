@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
-import { computeRatingPayload } from "@/lib/match-rating-compute";
-import { bucketColumn, bucketForMatch } from "@/lib/rating-buckets";
-import type { SetCode, FormatCode } from "@/lib/modalidades";
+import { computeRatingPayload } from "@domirank/shared/rating";
+import { bucketColumn, bucketForMatch } from "@domirank/shared/rating";
+import type { SetCode, FormatCode } from "@domirank/shared/matches";
 import { buildMatchEmailMeta, sendToUserIds } from "@/lib/match-notifications";
 import { matchConfirmedEmail, matchDisputedEmail } from "@/lib/email-templates";
 

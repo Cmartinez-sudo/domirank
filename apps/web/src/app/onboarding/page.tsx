@@ -1,5 +1,5 @@
 import { requireUser, getCurrentProfile } from "@/lib/auth";
-import { COUNTRIES, MODALIDADES } from "@/lib/modalidades";
+import { COUNTRIES, MODALIDADES } from "@domirank/shared/matches";
 import { OnboardingForm } from "./OnboardingForm";
 
 export const dynamic = "force-dynamic";

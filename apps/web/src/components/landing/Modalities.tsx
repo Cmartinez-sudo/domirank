@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { COUNT_RULES, PRESET_ORDER, PRESETS } from "@/lib/modalidades";
+import { COUNT_RULES, PRESET_ORDER, PRESETS } from "@domirank/shared/matches";
 
 const EASE_OUT: [number, number, number, number] = [0.25, 0.46, 0.45, 0.94];
 

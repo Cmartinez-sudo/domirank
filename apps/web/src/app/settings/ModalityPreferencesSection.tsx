@@ -16,7 +16,7 @@ import {
   PRESET_ORDER,
   matchPreset,
   type PresetId,
-} from "@/lib/modalidades";
+} from "@domirank/shared/matches";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { useToast } from "@/components/Toast";
 import type { UserPreferences } from "@/types/user-preferences";

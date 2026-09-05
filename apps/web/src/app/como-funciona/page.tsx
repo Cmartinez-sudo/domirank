@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { NR_THRESHOLD, SKILL_TIERS } from "@/lib/rating";
+import { NR_THRESHOLD, SKILL_TIERS } from "@domirank/shared/rating";
 
 export const metadata = {
   title: "Cómo funciona el rating · DomiRank",

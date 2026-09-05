@@ -32,7 +32,7 @@ import {
   type ModalityCode,
   type PresetId,
   type SetCode,
-} from "@/lib/modalidades";
+} from "@domirank/shared/matches";
 import { startLiveMatch } from "@/lib/live-match";
 import { linkMatchToPairing } from "@/lib/tournament-pairing-link";
 import { useUserPreferences } from "@/hooks/useUserPreferences";

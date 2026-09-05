@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { getDisplayRating } from "@/lib/rating";
+import { getDisplayRating } from "@domirank/shared/rating";
 import type { AdminOrgSummary } from "@/lib/club-pro/auth";
 
 /**

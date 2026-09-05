@@ -4,7 +4,7 @@ import { Avatar } from "@/components/Avatar";
 import { supabaseServer } from "@/lib/supabase/server";
 import { matchLabel } from "@/lib/match-label";
 import { getCurrentUser } from "@/lib/auth";
-import { formatInfo } from "@/lib/tournament-formats";
+import { formatInfo } from "@domirank/shared/tournaments";
 import { SecondaryPageShell } from "@/components/SecondaryPageShell";
 import { BACK_FALLBACKS } from "@/lib/back-fallbacks";
 import { Bracket } from "@/components/Bracket";

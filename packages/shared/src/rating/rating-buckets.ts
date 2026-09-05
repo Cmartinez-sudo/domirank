@@ -1,4 +1,4 @@
-import type { CountRule, SetCode, FormatCode } from "@/lib/modalidades";
+import type { CountRule, SetCode, FormatCode } from "../matches/modalidades";
 
 /**
  * Post-0106: el rating se indexa por count_rule (rival/mesa) en vez de

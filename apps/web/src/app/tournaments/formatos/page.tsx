@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FORMAT_LIST } from "@/lib/tournament-formats";
+import { FORMAT_LIST } from "@domirank/shared/tournaments";
 
 export const metadata = { title: "Formatos de torneo · DomiRank" };
 

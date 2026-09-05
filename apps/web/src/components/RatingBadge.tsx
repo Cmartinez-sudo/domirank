@@ -1,4 +1,4 @@
-import { toDisplayRating, tierFor, DEFAULT_ELO, NR_THRESHOLD } from "@/lib/rating";
+import { toDisplayRating, tierFor, DEFAULT_ELO, NR_THRESHOLD } from "@domirank/shared/rating";
 
 type Props = {
   /** Valor display 1-20. Si null/undefined, calcula desde elo. */

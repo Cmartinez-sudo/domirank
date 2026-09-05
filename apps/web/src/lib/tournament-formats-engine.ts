@@ -4,7 +4,7 @@
 // Para usar el algoritmo Berger directamente, importá desde "@/lib/berger-schedule".
 
 import { supabaseServer } from "@/lib/supabase/server";
-import type { TournamentFormat } from "@/lib/tournament-formats";
+import type { TournamentFormat } from "@domirank/shared/tournaments";
 import { generateMultiRoundFixture, isSupportedPlayerCount } from "@/lib/round-robin-fixture";
 
 // ─── Types (internos, no exportables desde "use server") ───────────────────

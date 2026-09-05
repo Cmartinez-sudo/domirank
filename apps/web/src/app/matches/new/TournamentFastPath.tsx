@@ -28,7 +28,7 @@ import {
   type CountRule,
   type ModalityCode,
   type SetCode,
-} from "@/lib/modalidades";
+} from "@domirank/shared/matches";
 
 // ─── Helpers ────────────────────────────────────────────────
 

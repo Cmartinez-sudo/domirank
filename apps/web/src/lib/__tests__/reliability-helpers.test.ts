@@ -9,7 +9,7 @@ import {
   getDisplayRating,
   getReliabilityBucket,
   NR_THRESHOLD,
-} from "../rating";
+} from "@domirank/shared/rating";
 
 describe("isRated", () => {
   it("prefiere la columna is_rated del DB cuando viene definida", () => {

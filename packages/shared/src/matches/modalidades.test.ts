@@ -8,7 +8,7 @@ import {
   matchPreset,
   presetById,
   presetsForCountRule,
-} from "../modalidades";
+} from "./modalidades";
 
 describe("countRuleFromLegacyModality", () => {
   it.each([

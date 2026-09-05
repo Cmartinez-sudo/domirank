@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { SKILL_TIERS, toDisplayRating, tierFor } from "@/lib/rating";
+import { SKILL_TIERS, toDisplayRating, tierFor } from "@domirank/shared/rating";
 import { LineAreaChart, type LineAreaChartXAxisTick } from "./LineAreaChart";
 
 export type EloChartPoint = {

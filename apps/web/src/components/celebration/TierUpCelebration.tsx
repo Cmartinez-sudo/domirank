@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { SPRING, ShineSweep } from "@/components/Motion";
 import { useCelebration } from "@/hooks/useCelebration";
 import { TierBadge } from "@/components/RatingInfo";
-import { tierFor } from "@/lib/rating";
+import { tierFor } from "@domirank/shared/rating";
 
 type Props = {
   userId: string;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { SKILL_TIERS, tierFor, type SkillTier } from "@/lib/rating";
+import { SKILL_TIERS, tierFor, type SkillTier } from "@domirank/shared/rating";
 
 export function TierBadge({
   display,

@@ -14,7 +14,7 @@ import {
   validateTournamentConfig,
   diaDeSemanaEs,
 } from "@/lib/tournament-validation";
-import { PRESETS } from "@/lib/modalidades";
+import { PRESETS } from "@domirank/shared/matches";
 import { FormatPickerCards } from "@/components/tournament-wizard/FormatPickerCards";
 import { PlayersCountStepper } from "@/components/tournament-wizard/PlayersCountStepper";
 import { ModalityChips } from "@/components/tournament-wizard/ModalityChips";

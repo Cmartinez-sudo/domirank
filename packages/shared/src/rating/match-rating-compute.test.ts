@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeRatingPayload } from "../match-rating-compute";
+import { computeRatingPayload } from "./match-rating-compute";
 
 // Helper: build a profile row con las columnas del bucket esperado.
 // Post-0106: rating por count_rule. Default = rival_doubles (matches d6).

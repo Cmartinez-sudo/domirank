@@ -11,8 +11,8 @@ import {
   type CountryCode,
   type ModalityCode,
   type PresetId,
-} from "@/lib/modalidades";
-import { initialRatingFromAssessment } from "@/lib/rating";
+} from "@domirank/shared/matches";
+import { initialRatingFromAssessment } from "@domirank/shared/rating";
 import { saveOnboarding } from "./actions";
 import { analytics } from "@/lib/analytics";
 

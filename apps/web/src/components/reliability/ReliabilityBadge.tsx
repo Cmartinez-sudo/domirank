@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { getReliabilityBucket } from "@/lib/rating";
+import { getReliabilityBucket } from "@domirank/shared/rating";
 
 type Size = "xs" | "sm" | "md";
 

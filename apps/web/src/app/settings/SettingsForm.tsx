@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
-import { COUNTRIES, MODALIDADES, type ModalityCode, type CountryCode } from "@/lib/modalidades";
+import { COUNTRIES, MODALIDADES, type ModalityCode, type CountryCode } from "@domirank/shared/matches";
 import { updateProfile, uploadAvatar, removeAvatar, signOut } from "@/lib/settings";
 import { PushSubscriptionToggle } from "@/components/notifications/PushSubscriptionToggle";
 import { ModalityPreferencesSection } from "./ModalityPreferencesSection";

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { NR_THRESHOLD } from "@/lib/rating";
+import { NR_THRESHOLD } from "@domirank/shared/rating";
 
 type Props = {
   totalGames: number;

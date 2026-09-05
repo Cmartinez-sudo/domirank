@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { supabaseServer } from "@/lib/supabase/server";
-import { DOMIRANK_MIN_GAMES } from "@/lib/rating";
+import { DOMIRANK_MIN_GAMES } from "@domirank/shared/rating";
 import { PageTransition } from "@/components/Motion";
 import { TierBadge, ColHeader } from "@/components/RatingInfo";
 import { ReliabilityBadge } from "@/components/reliability/ReliabilityBadge";

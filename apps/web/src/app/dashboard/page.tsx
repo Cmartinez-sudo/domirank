@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireUser, getCurrentProfile } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
-import { NR_THRESHOLD, isRated } from "@/lib/rating";
+import { NR_THRESHOLD, isRated } from "@domirank/shared/rating";
 import { PageTransition, StaggerChildren, StaggerItem } from "@/components/Motion";
 import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
 import { RatingNumberHero } from "@/components/RatingNumber";

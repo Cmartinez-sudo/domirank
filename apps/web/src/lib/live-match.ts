@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
 import { rl, checkLimit } from "@/lib/ratelimit";
-import { validateMatchClosure } from "@/lib/match-validation";
+import { validateMatchClosure } from "@domirank/shared/matches";
 import { buildMatchEmailMeta, sendToUserIds } from "@/lib/match-notifications";
 import { matchAttestRequestedEmail } from "@/lib/email-templates";
 

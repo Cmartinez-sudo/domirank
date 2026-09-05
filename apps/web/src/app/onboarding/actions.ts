@@ -2,12 +2,12 @@
 
 import { z } from "zod";
 import { supabaseServer } from "@/lib/supabase/server";
-import { initialRatingFromAssessment } from "@/lib/rating";
+import { initialRatingFromAssessment } from "@domirank/shared/rating";
 import {
   PRESETS,
   countRuleFromLegacyModality,
   type PresetId,
-} from "@/lib/modalidades";
+} from "@domirank/shared/matches";
 
 const PRESET_IDS = ["rapido", "clasico", "doble9", "mesa-completa", "personalizado"] as const;
 
