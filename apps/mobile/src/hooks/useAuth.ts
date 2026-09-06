@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import * as AuthSession from "expo-auth-session";
+import Constants from "expo-constants";
 import * as WebBrowser from "expo-web-browser";
 
 import { supabase } from "@/lib/supabase";
@@ -104,14 +105,22 @@ export function useAuth() {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    // makeRedirectUri() returns the app-specific scheme that
-    // ASWebAuthenticationSession on iOS knows how to intercept:
-    //   - Expo Go:            exp+@<username>/<slug>://
+    // Google OAuth on iOS uses ASWebAuthenticationSession which requires the
+    // callback URL's scheme to be registered by the *running* app. In Expo Go
+    // that means 'exp://...' — which iOS 17+ rejects with error 1 for auth
+    // sessions. There's no known workaround inside Expo Go; the fix is a
+    // dev-build (EAS) where the app owns 'domirank://'. See TECH_DEBT TD-020.
+    if (Constants.appOwnership === "expo") {
+      return {
+        ok: false,
+        error:
+          "Google requiere el dev-build de DomiRank (no funciona en Expo Go por limitación de iOS). Por ahora, entrá con email y contraseña.",
+      };
+    }
+
+    // makeRedirectUri() returns the app-specific scheme:
     //   - Dev-build / prod:   domirank://
-    // A plain exp:// URL like 'Linking.createURL()' returns is NOT valid
-    // for ASWebAuthenticationSession — it fails with error 1 (bad scheme).
     const redirectTo = AuthSession.makeRedirectUri();
-    if (__DEV__) console.log("[oauth] redirectTo =", redirectTo);
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -120,39 +129,26 @@ export function useAuth() {
         skipBrowserRedirect: true,
       },
     });
-    if (error) {
-      if (__DEV__) console.log("[oauth] signInWithOAuth error:", error);
-      return { ok: false, error: error.message };
-    }
+    if (error) return { ok: false, error: error.message };
     if (!data?.url) return { ok: false, error: "Supabase no devolvió URL de OAuth" };
-    if (__DEV__) console.log("[oauth] opening browser to:", data.url);
 
-    // preferEphemeralSession: true isolates the auth browser from Safari's
-    // cookie jar. Without it, if the user is signed into the PWA in Safari,
-    // Supabase reuses that session and skips Google auth entirely — which
-    // masks bugs in the redirect flow (looks like nothing happens, but the
-    // browser silently redirects to Site URL because it has a session).
+    // preferEphemeralSession isolates the auth browser from Safari cookies so
+    // Supabase doesn't reuse a stale PWA session and skip Google auth.
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo, {
       preferEphemeralSession: true,
     });
-    if (__DEV__) console.log("[oauth] browser result:", JSON.stringify(result));
 
     if (result.type !== "success") {
       return { ok: false, error: result.type === "cancel" ? "Cancelado" : "OAuth interrumpido" };
     }
 
     const { access_token, refresh_token } = extractTokensFromCallbackUrl(result.url);
-    if (__DEV__) console.log("[oauth] tokens present?", { at: !!access_token, rt: !!refresh_token });
     if (!access_token || !refresh_token) {
       return { ok: false, error: "No recibimos tokens del callback" };
     }
 
     const { error: setErr } = await supabase.auth.setSession({ access_token, refresh_token });
-    if (setErr) {
-      if (__DEV__) console.log("[oauth] setSession error:", setErr);
-      return { ok: false, error: setErr.message };
-    }
-    if (__DEV__) console.log("[oauth] setSession OK, waiting for onAuthStateChange");
+    if (setErr) return { ok: false, error: setErr.message };
 
     // AuthGuard will react to the onAuthStateChange emitted by setSession.
     return { ok: true, error: null };

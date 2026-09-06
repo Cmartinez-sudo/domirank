@@ -230,3 +230,53 @@ del port. Pasos:
    step en la pipeline de PRs.
 
 ---
+
+### TD-020: Google OAuth no funciona en Expo Go — requiere dev-build
+
+**Descripción**: `WebBrowser.openAuthSessionAsync` en iOS usa
+`ASWebAuthenticationSession`, que iOS 17+ solo permite interceptar
+callbacks cuyo scheme esté registrado en el Info.plist de la app
+*corriendo* (no del bundle general de Expo Go). Expo Go registra `exp`
+pero iOS lo rechaza para auth sessions con **error 1**
+(`WebAuthenticationSession error 1`).
+
+Probamos en Semana 2.5 con:
+- `AuthSession.makeRedirectUri({ scheme: 'domirank' })` → error 1.
+- `Linking.createURL('/')` → `exp://<ip>:<port>/--/` → error 1.
+- `AuthSession.makeRedirectUri()` (sin args) → `exp://<ip>:<port>` → error 1.
+- `preferEphemeralSession: true` para descartar cookies compartidas con
+  Safari — sin efecto en el error subyacente.
+
+Ninguna variante funciona en Expo Go SDK 57. Es una limitación
+industry-wide, no bug propio.
+
+**Mitigación actual** (`apps/mobile/src/hooks/useAuth.ts`):
+```ts
+if (Constants.appOwnership === "expo") {
+  return { ok: false, error: "Google requiere el dev-build de DomiRank
+    (no funciona en Expo Go por limitación de iOS). Por ahora, entrá con
+    email y contraseña." };
+}
+```
+El botón "Continuar con Google" sigue visible en `/login` pero al tap
+en Expo Go dispara ese mensaje inmediatamente sin abrir browser
+(evita el error 1 confuso).
+
+**Cuándo se resuelve**: al setup del **dev-build via EAS Build**
+(probablemente Semana 8-9 cuando pulís para stores). En un dev-build
+la app registra el bundle ID `com.domirank.mobile` con el scheme
+`domirank://`, ASWebAuthenticationSession lo intercepta correctamente
+y todo el flow (`signInWithOAuth` → browser → callback → setSession →
+guard) funciona end-to-end. El código actual ya está preparado — solo
+hay que hacer el build.
+
+**Acción pendiente**: setup EAS Build cuando llegue el momento. Comando
+esperado: `eas build --profile development --platform ios --local` +
+instalar el .ipa resultante en el iPhone. Post-instalación, remover el
+guard `Constants.appOwnership === "expo"` y validar en device.
+
+**Impacto**: usuarios de beta cerrada testeando en Expo Go no pueden
+usar Google — deben usar email + password. Aceptable para dev; no
+bloquea launch (launch va con dev-build o standalone build ya sí o sí).
+
+---
