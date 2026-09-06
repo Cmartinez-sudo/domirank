@@ -1,8 +1,27 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
+import * as AuthSession from "expo-auth-session";
+import * as WebBrowser from "expo-web-browser";
 
 import { supabase } from "@/lib/supabase";
 import type { LoginInput, SignupInput, ResetPasswordRequestInput } from "@domirank/shared/auth";
+
+// Ensures the auth session completes cleanly if the browser is dismissed
+// (e.g. user closes the tab manually). Safe no-op if never invoked.
+WebBrowser.maybeCompleteAuthSession();
+
+function extractTokensFromCallbackUrl(url: string): {
+  access_token: string | null;
+  refresh_token: string | null;
+} {
+  // Supabase returns tokens in the URL fragment: domirank://#access_token=...&refresh_token=...
+  const fragment = url.split("#")[1] ?? "";
+  const params = new URLSearchParams(fragment);
+  return {
+    access_token: params.get("access_token"),
+    refresh_token: params.get("refresh_token"),
+  };
+}
 
 type AuthState = {
   session: Session | null;
@@ -84,11 +103,43 @@ export function useAuth() {
     return { ok: !error, error: error?.message ?? null };
   }, []);
 
+  const signInWithGoogle = useCallback(async () => {
+    const redirectTo = AuthSession.makeRedirectUri({ scheme: "domirank" });
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo,
+        skipBrowserRedirect: true,
+      },
+    });
+    if (error) return { ok: false, error: error.message };
+    if (!data?.url) return { ok: false, error: "Supabase no devolvió URL de OAuth" };
+
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+
+    if (result.type !== "success") {
+      return { ok: false, error: result.type === "cancel" ? "Cancelado" : "OAuth interrumpido" };
+    }
+
+    const { access_token, refresh_token } = extractTokensFromCallbackUrl(result.url);
+    if (!access_token || !refresh_token) {
+      return { ok: false, error: "No recibimos tokens del callback" };
+    }
+
+    const { error: setErr } = await supabase.auth.setSession({ access_token, refresh_token });
+    if (setErr) return { ok: false, error: setErr.message };
+
+    // AuthGuard will react to the onAuthStateChange emitted by setSession.
+    return { ok: true, error: null };
+  }, []);
+
   return {
     ...state,
     signIn,
     signUp,
     signOut,
     resetPassword,
+    signInWithGoogle,
   };
 }
