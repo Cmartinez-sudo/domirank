@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 
 import { TrophyIcon } from '@/components/icons/TrophyIcon';
 import { UserIcon } from '@/components/icons/UserIcon';
+import { Badge, Button } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
 
 type Props = {
@@ -65,12 +66,7 @@ export function HamburgerDrawer({ open, onClose }: Props) {
             </View>
 
             <View className="px-4 py-4 border-t border-border dark:border-surface-2-dark">
-              <Text
-                onPress={onSignOut}
-                className="text-center font-semibold py-3 rounded-lg border border-danger text-danger"
-              >
-                Cerrar sesión
-              </Text>
+              <Button label="Cerrar sesión" variant="danger" onPress={onSignOut} />
             </View>
           </SafeAreaView>
         </Pressable>
@@ -97,11 +93,7 @@ function DrawerLink({
     >
       {icon}
       <Text className="flex-1 text-base text-text dark:text-text-inverse">{label}</Text>
-      {beta ? (
-        <Text className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">
-          beta
-        </Text>
-      ) : null}
+      {beta ? <Badge label="beta" variant="beta" /> : null}
     </TouchableOpacity>
   );
 }

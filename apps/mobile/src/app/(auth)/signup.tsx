@@ -4,6 +4,7 @@ import { Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/hooks/useAuth';
+import { Button, Input } from '@/components/ui';
 import { signupSchema } from '@domirank/shared/auth';
 
 export default function SignupScreen() {
@@ -79,98 +80,68 @@ export default function SignupScreen() {
           </Text>
 
           <View className="gap-4">
-            <View>
-              <Text className="text-sm font-medium mb-1 text-text dark:text-text-inverse">
-                Nombre y apellido
-              </Text>
-              <TextInput
-                value={fullName}
-                onChangeText={setFullName}
-                placeholder="Carlos Martínez"
-                placeholderTextColor="#94a3b8"
-                autoComplete="name"
-                returnKeyType="next"
-                onSubmitEditing={() => dobRef.current?.focus()}
-                className="border border-border dark:border-surface-2-dark bg-surface dark:bg-surface-dark rounded-lg px-3 py-3 text-base text-text dark:text-text-inverse"
-              />
-            </View>
+            <Input
+              label="Nombre y apellido"
+              value={fullName}
+              onChangeText={setFullName}
+              placeholder="Carlos Martínez"
+              autoComplete="name"
+              returnKeyType="next"
+              onSubmitEditing={() => dobRef.current?.focus()}
+            />
 
-            <View>
-              <Text className="text-sm font-medium mb-1 text-text dark:text-text-inverse">
-                Fecha de nacimiento
-              </Text>
-              <TextInput
-                ref={dobRef}
-                value={dob}
-                onChangeText={setDob}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#94a3b8"
-                keyboardType="numbers-and-punctuation"
-                returnKeyType="next"
-                onSubmitEditing={() => emailRef.current?.focus()}
-                className="border border-border dark:border-surface-2-dark bg-surface dark:bg-surface-dark rounded-lg px-3 py-3 text-base text-text dark:text-text-inverse"
-              />
-              <Text className="text-xs text-text-mute dark:text-text-dim-dark mt-1">
-                Debés tener al menos 13 años.
-              </Text>
-            </View>
+            <Input
+              ref={dobRef}
+              label="Fecha de nacimiento"
+              value={dob}
+              onChangeText={setDob}
+              placeholder="YYYY-MM-DD"
+              keyboardType="numbers-and-punctuation"
+              returnKeyType="next"
+              onSubmitEditing={() => emailRef.current?.focus()}
+              hint="Debés tener al menos 13 años."
+            />
 
-            <View>
-              <Text className="text-sm font-medium mb-1 text-text dark:text-text-inverse">
-                Correo
-              </Text>
-              <TextInput
-                ref={emailRef}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="tu@correo.com"
-                placeholderTextColor="#94a3b8"
-                autoComplete="email"
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="email-address"
-                returnKeyType="next"
-                onSubmitEditing={() => passwordRef.current?.focus()}
-                className="border border-border dark:border-surface-2-dark bg-surface dark:bg-surface-dark rounded-lg px-3 py-3 text-base text-text dark:text-text-inverse"
-              />
-            </View>
+            <Input
+              ref={emailRef}
+              label="Correo"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="tu@correo.com"
+              autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+            />
 
-            <View>
-              <Text className="text-sm font-medium mb-1 text-text dark:text-text-inverse">
-                Contraseña
-              </Text>
-              <TextInput
-                ref={passwordRef}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Mínimo 8 caracteres"
-                placeholderTextColor="#94a3b8"
-                autoComplete="new-password"
-                secureTextEntry
-                returnKeyType="done"
-                className="border border-border dark:border-surface-2-dark bg-surface dark:bg-surface-dark rounded-lg px-3 py-3 text-base text-text dark:text-text-inverse"
-              />
-            </View>
+            <Input
+              ref={passwordRef}
+              label="Contraseña"
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Mínimo 8 caracteres"
+              autoComplete="new-password"
+              secureTextEntry
+              returnKeyType="done"
+              error={error}
+            />
 
             <Text
               onPress={() => setTerms((v) => !v)}
-              className={`text-sm py-2 ${terms ? 'text-text dark:text-text-inverse' : 'text-text-mute dark:text-text-dim-dark'}`}
+              className={`text-sm py-2 ${
+                terms ? 'text-text dark:text-text-inverse' : 'text-text-mute dark:text-text-dim-dark'
+              }`}
             >
               {terms ? '☑' : '☐'}  Acepto los términos y la política de privacidad.
             </Text>
 
-            {error ? <Text className="text-danger text-sm">{error}</Text> : null}
-
-            <Text
-              onPress={() => {
-                if (!pending) void onSubmit();
-              }}
-              className={`text-primary-ink text-center font-semibold py-3 rounded-lg ${
-                pending ? 'bg-text-mute' : 'bg-primary'
-              }`}
-            >
-              {pending ? 'Creando...' : 'Crear cuenta'}
-            </Text>
+            <Button
+              label={pending ? 'Creando...' : 'Crear cuenta'}
+              onPress={onSubmit}
+              loading={pending}
+            />
 
             <View className="items-center mt-2">
               <Link href="/login" className="text-primary text-sm">

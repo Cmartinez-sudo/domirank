@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { Avatar, Button } from '@/components/ui';
 
 type ProfileRow = {
   full_name: string | null;
@@ -55,16 +56,15 @@ export default function Profile() {
   }
 
   const displayName = profile?.full_name ?? profile?.username ?? user?.email ?? 'Sin nombre';
-  const initial = displayName.charAt(0).toUpperCase();
 
   return (
     <SafeAreaView className="flex-1 bg-bg dark:bg-bg-dark">
       <ScrollView contentContainerClassName="px-6 py-8">
         <View className="items-center mb-8">
-          <View className="w-24 h-24 rounded-full bg-primary items-center justify-center mb-4">
-            <Text className="text-primary-ink text-4xl font-bold">{initial}</Text>
-          </View>
-          <Text className="text-2xl font-bold text-text dark:text-text-inverse">{displayName}</Text>
+          <Avatar url={profile?.avatar_url} name={displayName} size={96} />
+          <Text className="text-2xl font-bold text-text dark:text-text-inverse mt-4">
+            {displayName}
+          </Text>
           {user?.email ? (
             <Text className="text-text-mute dark:text-text-dim-dark mt-1">{user.email}</Text>
           ) : null}
@@ -75,16 +75,12 @@ export default function Profile() {
           <ProfileRow label="Fecha de nacimiento" value={profile?.date_of_birth ?? '—'} />
         </View>
 
-        <Text
-          onPress={() => {
-            if (!signingOut) void onSignOut();
-          }}
-          className={`text-center font-semibold py-3 rounded-lg border border-danger text-danger ${
-            signingOut ? 'opacity-50' : ''
-          }`}
-        >
-          {signingOut ? 'Cerrando...' : 'Cerrar sesión'}
-        </Text>
+        <Button
+          label={signingOut ? 'Cerrando...' : 'Cerrar sesión'}
+          variant="danger"
+          onPress={onSignOut}
+          loading={signingOut}
+        />
       </ScrollView>
     </SafeAreaView>
   );
