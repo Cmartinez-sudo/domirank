@@ -119,22 +119,32 @@ export function useAuth() {
         skipBrowserRedirect: true,
       },
     });
-    if (error) return { ok: false, error: error.message };
+    if (error) {
+      if (__DEV__) console.log("[oauth] signInWithOAuth error:", error);
+      return { ok: false, error: error.message };
+    }
     if (!data?.url) return { ok: false, error: "Supabase no devolvió URL de OAuth" };
+    if (__DEV__) console.log("[oauth] opening browser to:", data.url);
 
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+    if (__DEV__) console.log("[oauth] browser result:", JSON.stringify(result));
 
     if (result.type !== "success") {
       return { ok: false, error: result.type === "cancel" ? "Cancelado" : "OAuth interrumpido" };
     }
 
     const { access_token, refresh_token } = extractTokensFromCallbackUrl(result.url);
+    if (__DEV__) console.log("[oauth] tokens present?", { at: !!access_token, rt: !!refresh_token });
     if (!access_token || !refresh_token) {
       return { ok: false, error: "No recibimos tokens del callback" };
     }
 
     const { error: setErr } = await supabase.auth.setSession({ access_token, refresh_token });
-    if (setErr) return { ok: false, error: setErr.message };
+    if (setErr) {
+      if (__DEV__) console.log("[oauth] setSession error:", setErr);
+      return { ok: false, error: setErr.message };
+    }
+    if (__DEV__) console.log("[oauth] setSession OK, waiting for onAuthStateChange");
 
     // AuthGuard will react to the onAuthStateChange emitted by setSession.
     return { ok: true, error: null };
