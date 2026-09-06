@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import * as AuthSession from "expo-auth-session";
+import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 
 import { supabase } from "@/lib/supabase";
@@ -104,7 +104,13 @@ export function useAuth() {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    const redirectTo = AuthSession.makeRedirectUri({ scheme: "domirank" });
+    // Linking.createURL returns a URL that both Expo Go (exp://<ip>:8081/--/)
+    // and standalone/dev-build (domirank://) can intercept. This one URL has
+    // to be added to Supabase → Auth → URL Configuration → Redirect URLs.
+    // For dev flexibility, adding 'exp://*' as a wildcard entry there covers
+    // any dev machine's LAN IP without re-adding per session.
+    const redirectTo = Linking.createURL("/");
+    if (__DEV__) console.log("[oauth] redirectTo =", redirectTo);
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
