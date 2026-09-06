@@ -45,7 +45,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
     // Session exists AND profile complete. Kick out of (auth).
     if (inAuthGroup) {
-      router.replace('/');
+      router.replace('/dashboard');
     }
   }, [session, user, loading, segments, router]);
 

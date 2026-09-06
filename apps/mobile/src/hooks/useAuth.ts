@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import * as AuthSession from "expo-auth-session";
+import Constants from "expo-constants";
 import * as WebBrowser from "expo-web-browser";
 
 import { supabase } from "@/lib/supabase";
@@ -104,7 +105,22 @@ export function useAuth() {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    const redirectTo = AuthSession.makeRedirectUri({ scheme: "domirank" });
+    // Google OAuth on iOS uses ASWebAuthenticationSession which requires the
+    // callback URL's scheme to be registered by the *running* app. In Expo Go
+    // that means 'exp://...' — which iOS 17+ rejects with error 1 for auth
+    // sessions. There's no known workaround inside Expo Go; the fix is a
+    // dev-build (EAS) where the app owns 'domirank://'. See TECH_DEBT TD-020.
+    if (Constants.appOwnership === "expo") {
+      return {
+        ok: false,
+        error:
+          "Google requiere el dev-build de DomiRank (no funciona en Expo Go por limitación de iOS). Por ahora, entrá con email y contraseña.",
+      };
+    }
+
+    // makeRedirectUri() returns the app-specific scheme:
+    //   - Dev-build / prod:   domirank://
+    const redirectTo = AuthSession.makeRedirectUri();
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -116,7 +132,11 @@ export function useAuth() {
     if (error) return { ok: false, error: error.message };
     if (!data?.url) return { ok: false, error: "Supabase no devolvió URL de OAuth" };
 
-    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+    // preferEphemeralSession isolates the auth browser from Safari cookies so
+    // Supabase doesn't reuse a stale PWA session and skip Google auth.
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo, {
+      preferEphemeralSession: true,
+    });
 
     if (result.type !== "success") {
       return { ok: false, error: result.type === "cancel" ? "Cancelado" : "OAuth interrumpido" };
