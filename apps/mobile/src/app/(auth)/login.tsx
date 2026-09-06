@@ -7,13 +7,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { loginSchema } from '@domirank/shared/auth';
 
 export default function LoginScreen() {
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
   const passwordRef = useRef<TextInput>(null);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [googlePending, setGooglePending] = useState(false);
 
   const onSubmit = async () => {
     setError(null);
@@ -35,6 +36,16 @@ export default function LoginScreen() {
     if (!pending) void onSubmit();
   };
 
+  const onGoogle = async () => {
+    setError(null);
+    setGooglePending(true);
+    const result = await signInWithGoogle();
+    setGooglePending(false);
+    if (!result.ok && result.error !== 'Cancelado') {
+      setError(result.error ?? 'No pudimos entrar con Google');
+    }
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-bg dark:bg-bg-dark">
       <KeyboardAvoidingView
@@ -47,6 +58,25 @@ export default function LoginScreen() {
         <Text className="text-text-mute dark:text-text-dim-dark mb-8">
           Con tu cuenta DomiRank
         </Text>
+
+        <Text
+          onPress={() => {
+            if (!googlePending) void onGoogle();
+          }}
+          className={`text-center font-semibold py-3 rounded-lg border border-border dark:border-surface-2-dark bg-surface dark:bg-surface-dark text-text dark:text-text-inverse mb-4 ${
+            googlePending ? 'opacity-50' : ''
+          }`}
+        >
+          {googlePending ? 'Abriendo Google...' : 'Continuar con Google'}
+        </Text>
+
+        <View className="flex-row items-center mb-4">
+          <View className="flex-1 h-px bg-border dark:bg-surface-2-dark" />
+          <Text className="text-xs uppercase tracking-wider text-text-mute dark:text-text-dim-dark px-3">
+            o con email
+          </Text>
+          <View className="flex-1 h-px bg-border dark:bg-surface-2-dark" />
+        </View>
 
         <View className="gap-4">
           <View>
