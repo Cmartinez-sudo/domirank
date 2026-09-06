@@ -46,14 +46,17 @@ export default function SignupScreen() {
 
   if (sent) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-bg dark:bg-bg-dark">
         <View className="flex-1 justify-center px-6">
-          <Text className="text-3xl font-bold mb-3">Revisa tu correo</Text>
-          <Text className="text-gray-600 mb-6">
-            Te enviamos un enlace de confirmación a <Text className="font-semibold">{email}</Text>.
-            Ábrelo desde el mismo dispositivo para activar tu cuenta.
+          <Text className="text-3xl font-bold mb-3 text-text dark:text-text-inverse">
+            Revisá tu correo
           </Text>
-          <Link href="/login" className="text-blue-600">
+          <Text className="text-text-dim dark:text-text-dim-dark mb-6">
+            Te enviamos un enlace de confirmación a{' '}
+            <Text className="font-semibold text-text dark:text-text-inverse">{email}</Text>.
+            Abrilo desde el mismo dispositivo para activar tu cuenta.
+          </Text>
+          <Link href="/login" className="text-primary">
             Volver al login
           </Link>
         </View>
@@ -62,97 +65,115 @@ export default function SignupScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-bg dark:bg-bg-dark">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
       >
         <ScrollView contentContainerClassName="px-6 py-8" keyboardShouldPersistTaps="handled">
-          <Text className="text-3xl font-bold mb-1">Crear cuenta</Text>
-          <Text className="text-gray-500 mb-8">Empezá a jugar en DomiRank</Text>
+          <Text className="text-3xl font-bold mb-1 text-text dark:text-text-inverse">
+            Crear cuenta
+          </Text>
+          <Text className="text-text-mute dark:text-text-dim-dark mb-8">
+            Empezá a jugar en DomiRank
+          </Text>
 
           <View className="gap-4">
             <View>
-              <Text className="text-sm font-medium mb-1">Nombre y apellido</Text>
+              <Text className="text-sm font-medium mb-1 text-text dark:text-text-inverse">
+                Nombre y apellido
+              </Text>
               <TextInput
                 value={fullName}
                 onChangeText={setFullName}
                 placeholder="Carlos Martínez"
+                placeholderTextColor="#94a3b8"
                 autoComplete="name"
                 returnKeyType="next"
                 onSubmitEditing={() => dobRef.current?.focus()}
-                className="border border-gray-300 rounded-lg px-3 py-3 text-base"
+                className="border border-border dark:border-surface-2-dark bg-surface dark:bg-surface-dark rounded-lg px-3 py-3 text-base text-text dark:text-text-inverse"
               />
             </View>
 
             <View>
-              <Text className="text-sm font-medium mb-1">Fecha de nacimiento</Text>
+              <Text className="text-sm font-medium mb-1 text-text dark:text-text-inverse">
+                Fecha de nacimiento
+              </Text>
               <TextInput
                 ref={dobRef}
                 value={dob}
                 onChangeText={setDob}
                 placeholder="YYYY-MM-DD"
+                placeholderTextColor="#94a3b8"
                 keyboardType="numbers-and-punctuation"
                 returnKeyType="next"
                 onSubmitEditing={() => emailRef.current?.focus()}
-                className="border border-gray-300 rounded-lg px-3 py-3 text-base"
+                className="border border-border dark:border-surface-2-dark bg-surface dark:bg-surface-dark rounded-lg px-3 py-3 text-base text-text dark:text-text-inverse"
               />
-              <Text className="text-xs text-gray-500 mt-1">Debes tener al menos 13 años.</Text>
+              <Text className="text-xs text-text-mute dark:text-text-dim-dark mt-1">
+                Debés tener al menos 13 años.
+              </Text>
             </View>
 
             <View>
-              <Text className="text-sm font-medium mb-1">Correo</Text>
+              <Text className="text-sm font-medium mb-1 text-text dark:text-text-inverse">
+                Correo
+              </Text>
               <TextInput
                 ref={emailRef}
                 value={email}
                 onChangeText={setEmail}
                 placeholder="tu@correo.com"
+                placeholderTextColor="#94a3b8"
                 autoComplete="email"
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="email-address"
                 returnKeyType="next"
                 onSubmitEditing={() => passwordRef.current?.focus()}
-                className="border border-gray-300 rounded-lg px-3 py-3 text-base"
+                className="border border-border dark:border-surface-2-dark bg-surface dark:bg-surface-dark rounded-lg px-3 py-3 text-base text-text dark:text-text-inverse"
               />
             </View>
 
             <View>
-              <Text className="text-sm font-medium mb-1">Contraseña</Text>
+              <Text className="text-sm font-medium mb-1 text-text dark:text-text-inverse">
+                Contraseña
+              </Text>
               <TextInput
                 ref={passwordRef}
                 value={password}
                 onChangeText={setPassword}
                 placeholder="Mínimo 8 caracteres"
+                placeholderTextColor="#94a3b8"
                 autoComplete="new-password"
                 secureTextEntry
                 returnKeyType="done"
-                className="border border-gray-300 rounded-lg px-3 py-3 text-base"
+                className="border border-border dark:border-surface-2-dark bg-surface dark:bg-surface-dark rounded-lg px-3 py-3 text-base text-text dark:text-text-inverse"
               />
             </View>
 
             <Text
               onPress={() => setTerms((v) => !v)}
-              className={`text-sm py-2 ${terms ? 'text-gray-800' : 'text-gray-500'}`}
+              className={`text-sm py-2 ${terms ? 'text-text dark:text-text-inverse' : 'text-text-mute dark:text-text-dim-dark'}`}
             >
               {terms ? '☑' : '☐'}  Acepto los términos y la política de privacidad.
             </Text>
 
-            {error ? <Text className="text-red-600 text-sm">{error}</Text> : null}
+            {error ? <Text className="text-danger text-sm">{error}</Text> : null}
 
             <Text
               onPress={() => {
                 if (!pending) void onSubmit();
               }}
-              className={`text-white text-center font-semibold py-3 rounded-lg ${
-                pending ? 'bg-gray-400' : 'bg-blue-600'
+              className={`text-primary-ink text-center font-semibold py-3 rounded-lg ${
+                pending ? 'bg-text-mute' : 'bg-primary'
               }`}
             >
               {pending ? 'Creando...' : 'Crear cuenta'}
             </Text>
 
             <View className="items-center mt-2">
-              <Link href="/login" className="text-blue-600 text-sm">
+              <Link href="/login" className="text-primary text-sm">
                 ¿Ya tenés cuenta? Iniciá sesión
               </Link>
             </View>

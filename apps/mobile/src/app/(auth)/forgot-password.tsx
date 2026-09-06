@@ -33,14 +33,16 @@ export default function ForgotPasswordScreen() {
 
   if (sent) {
     return (
-      <SafeAreaView className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-bg dark:bg-bg-dark">
         <View className="flex-1 justify-center px-6">
-          <Text className="text-3xl font-bold mb-3">Correo enviado</Text>
-          <Text className="text-gray-600 mb-6">
-            Si <Text className="font-semibold">{email}</Text> tiene una cuenta,
-            te enviamos un enlace para restablecer la contraseña.
+          <Text className="text-3xl font-bold mb-3 text-text dark:text-text-inverse">
+            Correo enviado
           </Text>
-          <Link href="/login" className="text-blue-600">
+          <Text className="text-text-dim dark:text-text-dim-dark mb-6">
+            Si <Text className="font-semibold text-text dark:text-text-inverse">{email}</Text>{' '}
+            tiene una cuenta, te enviamos un enlace para restablecer la contraseña.
+          </Text>
+          <Link href="/login" className="text-primary">
             Volver al login
           </Link>
         </View>
@@ -49,23 +51,28 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-bg dark:bg-bg-dark">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1 justify-center px-6"
       >
-        <Text className="text-3xl font-bold mb-1">Restablecer contraseña</Text>
-        <Text className="text-gray-500 mb-8">
+        <Text className="text-3xl font-bold mb-1 text-text dark:text-text-inverse">
+          Restablecer contraseña
+        </Text>
+        <Text className="text-text-mute dark:text-text-dim-dark mb-8">
           Te enviamos un enlace por correo para elegir una nueva.
         </Text>
 
         <View className="gap-4">
           <View>
-            <Text className="text-sm font-medium mb-1">Correo</Text>
+            <Text className="text-sm font-medium mb-1 text-text dark:text-text-inverse">
+              Correo
+            </Text>
             <TextInput
               value={email}
               onChangeText={setEmail}
               placeholder="tu@correo.com"
+              placeholderTextColor="#94a3b8"
               autoComplete="email"
               autoCapitalize="none"
               autoCorrect={false}
@@ -74,25 +81,25 @@ export default function ForgotPasswordScreen() {
               onSubmitEditing={() => {
                 if (!pending) void onSubmit();
               }}
-              className="border border-gray-300 rounded-lg px-3 py-3 text-base"
+              className="border border-border dark:border-surface-2-dark bg-surface dark:bg-surface-dark rounded-lg px-3 py-3 text-base text-text dark:text-text-inverse"
             />
           </View>
 
-          {error ? <Text className="text-red-600 text-sm">{error}</Text> : null}
+          {error ? <Text className="text-danger text-sm">{error}</Text> : null}
 
           <Text
             onPress={() => {
               if (!pending) void onSubmit();
             }}
-            className={`text-white text-center font-semibold py-3 rounded-lg ${
-              pending ? 'bg-gray-400' : 'bg-blue-600'
+            className={`text-primary-ink text-center font-semibold py-3 rounded-lg ${
+              pending ? 'bg-text-mute' : 'bg-primary'
             }`}
           >
             {pending ? 'Enviando...' : 'Enviar enlace'}
           </Text>
 
           <View className="items-center mt-2">
-            <Link href="/login" className="text-blue-600 text-sm">
+            <Link href="/login" className="text-primary text-sm">
               Volver al login
             </Link>
           </View>

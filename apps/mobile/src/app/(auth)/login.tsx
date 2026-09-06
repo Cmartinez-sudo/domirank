@@ -36,62 +36,72 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-bg dark:bg-bg-dark">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1 justify-center px-6"
       >
-        <Text className="text-3xl font-bold mb-1">Inicia sesión</Text>
-        <Text className="text-gray-500 mb-8">Con tu cuenta DomiRank</Text>
+        <Text className="text-3xl font-bold mb-1 text-text dark:text-text-inverse">
+          Iniciá sesión
+        </Text>
+        <Text className="text-text-mute dark:text-text-dim-dark mb-8">
+          Con tu cuenta DomiRank
+        </Text>
 
         <View className="gap-4">
           <View>
-            <Text className="text-sm font-medium mb-1">Correo</Text>
+            <Text className="text-sm font-medium mb-1 text-text dark:text-text-inverse">
+              Correo
+            </Text>
             <TextInput
               value={email}
               onChangeText={setEmail}
               placeholder="tu@correo.com"
+              placeholderTextColor="#94a3b8"
               autoComplete="email"
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="email-address"
               returnKeyType="next"
               onSubmitEditing={() => passwordRef.current?.focus()}
-              className="border border-gray-300 rounded-lg px-3 py-3 text-base"
+              className="border border-border dark:border-surface-2-dark bg-surface dark:bg-surface-dark rounded-lg px-3 py-3 text-base text-text dark:text-text-inverse"
             />
           </View>
 
           <View>
-            <Text className="text-sm font-medium mb-1">Contraseña</Text>
+            <Text className="text-sm font-medium mb-1 text-text dark:text-text-inverse">
+              Contraseña
+            </Text>
             <TextInput
               ref={passwordRef}
               value={password}
               onChangeText={setPassword}
               placeholder="Mínimo 8 caracteres"
+              placeholderTextColor="#94a3b8"
               autoComplete="current-password"
               secureTextEntry
               returnKeyType="go"
               onSubmitEditing={submit}
-              className="border border-gray-300 rounded-lg px-3 py-3 text-base"
+              className="border border-border dark:border-surface-2-dark bg-surface dark:bg-surface-dark rounded-lg px-3 py-3 text-base text-text dark:text-text-inverse"
             />
           </View>
 
-          {error ? <Text className="text-red-600 text-sm">{error}</Text> : null}
+          {error ? <Text className="text-danger text-sm">{error}</Text> : null}
 
           <Text
             onPress={submit}
-            className={`text-white text-center font-semibold py-3 rounded-lg ${
-              pending ? 'bg-gray-400' : 'bg-blue-600'
+            className={`text-primary-ink text-center font-semibold py-3 rounded-lg ${
+              pending ? 'bg-text-mute' : 'bg-primary'
             }`}
           >
             {pending ? 'Iniciando...' : 'Entrar'}
           </Text>
 
           <View className="flex-row justify-between mt-2">
-            <Link href="/signup" className="text-blue-600 text-sm">
+            <Link href="/signup" className="text-primary text-sm">
               Crear cuenta
             </Link>
-            <Link href="/forgot-password" className="text-blue-600 text-sm">
+            <Link href="/forgot-password" className="text-primary text-sm">
               Olvidé mi contraseña
             </Link>
           </View>
