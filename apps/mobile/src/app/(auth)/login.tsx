@@ -4,6 +4,7 @@ import { Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/hooks/useAuth';
+import { Button, Input } from '@/components/ui';
 import { loginSchema } from '@domirank/shared/auth';
 
 export default function LoginScreen() {
@@ -32,10 +33,6 @@ export default function LoginScreen() {
     // Successful sign-in triggers onAuthStateChange → AuthGuard redirects.
   };
 
-  const submit = () => {
-    if (!pending) void onSubmit();
-  };
-
   const onGoogle = async () => {
     setError(null);
     setGooglePending(true);
@@ -59,16 +56,14 @@ export default function LoginScreen() {
           Con tu cuenta DomiRank
         </Text>
 
-        <Text
-          onPress={() => {
-            if (!googlePending) void onGoogle();
-          }}
-          className={`text-center font-semibold py-3 rounded-lg border border-border dark:border-surface-2-dark bg-surface dark:bg-surface-dark text-text dark:text-text-inverse mb-4 ${
-            googlePending ? 'opacity-50' : ''
-          }`}
-        >
-          {googlePending ? 'Abriendo Google...' : 'Continuar con Google'}
-        </Text>
+        <View className="mb-4">
+          <Button
+            label="Continuar con Google"
+            variant="secondary"
+            onPress={onGoogle}
+            loading={googlePending}
+          />
+        </View>
 
         <View className="flex-row items-center mb-4">
           <View className="flex-1 h-px bg-border dark:bg-surface-2-dark" />
@@ -79,53 +74,39 @@ export default function LoginScreen() {
         </View>
 
         <View className="gap-4">
-          <View>
-            <Text className="text-sm font-medium mb-1 text-text dark:text-text-inverse">
-              Correo
-            </Text>
-            <TextInput
-              value={email}
-              onChangeText={setEmail}
-              placeholder="tu@correo.com"
-              placeholderTextColor="#94a3b8"
-              autoComplete="email"
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="email-address"
-              returnKeyType="next"
-              onSubmitEditing={() => passwordRef.current?.focus()}
-              className="border border-border dark:border-surface-2-dark bg-surface dark:bg-surface-dark rounded-lg px-3 py-3 text-base text-text dark:text-text-inverse"
-            />
-          </View>
+          <Input
+            label="Correo"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="tu@correo.com"
+            autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
+          />
 
-          <View>
-            <Text className="text-sm font-medium mb-1 text-text dark:text-text-inverse">
-              Contraseña
-            </Text>
-            <TextInput
-              ref={passwordRef}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Mínimo 8 caracteres"
-              placeholderTextColor="#94a3b8"
-              autoComplete="current-password"
-              secureTextEntry
-              returnKeyType="go"
-              onSubmitEditing={submit}
-              className="border border-border dark:border-surface-2-dark bg-surface dark:bg-surface-dark rounded-lg px-3 py-3 text-base text-text dark:text-text-inverse"
-            />
-          </View>
+          <Input
+            ref={passwordRef}
+            label="Contraseña"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Mínimo 8 caracteres"
+            autoComplete="current-password"
+            secureTextEntry
+            returnKeyType="go"
+            onSubmitEditing={() => {
+              if (!pending) void onSubmit();
+            }}
+            error={error}
+          />
 
-          {error ? <Text className="text-danger text-sm">{error}</Text> : null}
-
-          <Text
-            onPress={submit}
-            className={`text-primary-ink text-center font-semibold py-3 rounded-lg ${
-              pending ? 'bg-text-mute' : 'bg-primary'
-            }`}
-          >
-            {pending ? 'Iniciando...' : 'Entrar'}
-          </Text>
+          <Button
+            label={pending ? 'Iniciando...' : 'Entrar'}
+            onPress={onSubmit}
+            loading={pending}
+          />
 
           <View className="flex-row justify-between mt-2">
             <Link href="/signup" className="text-primary text-sm">

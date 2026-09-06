@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { Button, Input } from '@/components/ui';
 import { signupSchema } from '@domirank/shared/auth';
 
 // Subset of signupSchema — OAuth users already have email+password (via
@@ -43,7 +44,6 @@ export default function CompleteProfileScreen() {
 
     setPending(true);
     const now = new Date().toISOString();
-    // full_name defaults to Google's name if we have it in the OAuth metadata.
     const googleName =
       (user.user_metadata as { full_name?: string; name?: string } | null)?.full_name ??
       (user.user_metadata as { full_name?: string; name?: string } | null)?.name ??
@@ -65,9 +65,6 @@ export default function CompleteProfileScreen() {
       return;
     }
 
-    // Also mirror the flag into user_metadata so the AuthGuard can decide
-    // "profile complete?" from the session JWT without an extra profiles
-    // query on every navigation.
     const { error: metaErr } = await supabase.auth.updateUser({
       data: {
         terms_accepted_at: now,
@@ -81,7 +78,6 @@ export default function CompleteProfileScreen() {
       setError(metaErr.message);
       return;
     }
-    // onAuthStateChange → guard sees terms_accepted_at → redirects to /.
   };
 
   return (
@@ -98,44 +94,33 @@ export default function CompleteProfileScreen() {
         </Text>
 
         <View className="gap-4">
-          <View>
-            <Text className="text-sm font-medium mb-1 text-text dark:text-text-inverse">
-              Fecha de nacimiento
-            </Text>
-            <TextInput
-              ref={dobRef}
-              value={dob}
-              onChangeText={setDob}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#94a3b8"
-              keyboardType="numbers-and-punctuation"
-              returnKeyType="done"
-              className="border border-border dark:border-surface-2-dark bg-surface dark:bg-surface-dark rounded-lg px-3 py-3 text-base text-text dark:text-text-inverse"
-            />
-            <Text className="text-xs text-text-mute dark:text-text-dim-dark mt-1">
-              Debés tener al menos 13 años.
-            </Text>
-          </View>
+          <Input
+            ref={dobRef}
+            label="Fecha de nacimiento"
+            value={dob}
+            onChangeText={setDob}
+            placeholder="YYYY-MM-DD"
+            keyboardType="numbers-and-punctuation"
+            returnKeyType="done"
+            hint="Debés tener al menos 13 años."
+          />
 
           <Text
             onPress={() => setTerms((v) => !v)}
-            className={`text-sm py-2 ${terms ? 'text-text dark:text-text-inverse' : 'text-text-mute dark:text-text-dim-dark'}`}
+            className={`text-sm py-2 ${
+              terms ? 'text-text dark:text-text-inverse' : 'text-text-mute dark:text-text-dim-dark'
+            }`}
           >
             {terms ? '☑' : '☐'}  Acepto los términos y la política de privacidad.
           </Text>
 
           {error ? <Text className="text-danger text-sm">{error}</Text> : null}
 
-          <Text
-            onPress={() => {
-              if (!pending) void onSubmit();
-            }}
-            className={`text-primary-ink text-center font-semibold py-3 rounded-lg ${
-              pending ? 'bg-text-mute' : 'bg-primary'
-            }`}
-          >
-            {pending ? 'Guardando...' : 'Continuar'}
-          </Text>
+          <Button
+            label={pending ? 'Guardando...' : 'Continuar'}
+            onPress={onSubmit}
+            loading={pending}
+          />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

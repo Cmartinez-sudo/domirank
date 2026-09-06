@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 import { Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/hooks/useAuth';
+import { Button, Input } from '@/components/ui';
 import { resetPasswordRequestSchema } from '@domirank/shared/auth';
 
 export default function ForgotPasswordScreen() {
@@ -64,39 +65,27 @@ export default function ForgotPasswordScreen() {
         </Text>
 
         <View className="gap-4">
-          <View>
-            <Text className="text-sm font-medium mb-1 text-text dark:text-text-inverse">
-              Correo
-            </Text>
-            <TextInput
-              value={email}
-              onChangeText={setEmail}
-              placeholder="tu@correo.com"
-              placeholderTextColor="#94a3b8"
-              autoComplete="email"
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="email-address"
-              returnKeyType="go"
-              onSubmitEditing={() => {
-                if (!pending) void onSubmit();
-              }}
-              className="border border-border dark:border-surface-2-dark bg-surface dark:bg-surface-dark rounded-lg px-3 py-3 text-base text-text dark:text-text-inverse"
-            />
-          </View>
-
-          {error ? <Text className="text-danger text-sm">{error}</Text> : null}
-
-          <Text
-            onPress={() => {
+          <Input
+            label="Correo"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="tu@correo.com"
+            autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            returnKeyType="go"
+            onSubmitEditing={() => {
               if (!pending) void onSubmit();
             }}
-            className={`text-primary-ink text-center font-semibold py-3 rounded-lg ${
-              pending ? 'bg-text-mute' : 'bg-primary'
-            }`}
-          >
-            {pending ? 'Enviando...' : 'Enviar enlace'}
-          </Text>
+            error={error}
+          />
+
+          <Button
+            label={pending ? 'Enviando...' : 'Enviar enlace'}
+            onPress={onSubmit}
+            loading={pending}
+          />
 
           <View className="items-center mt-2">
             <Link href="/login" className="text-primary text-sm">

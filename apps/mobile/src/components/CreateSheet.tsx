@@ -6,6 +6,7 @@ import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
 import { PlusIcon } from '@/components/icons/PlusIcon';
 import { TrophyIcon } from '@/components/icons/TrophyIcon';
 import { GroupsIcon } from '@/components/icons/GroupsIcon';
+import { Card } from '@/components/ui';
 
 export const CreateSheet = forwardRef<BottomSheetModal>((_, ref) => {
   const snapPoints = useMemo(() => ['40%'], []);
@@ -75,17 +76,18 @@ function CreateOption({
   onPress: () => void;
 }) {
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      className="flex-row items-center gap-3 p-4 rounded-xl bg-surface-2 active:opacity-70"
-    >
-      <View className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center">
-        {icon}
-      </View>
-      <View className="flex-1">
-        <Text className="text-base font-semibold text-text">{title}</Text>
-        <Text className="text-sm text-text-mute">{subtitle}</Text>
-      </View>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+      <Card padding="md">
+        <View className="flex-row items-center gap-3">
+          <View className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center">
+            {icon}
+          </View>
+          <View className="flex-1">
+            <Text className="text-base font-semibold text-text">{title}</Text>
+            <Text className="text-sm text-text-mute">{subtitle}</Text>
+          </View>
+        </View>
+      </Card>
     </TouchableOpacity>
   );
 }
