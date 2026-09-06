@@ -126,7 +126,14 @@ export function useAuth() {
     if (!data?.url) return { ok: false, error: "Supabase no devolvió URL de OAuth" };
     if (__DEV__) console.log("[oauth] opening browser to:", data.url);
 
-    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+    // preferEphemeralSession: true isolates the auth browser from Safari's
+    // cookie jar. Without it, if the user is signed into the PWA in Safari,
+    // Supabase reuses that session and skips Google auth entirely — which
+    // masks bugs in the redirect flow (looks like nothing happens, but the
+    // browser silently redirects to Site URL because it has a session).
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo, {
+      preferEphemeralSession: true,
+    });
     if (__DEV__) console.log("[oauth] browser result:", JSON.stringify(result));
 
     if (result.type !== "success") {
