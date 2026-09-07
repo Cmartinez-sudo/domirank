@@ -4,41 +4,38 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-import { Avatar, Button } from '@/components/ui';
+import { useProfileByUsername } from '@/hooks/useProfile';
+import { Button } from '@/components/ui';
+import { ProfileHero } from '@/components/profile/ProfileHero';
+import { StatTiles } from '@/components/profile/StatTiles';
+import { EloCurveSection } from '@/components/profile/EloCurveSection';
+import { StreaksSection } from '@/components/profile/StreaksSection';
+import { ModalityCards } from '@/components/profile/ModalityCards';
+import { HistoryList } from '@/components/profile/HistoryList';
 
-type ProfileRow = {
-  full_name: string | null;
-  username: string | null;
-  avatar_url: string | null;
-  date_of_birth: string | null;
-};
-
-export default function Profile() {
+export default function ProfileTab() {
   const { user, signOut } = useAuth();
-  const [profile, setProfile] = useState<ProfileRow | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [username, setUsername] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+    if (!user) return;
     supabase
       .from('profiles')
-      .select('full_name, username, avatar_url, date_of_birth')
+      .select('username')
       .eq('id', user.id)
       .single()
       .then(({ data }) => {
         if (cancelled) return;
-        setProfile(data);
-        setLoading(false);
+        setUsername(data?.username ?? null);
       });
     return () => {
       cancelled = true;
     };
   }, [user]);
+
+  const { data: profile, isLoading } = useProfileByUsername(username ?? undefined);
 
   const onSignOut = async () => {
     setSigningOut(true);
@@ -47,7 +44,7 @@ export default function Profile() {
     // AuthGuard reacts via onAuthStateChange → redirects to /login.
   };
 
-  if (loading) {
+  if (isLoading || !profile || !profile.id) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-bg dark:bg-bg-dark">
         <ActivityIndicator />
@@ -55,42 +52,33 @@ export default function Profile() {
     );
   }
 
-  const displayName = profile?.full_name ?? profile?.username ?? user?.email ?? 'Sin nombre';
+  const userId = profile.id;
 
   return (
     <SafeAreaView className="flex-1 bg-bg dark:bg-bg-dark">
-      <ScrollView contentContainerClassName="px-6 py-8">
-        <View className="items-center mb-8">
-          <Avatar url={profile?.avatar_url} name={displayName} size={96} />
-          <Text className="text-2xl font-bold text-text dark:text-text-inverse mt-4">
-            {displayName}
-          </Text>
-          {user?.email ? (
-            <Text className="text-text-mute dark:text-text-dim-dark mt-1">{user.email}</Text>
-          ) : null}
-        </View>
+      <ScrollView contentContainerClassName="px-4 pb-8">
+        <ProfileHero profile={profile} />
 
-        <View className="gap-3 mb-8">
-          <ProfileRow label="Username" value={profile?.username ?? '—'} />
-          <ProfileRow label="Fecha de nacimiento" value={profile?.date_of_birth ?? '—'} />
-        </View>
+        <View className="gap-6 mt-2">
+          <StatTiles profile={profile} />
+          <EloCurveSection userId={userId} />
+          <StreaksSection userId={userId} />
+          <ModalityCards profile={profile} />
+          <HistoryList userId={userId} />
 
-        <Button
-          label={signingOut ? 'Cerrando...' : 'Cerrar sesión'}
-          variant="danger"
-          onPress={onSignOut}
-          loading={signingOut}
-        />
+          <View className="mt-4">
+            <Text className="text-text-mute dark:text-text-dim-dark text-xs mb-2">
+              Cuenta: {user?.email}
+            </Text>
+            <Button
+              label={signingOut ? 'Cerrando...' : 'Cerrar sesión'}
+              variant="danger"
+              onPress={onSignOut}
+              loading={signingOut}
+            />
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function ProfileRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View className="flex-row justify-between py-3 border-b border-border dark:border-surface-2-dark">
-      <Text className="text-text-mute dark:text-text-dim-dark">{label}</Text>
-      <Text className="text-text dark:text-text-inverse font-medium">{value}</Text>
-    </View>
   );
 }
