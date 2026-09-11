@@ -8,6 +8,8 @@ import { PageTransition } from "@/components/Motion";
 import { TierBadge, ColHeader } from "@/components/RatingInfo";
 import { ReliabilityBadge } from "@/components/reliability/ReliabilityBadge";
 import { ScopeToggle } from "@/components/leaderboard/ScopeToggle";
+import { loadHintsSeen } from "@/lib/hints";
+import { Hint } from "@/components/Hint";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +34,18 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
 
   if (isFriends && !user) {
     redirect("/login?redirectTo=/leaderboard?scope=friends");
+  }
+
+  // Sprint 1c: hint sobre NR si el user aún no aparece en el leaderboard.
+  const hintsSeen = user ? await loadHintsSeen() : [];
+  let viewerIsRated = false;
+  if (user) {
+    const { data: viewer } = await supabase
+      .from("profile_ratings")
+      .select("is_rated")
+      .eq("id", user.id)
+      .maybeSingle();
+    viewerIsRated = !!(viewer as { is_rated?: boolean } | null)?.is_rated;
   }
 
   let rows: any[] = [];
@@ -61,7 +75,15 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
     <PageTransition>
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-3xl font-bold">{isFriends ? "Ranking entre amigos" : "Ranking"}</h1>
+        <Hint
+          id="first_leaderboard_nr"
+          initialSeenIds={hintsSeen}
+          when={!!user && !viewerIsRated}
+          title="No estás aquí todavía"
+          body={`Aparecerás en el ranking cuando tengas ${DOMIRANK_MIN_GAMES} partidas atestiguadas. Antes de eso apareces como NR (Sin Rating).`}
+        >
+          <h1 className="text-3xl font-bold">{isFriends ? "Ranking entre amigos" : "Ranking"}</h1>
+        </Hint>
         <ScopeToggle hasSession={!!user} />
       </div>
 
