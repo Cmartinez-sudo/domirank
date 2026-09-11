@@ -6,7 +6,9 @@
 
 import type { SVGProps } from "react";
 
-type IconProps = SVGProps<SVGSVGElement> & { size?: number };
+// `Omit<SVGProps, "ref">` evita la incompatibilidad LegacyRef vs Ref cuando
+// spread sobre <svg>. Estos iconos no exponen ref hacia afuera.
+type IconProps = Omit<SVGProps<SVGSVGElement>, "ref"> & { size?: number };
 
 function Base({ size = 24, children, ...rest }: IconProps & { children: React.ReactNode }) {
   return (
