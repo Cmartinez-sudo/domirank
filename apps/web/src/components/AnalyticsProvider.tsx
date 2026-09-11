@@ -7,7 +7,13 @@ import type { User } from "@supabase/supabase-js";
 
 type Props = {
   user: User | null;
-  profile?: { username?: string | null; country?: string | null } | null;
+  profile?: {
+    username?: string | null;
+    country?: string | null;
+    default_modality?: string | null;
+    onboarding_version?: number | null;
+    referred_by?: string | null;
+  } | null;
   children: React.ReactNode;
 };
 
@@ -31,6 +37,9 @@ export function AnalyticsProvider({ user, profile, children }: Props) {
         email: user.email ?? undefined,
         username: profile?.username ?? undefined,
         country: profile?.country ?? undefined,
+        default_modality: profile?.default_modality ?? undefined,
+        onboarding_version: profile?.onboarding_version ?? undefined,
+        arrived_via_referral: profile?.referred_by ? true : false,
       });
       prevUserIdRef.current = user.id;
     } else if (prevUserIdRef.current !== null) {
@@ -40,7 +49,7 @@ export function AnalyticsProvider({ user, profile, children }: Props) {
     }
     // Si user es null desde el primer render (visitante anónimo), no llama reset()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, user?.email, profile?.username, profile?.country]);
+  }, [user?.id, user?.email, profile?.username, profile?.country, profile?.default_modality, profile?.onboarding_version, profile?.referred_by]);
 
   return (
     <>

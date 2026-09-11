@@ -8,6 +8,8 @@ import { updateProfile, uploadAvatar, removeAvatar, signOut } from "@/lib/settin
 import { PushSubscriptionToggle } from "@/components/notifications/PushSubscriptionToggle";
 import { ModalityPreferencesSection } from "./ModalityPreferencesSection";
 import { AppearanceSection } from "./AppearanceSection";
+import { RecalibrateSkillDialog } from "./RecalibrateSkillDialog";
+import { analytics } from "@/lib/analytics";
 import type { UserPreferences } from "@/types/user-preferences";
 
 type Profile = {
@@ -18,6 +20,8 @@ type Profile = {
   country: CountryCode | null;
   default_modality: ModalityCode;
   email_notifications: boolean;
+  date_of_birth: string | null;
+  initial_skill_points: number | null;
 };
 
 export function SettingsForm({
@@ -35,8 +39,34 @@ export function SettingsForm({
   const [modality, setModality] = useState<ModalityCode>(profile.default_modality);
   const [emailNotif, setEmailNotif] = useState<boolean>(profile.email_notifications);
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url);
+  const [dob, setDob] = useState<string>(profile.date_of_birth ?? "");
+  const [confirmDobOpen, setConfirmDobOpen] = useState(false);
+  const [recalibrateOpen, setRecalibrateOpen] = useState(false);
   const [msg, setMsg] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const maxDob = (() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 13);
+    return d.toISOString().slice(0, 10);
+  })();
+
+  async function saveDob() {
+    setMsg(null);
+    setPending(true);
+    try {
+      const r = await updateProfile({ date_of_birth: dob });
+      if (r.ok) {
+        setMsg({ kind: "ok", text: "Fecha actualizada" });
+        analytics.track("dob_edited", { age_before: null, age_after: null });
+      } else {
+        setMsg({ kind: "error", text: r.error });
+      }
+    } finally {
+      setPending(false);
+      setConfirmDobOpen(false);
+    }
+  }
 
   async function save() {
     setMsg(null);
@@ -160,8 +190,75 @@ export function SettingsForm({
       {/* ── Preferencias de partida ─────────────────────────────────────── */}
       <ModalityPreferencesSection initialPreferences={initialPreferences} />
 
+      {/* ── Fecha de nacimiento (S2) ────────────────────────────────────── */}
+      <section className="card space-y-2">
+        <label className="label">Fecha de nacimiento</label>
+        <input
+          type="date"
+          className="input"
+          value={dob}
+          onChange={(e) => setDob(e.target.value)}
+          max={maxDob}
+        />
+        <p className="text-text-mute text-xs">
+          Solo cambia si te equivocaste al registrarte. Debes tener al menos 13 años.
+        </p>
+        <button
+          type="button"
+          className="btn-ghost text-sm"
+          disabled={pending || !dob || dob === (profile.date_of_birth ?? "")}
+          onClick={() => setConfirmDobOpen(true)}
+        >
+          Guardar fecha
+        </button>
+      </section>
+
+      {/* ── Recalibrar nivel (S1) ───────────────────────────────────────── */}
+      <section className="card space-y-2">
+        <h2 className="font-semibold text-sm">Recalibrar mi nivel</h2>
+        <p className="text-text-mute text-xs">
+          Vuelve a responder las 4 preguntas del onboarding. Si aún no tienes
+          rating real, esto actualiza tu DomiRank inicial estimado.
+        </p>
+        {profile.initial_skill_points != null && (
+          <p className="text-text-mute text-xs">Skill actual: {profile.initial_skill_points} pts</p>
+        )}
+        <button
+          type="button"
+          className="btn-ghost text-sm"
+          onClick={() => setRecalibrateOpen(true)}
+        >
+          Volver a hacer el assessment
+        </button>
+      </section>
+
       {/* ── Apariencia ──────────────────────────────────────────────────── */}
       <AppearanceSection />
+
+      <RecalibrateSkillDialog open={recalibrateOpen} onClose={() => setRecalibrateOpen(false)} />
+
+      {confirmDobOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setConfirmDobOpen(false)}>
+          <div
+            className="bg-surface-1 rounded-2xl border border-border max-w-sm w-full p-6 space-y-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="font-semibold">¿Cambiar tu fecha de nacimiento?</h2>
+            <p className="text-text-mute text-sm">
+              Solo cambia si te equivocaste al registrarte. Usamos esta fecha para
+              verificar la edad mínima (13+).
+            </p>
+            <div className="flex gap-2 pt-2">
+              <button type="button" className="btn-ghost flex-1" onClick={() => setConfirmDobOpen(false)}>
+                Cancelar
+              </button>
+              <button type="button" className="btn-primary flex-1" onClick={saveDob} disabled={pending}>
+                {pending ? "Guardando…" : "Sí, cambiar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {msg && (
         <div className={`p-3 rounded-md text-sm ${msg.kind === "ok" ? "bg-primary/10 border border-primary/30 text-primary" : "bg-danger/10 border border-danger/30 text-danger"}`}>

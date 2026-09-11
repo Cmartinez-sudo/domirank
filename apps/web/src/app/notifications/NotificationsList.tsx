@@ -232,6 +232,32 @@ function NotificationCard({ n }: { n: AppNotification }) {
   } else if (n.type === "pair_invite_accepted") {
     body = <><strong>{actorName}</strong> aceptó tu invitación de partner</>;
     href = tournamentHref;
+  } else if (n.type === "referral_signup") {
+    // Sprint 1a: alguien creó cuenta por tu link ?ref=.
+    const newUserName = String(n.payload?.new_user_display_name ?? actorName);
+    const newUserId = String(n.payload?.actor_id ?? "");
+    body = <><strong>{newUserName}</strong> aceptó tu invitación a DomiRank</>;
+    inline = (
+      <div className="flex gap-2 mt-2 flex-wrap">
+        {newUserId && (
+          <Link
+            href={`/matches/new?preload=${newUserId}`}
+            className="btn-primary text-sm py-1.5 px-3"
+          >
+            Registrar partida
+          </Link>
+        )}
+        {actorUsername && (
+          <Link
+            href={`/profile/${actorUsername}`}
+            className="btn-ghost text-sm py-1.5 px-3"
+          >
+            Ver perfil
+          </Link>
+        )}
+      </div>
+    );
+    href = actorUsername ? `/profile/${actorUsername}` : null;
   } else {
     body = <>Nueva notificación</>;
   }
@@ -258,7 +284,8 @@ function NotificationCard({ n }: { n: AppNotification }) {
   // se traganarían el click). Si no, envolver en Link al perfil del actor.
   const hasActionButtons =
     (inline && n.type === "friend_request_received" && n.pending_request_id && !acted) ||
-    (inline && n.type === "pair_invite_received" && !acted);
+    (inline && n.type === "pair_invite_received" && !acted) ||
+    n.type === "referral_signup";
   if (hasActionButtons) {
     return content;
   }

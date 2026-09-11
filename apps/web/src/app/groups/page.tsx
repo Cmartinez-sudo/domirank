@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { listMyGroups, listMyInvitations } from "@/lib/groups-queries";
+import { loadHintsSeen } from "@/lib/hints";
+import { Hint } from "@/components/Hint";
 import { GroupCard } from "./GroupCard";
 import { InvitationCard } from "./InvitationCard";
 
@@ -9,9 +11,10 @@ export const dynamic = "force-dynamic";
 export default async function GroupsPage() {
   await requireUser();
 
-  const [groups, invitations] = await Promise.all([
+  const [groups, invitations, hintsSeen] = await Promise.all([
     listMyGroups(),
     listMyInvitations(),
+    loadHintsSeen(),
   ]);
 
   return (
@@ -23,9 +26,17 @@ export default async function GroupsPage() {
             Crews donde compartís historial de partidas.
           </p>
         </div>
-        <Link href="/groups/new" className="btn-primary">
-          + Crear grupo
-        </Link>
+        <Hint
+          id="first_new_group_button"
+          initialSeenIds={hintsSeen}
+          when={groups.length === 0}
+          title="Tu peña, tu ranking"
+          body="Un grupo es tu peña. Las partidas entre miembros suman doble para su leaderboard."
+        >
+          <Link href="/groups/new" className="btn-primary">
+            + Crear grupo
+          </Link>
+        </Hint>
       </div>
 
       {/* Mis grupos */}

@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { requireUser, getCurrentProfile } from "@/lib/auth";
 import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseService } from "@/lib/supabase/service";
 import { NR_THRESHOLD, isRated } from "@domirank/shared/rating";
 import { PageTransition, StaggerChildren, StaggerItem } from "@/components/Motion";
 import { TierBadge, RatingInfoTooltip } from "@/components/RatingInfo";
@@ -13,6 +15,8 @@ import { GameIcon } from "@/components/icons";
 import { NotificationPermissionPrompt } from "@/components/notifications/NotificationPermissionPrompt";
 import { ModalityCard } from "@/components/ModalityCard";
 import { buildModalities } from "@/lib/profile";
+import { P1 } from "@/components/post-onboarding/P1";
+import { LegacyReonboardingBanner } from "@/components/LegacyReonboardingBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +24,83 @@ export default async function Dashboard() {
   const user = await requireUser();
   const profile: any = await getCurrentProfile();
   if (!profile) return <p>No se pudo cargar tu perfil.</p>;
+
+  // Sprint 1b: P1 (primera pantalla post-onboarding).
+  // Se muestra bloqueando el dashboard normal hasta que:
+  //   - cumpla first_valuable_action_at (Combo OR), o
+  //   - descarte 3 veces ("Solo explorar")
+  const p1ShouldShow =
+    profile.first_valuable_action_at == null &&
+    (profile.p1_dismissed_count ?? 0) < 3;
+
+  if (p1ShouldShow) {
+    const h = headers();
+    const forwardedHost = h.get("x-forwarded-host");
+    const forwardedProto = h.get("x-forwarded-proto") ?? "https";
+    const origin = forwardedHost
+      ? `${forwardedProto}://${forwardedHost}`
+      : (process.env.NEXT_PUBLIC_APP_URL ?? "https://domirank.app");
+
+    let referrer: Parameters<typeof P1>[0]["referrer"] = null;
+    if (profile.referred_by) {
+      const svc = supabaseService();
+      const { data: refRow } = await svc
+        .from("profiles")
+        .select("id, username, display_name, avatar_url")
+        .eq("id", profile.referred_by)
+        .maybeSingle();
+      if (refRow) {
+        const r = refRow as { id: string; username: string; display_name: string | null; avatar_url: string | null };
+
+        // Rating del referrer (para header).
+        const { data: ratingRow } = await svc
+          .from("profile_ratings")
+          .select("global_display, is_rated")
+          .eq("id", r.id)
+          .maybeSingle();
+        const rating = ratingRow as { global_display: number | null; is_rated: boolean } | null;
+
+        // Primer grupo del referrer con join_code activo (para CTA condicional).
+        const { data: groupRow } = await svc
+          .from("groups")
+          .select("id, name, join_code, join_code_expires_at, group_members!inner(role, status, user_id)")
+          .eq("created_by_user_id", r.id)
+          .eq("is_active", true)
+          .not("join_code", "is", null)
+          .eq("group_members.user_id", r.id)
+          .eq("group_members.status", "active")
+          .limit(1)
+          .maybeSingle();
+        const g = groupRow as { id: string; name: string; join_code: string; join_code_expires_at: string | null } | null;
+        const groupWithCodeValid =
+          g && (!g.join_code_expires_at || new Date(g.join_code_expires_at) > new Date());
+
+        referrer = {
+          id: r.id,
+          username: r.username,
+          display_name: r.display_name,
+          avatar_url: r.avatar_url,
+          rating_display: rating?.global_display ?? null,
+          is_rated: rating?.is_rated ?? false,
+          first_group_with_code: groupWithCodeValid
+            ? { id: g!.id, name: g!.name, join_code: g!.join_code }
+            : null,
+        };
+      }
+    }
+
+    return (
+      <PageTransition>
+        <P1
+          currentUserId={user.id}
+          currentDisplayName={profile.display_name || profile.username || "jugador"}
+          invitesSentCount={0}
+          referrer={referrer}
+          origin={origin}
+        />
+      </PageTransition>
+    );
+  }
 
   // All display values come directly from profile_ratings view (single source of truth).
   // Never recompute from mu/sigma in TS — SQL is authoritative.
@@ -48,9 +129,16 @@ export default async function Dashboard() {
     .eq("user_id", user.id)
     .eq("matches.status", "confirmed");
 
+  const isLegacyUser = (profile.onboarding_version ?? 2) < 2;
+
   return (
     <PageTransition>
       <StaggerChildren className="space-y-8">
+        {isLegacyUser && (
+          <StaggerItem>
+            <LegacyReonboardingBanner />
+          </StaggerItem>
+        )}
         <StaggerItem>
           <NotificationPermissionPrompt confirmedMatchesCount={confirmedCount ?? 0} />
         </StaggerItem>

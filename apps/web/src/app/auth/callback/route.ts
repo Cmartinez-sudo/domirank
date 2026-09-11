@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { supabaseServer } from "@/lib/supabase/server";
+import { attributeReferral, resolveReferrer } from "@/lib/referral";
+import { createReferralSignupNotification } from "@/lib/notifications";
+import { joinGroupByCode } from "@/lib/group-join-code";
+import { supabaseService } from "@/lib/supabase/service";
+import { checkAndFireFirstValuableAction } from "@/lib/activation";
+
+const PENDING_GROUP_JOIN_COOKIE = "pending_group_join";
 
 /**
  * Callback de auth para OAuth, magic links, password reset, signup confirm.
@@ -69,14 +76,58 @@ export async function GET(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   let target = requestedNext ?? "/dashboard";
 
-  if (user && !requestedNext) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("onboarded")
-      .eq("id", user.id)
-      .single();
-    if (profile && profile.onboarded === false) {
-      target = "/onboarding";
+  if (user) {
+    // Sprint 1a: atribución de referral (first-touch cookie dr_ref).
+    // Corre para signups Y logins de usuarios que aún no tenían referred_by
+    // — cubre el caso OAuth donde la metadata no llega al trigger.
+    try {
+      const referrerId = await attributeReferral(user.id, user.email ?? null);
+      if (referrerId) {
+        // Fetch nuevo perfil para copy de la notif.
+        const svc = supabaseService();
+        const { data: newProfile } = await svc
+          .from("profiles")
+          .select("id, username, display_name")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (newProfile) {
+          const p = newProfile as { id: string; username: string; display_name: string | null };
+          await createReferralSignupNotification(referrerId, p);
+        }
+        // Sprint 1b: para el referrer, este signup cuenta como
+        // first_valuable_action vía "invite_accepted".
+        await checkAndFireFirstValuableAction(referrerId, "invite_accepted");
+        // Attach al request para logging.
+        console.log("[auth/callback] referral attributed:", referrerId, "→", user.id);
+      }
+    } catch (e) {
+      console.error("[auth/callback] referral attribution failed:", e);
+    }
+
+    // Sprint 1a: si hay pending_group_join (usuario abrió /g/<code> sin sesión),
+    // procesar la unión antes del redirect final.
+    const pendingCode = cookies().get(PENDING_GROUP_JOIN_COOKIE)?.value;
+    if (pendingCode) {
+      cookies().set(PENDING_GROUP_JOIN_COOKIE, "", { path: "/", maxAge: 0 });
+      try {
+        const r = await joinGroupByCode({ code: pendingCode });
+        if (r.ok) {
+          target = `/groups/${r.data!.groupId}`;
+        }
+      } catch (e) {
+        console.error("[auth/callback] pending group join failed:", e);
+      }
+    }
+
+    if (!requestedNext && target === "/dashboard") {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("onboarded")
+        .eq("id", user.id)
+        .single();
+      if (profile && profile.onboarded === false) {
+        target = "/onboarding";
+      }
     }
   }
 

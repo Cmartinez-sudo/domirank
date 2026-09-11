@@ -4,6 +4,7 @@
 
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseService } from "@/lib/supabase/service";
 import type { NotificationCounts, AppNotification } from "@/lib/notifications-types";
 
 /* ============================================================
@@ -101,6 +102,47 @@ export async function markRead(notificationId: string): Promise<{ ok: true } | {
   if (error) return { ok: false, error: error.message };
   revalidatePath("/notifications");
   return { ok: true };
+}
+
+/**
+ * Crea una notificación in-app para el referrer cuando alguien aceptó
+ * su link ?ref=. Se dispara desde auth/callback tras attributeReferral().
+ *
+ * Idempotente por (user_id, type, ref_user_id): si ya existe una notif
+ * de este tipo para este par, no crea otra. Usa service_role porque en
+ * el signup flow el nuevo user está autenticado pero necesitamos escribir
+ * en la fila del referrer (RLS INSERT lo bloquearía).
+ */
+export async function createReferralSignupNotification(
+  referrerId: string,
+  newUser: { id: string; display_name: string | null; username: string },
+): Promise<void> {
+  const svc = supabaseService();
+
+  const { data: existing } = await svc
+    .from("notifications")
+    .select("id")
+    .eq("user_id", referrerId)
+    .eq("type", "referral_signup")
+    .eq("ref_user_id", newUser.id)
+    .maybeSingle();
+
+  if (existing) return;
+
+  const { error } = await svc.from("notifications").insert({
+    user_id: referrerId,
+    type: "referral_signup",
+    ref_user_id: newUser.id,
+    payload: {
+      actor_id: newUser.id,
+      new_user_display_name: newUser.display_name ?? newUser.username,
+      new_user_username: newUser.username,
+    },
+  } as never);
+
+  if (error) {
+    console.error("[createReferralSignupNotification] insert failed:", error.message);
+  }
 }
 
 export async function markAllRead(): Promise<{ ok: true } | { ok: false; error: string }> {

@@ -23,6 +23,32 @@ import { supabaseService } from "@/lib/supabase/service";
 import { rl, checkLimit } from "@/lib/ratelimit";
 import { sendEmail } from "@/lib/email";
 import { groupInvitationEmail } from "@/lib/email-templates";
+import { checkAndFireFirstValuableAction } from "@/lib/activation";
+
+/**
+ * Sprint 1b: dispara first_valuable_action para el creator del grupo
+ * si tras el join actual el grupo tiene ≥2 miembros activos.
+ * Idempotente (checkFVA no re-dispara si ya se marcó).
+ */
+async function maybeFireGroupFVA(supabase: ReturnType<typeof supabaseService>, groupId: string): Promise<void> {
+  const { data: group } = await supabase
+    .from("groups")
+    .select("created_by_user_id")
+    .eq("id", groupId)
+    .maybeSingle();
+  if (!group) return;
+  const creatorId = (group as { created_by_user_id: string }).created_by_user_id;
+  const { count } = await supabase
+    .from("group_members")
+    .select("id", { count: "exact", head: true })
+    .eq("group_id", groupId)
+    .eq("status", "active");
+  if ((count ?? 0) >= 2) {
+    await checkAndFireFirstValuableAction(creatorId, "group_with_member").catch((e) => {
+      console.warn("[maybeFireGroupFVA] failed:", e);
+    });
+  }
+}
 
 type ActionResult<T = void> =
   | { ok: true; data?: T }
@@ -355,6 +381,9 @@ export async function acceptInvitation(input: z.infer<typeof InvitationIdSchema>
     }
     return { ok: false, error: memUpdErr.message };
   }
+
+  // Sprint 1b: first_valuable_action para el creator si el grupo cruzó ≥2 members.
+  await maybeFireGroupFVA(service, inv.group_id);
 
   revalidatePath("/groups");
   revalidatePath(`/groups/${inv.group_id}`);

@@ -18,6 +18,7 @@ export type NotificationType =
   | "tournament_finished"
   | "pair_invite_received"
   | "pair_invite_accepted"
+  | "referral_signup"
   | string;
 
 export type AppNotification = {

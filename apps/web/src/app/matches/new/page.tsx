@@ -2,6 +2,7 @@ import { requireOnboardedUser, getCurrentProfile } from "@/lib/auth";
 import { getUserPreferences } from "@/lib/user-preferences-actions";
 import { supabaseServer } from "@/lib/supabase/server";
 import { COUNTRIES, type PresetId } from "@domirank/shared/matches";
+import { loadHintsSeen } from "@/lib/hints";
 import { NewMatchForm } from "./NewMatchForm";
 import { TournamentFastPath } from "./TournamentFastPath";
 
@@ -64,16 +65,19 @@ async function getFrequentPlayers(userId: string) {
     .filter((p): p is Prof => !!p);
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default async function NewMatchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tournament?: string; pairing?: string }>;
+  searchParams: Promise<{ tournament?: string; pairing?: string; preload?: string }>;
 }) {
   await requireOnboardedUser();
 
   const params = await searchParams;
   const tournamentId = params.tournament ?? null;
   const pairingId = params.pairing ?? null;
+  const preloadUserId = params.preload && UUID_RE.test(params.preload) ? params.preload : null;
 
   // ── Fast path: crear partida directamente desde el hero del torneo ──
   // Si el usuario llegó con ?tournament=X&pairing=Y, saltamos el wizard
@@ -107,6 +111,28 @@ export default async function NewMatchPage({
     console.warn("[NewMatchPage] No se pudieron cargar jugadores frecuentes:", err);
   }
 
+  const hintsSeen = await loadHintsSeen();
+
+  // Sprint 1a: preload de co-jugador (?preload=<user_id>) desde P1-referido
+  // o notif "Registrar partida con Carlos". Fetch server-side y pass como prop.
+  type PreloadedPlayer = {
+    id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+    country: string | null;
+  };
+  let preloadedPlayer: PreloadedPlayer | null = null;
+  if (preloadUserId && preloadUserId !== profile.id) {
+    const supabase = await supabaseServer();
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, username, display_name, avatar_url, country")
+      .eq("id", preloadUserId)
+      .maybeSingle();
+    if (data) preloadedPlayer = data as PreloadedPlayer;
+  }
+
   // Derivar defaultPreset a partir del país del onboarding.
   // Fallback "rapido" para users sin país o país sin mapeo directo.
   const country = COUNTRIES.find((c) => c.code === profile?.country);
@@ -130,6 +156,8 @@ export default async function NewMatchPage({
         defaultPreset={defaultPreset}
         initialPreferences={initialPreferences}
         frequentPlayers={frequentPlayers}
+        preloadedPlayer={preloadedPlayer}
+        hintsSeen={hintsSeen}
       />
     </div>
   );

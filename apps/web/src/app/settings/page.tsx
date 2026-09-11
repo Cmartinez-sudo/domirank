@@ -23,6 +23,8 @@ export default async function SettingsPage() {
             country: profile.country,
             default_modality: profile.default_modality ?? "ven",
             email_notifications: profile.email_notifications ?? true,
+            date_of_birth: profile.date_of_birth ?? null,
+            initial_skill_points: profile.initial_skill_points ?? null,
           }}
           initialPreferences={initialPrefs}
         />
