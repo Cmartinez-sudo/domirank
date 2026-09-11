@@ -41,8 +41,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Ejecutamos el script dentro de apps/web (no vía --filter desde root)
+      # para que TypeScript resuelva @types/react desde el node_modules de
+      # apps/web (React 18) y no del hoisted del monorepo (React 19 de mobile).
       - name: Run ${{ matrix.task }}
-        run: pnpm --filter @domirank/web ${{ matrix.task }}
+        working-directory: apps/web
+        run: pnpm ${{ matrix.task }}
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ matrix.task == 'build' && 'https://placeholder.supabase.co' || '' }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ matrix.task == 'build' && 'placeholder-anon-key' || '' }}
