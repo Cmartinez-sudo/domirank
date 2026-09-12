@@ -33,6 +33,8 @@ import { HistoryList } from "@/components/profile/HistoryList";
 import { FriendsPreview } from "@/components/profile/FriendsPreview";
 import { RingStat } from "@/components/charts/RingStat";
 import { BarStat } from "@/components/charts/BarStat";
+import { loadHintsSeen } from "@/lib/hints";
+import { Hint } from "@/components/Hint";
 
 export const dynamic = "force-dynamic";
 
@@ -212,6 +214,9 @@ export default async function PublicProfile({
   }
 
   const isNovato0 = isOwnProfile && (p.total_games ?? 0) === 0;
+  // Sprint 1c: hint sobre cómo se mueve el rating, primera vez que hay ≥1 partida.
+  const hintsSeen = isOwnProfile ? await loadHintsSeen() : [];
+  const showRatingHint = isOwnProfile && (p.total_games ?? 0) > 0;
 
   // Derived metrics from raw view fields (view exposes total_wins/losses/points_won/points_lost, not win_rate/effectiveness).
   const totalGames    = Number(p.total_games ?? 0);
@@ -259,6 +264,13 @@ export default async function PublicProfile({
                 <div className="text-text-mute text-xs uppercase tracking-wider">DomiRank Global</div>
                 <RatingInfoTooltip />
               </div>
+              <Hint
+                id="first_rating_change"
+                initialSeenIds={hintsSeen}
+                when={showRatingHint}
+                title="Tu rating se mueve así"
+                body="Elo + Margin of Victory. Ganarle a alguien mejor te sube más; perder contra alguien peor te baja más. Mira 'cómo se calcula'."
+              >
               {rated ? (
                 <>
                   <div className="mt-1">
@@ -296,6 +308,7 @@ export default async function PublicProfile({
                   </span>
                 </div>
               )}
+              </Hint>
               <div className="text-text-mute text-xs mt-2">
                 {p.total_games} {p.total_games === 1 ? "partida" : "partidas"} totales
                 {!rated && remainingToRated > 0 && (

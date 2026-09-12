@@ -85,6 +85,22 @@ export default async function GroupMembersPage({
     is_rated: ratingsMap.get(m.user_id)?.is_rated ?? false,
   }));
 
+  // Sprint 1a: join_code + expiración (solo relevante para admin/co_admin).
+  let joinCode: string | null = null;
+  let joinCodeExpiresAt: string | null = null;
+  if (isAdminOrCo) {
+    const { data: codeRow } = await service
+      .from("groups")
+      .select("join_code, join_code_expires_at")
+      .eq("id", id)
+      .maybeSingle();
+    if (codeRow) {
+      const c = codeRow as { join_code: string | null; join_code_expires_at: string | null };
+      joinCode = c.join_code;
+      joinCodeExpiresAt = c.join_code_expires_at;
+    }
+  }
+
   return (
     <MembersPanel
       groupId={id}
@@ -93,6 +109,8 @@ export default async function GroupMembersPage({
       currentUserId={user.id}
       isAdminOrCo={isAdminOrCo}
       isCreator={isCreator}
+      joinCode={joinCode}
+      joinCodeExpiresAt={joinCodeExpiresAt}
     />
   );
 }

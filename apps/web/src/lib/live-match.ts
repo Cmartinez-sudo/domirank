@@ -8,6 +8,7 @@ import { rl, checkLimit } from "@/lib/ratelimit";
 import { validateMatchClosure } from "@domirank/shared/matches";
 import { buildMatchEmailMeta, sendToUserIds } from "@/lib/match-notifications";
 import { matchAttestRequestedEmail } from "@/lib/email-templates";
+import { checkAndFireFirstValuableAction } from "@/lib/activation";
 
 /* ============================================================
    START LIVE MATCH
@@ -127,6 +128,16 @@ export async function startLiveMatch(input: StartLiveMatchInput): Promise<{ ok: 
     await supabase.from("matches").delete().eq("id", match.id);
     return { ok: false, error: mpErr.message };
   }
+
+  // Sprint 1b: first_valuable_action vía "match_created_with_cojugador".
+  // Los co-jugadores llegan como UUIDs (todos identified). Basta con ≥1 distinto al creator.
+  const hasCojugador = all.some((pid) => pid !== user.id);
+  if (hasCojugador) {
+    checkAndFireFirstValuableAction(user.id, "match_created_with_cojugador").catch((err) => {
+      console.warn("[startLiveMatch] checkFVA failed:", err);
+    });
+  }
+
   return { ok: true, match_id: match.id };
 }
 

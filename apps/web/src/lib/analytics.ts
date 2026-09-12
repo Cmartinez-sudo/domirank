@@ -12,7 +12,37 @@ export type EventName =
   | "club_joined"
   | "modality_preference_set"
   | "modality_override_used"
-  | "modality_step_skipped";
+  | "modality_step_skipped"
+  // Sprint 1a — Referral + Group join link + Notif referrer
+  | "referral_signup_completed"
+  | "group_join_code_generated"
+  | "group_join_code_redeemed"
+  | "group_join_link_copied"
+  | "group_join_link_shared"
+  | "referrer_notified"
+  | "matches_preload_used"
+  // Sprint 1b — Onboarding v2 + P1 + first_valuable_action
+  | "onboarding_started"
+  | "onboarding_step_viewed"
+  | "onboarding_step_completed"
+  | "onboarding_step_skipped"
+  | "onboarding_skipped_global"
+  | "onboarding_completed"
+  | "onboarding_abandoned"
+  | "p1_screen_viewed"
+  | "p1_cta_tapped"
+  | "p1_dismissed"
+  | "first_invite_sent"
+  | "first_valuable_action"
+  | "match_attested_first_time"
+  // Sprint 1c — Settings + Coach marks + Legacy
+  | "skill_recalibrated"
+  | "dob_edited"
+  | "hint_shown"
+  | "hint_dismissed"
+  | "legacy_reonboarding_banner_shown"
+  | "legacy_reonboarding_started"
+  | "legacy_reonboarding_completed";
 // ampliar según taxonomía documentada en docs/ANALYTICS_EVENTS.md
 
 export type EventProperties = Record<

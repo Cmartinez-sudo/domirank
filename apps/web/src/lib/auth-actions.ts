@@ -30,6 +30,8 @@ function getIp(): string {
 
 const PasswordRules = z.string().min(8, "Mínimo 8 caracteres").max(72, "Máximo 72 caracteres");
 
+const UuidOptional = z.string().uuid().optional().nullable();
+
 const SignupSchema = z.object({
   full_name: z.string().min(2, "Nombre muy corto").max(80, "Nombre muy largo"),
   email: z.string().email("Correo inválido"),
@@ -42,23 +44,26 @@ const SignupSchema = z.object({
     return d <= min;
   }, "Debes tener al menos 13 años"),
   terms_accepted: z.literal("on", { errorMap: () => ({ message: "Debes aceptar los términos" }) }),
+  referred_by: UuidOptional,
 });
 
 export async function signUpWithPassword(formData: FormData) {
   const limit = await checkLimit(rl.auth, `signup:${getIp()}`);
   if (!limit.allowed) return { ok: false as const, error: limit.error };
 
+  const rawReferred = formData.get("referred_by");
   const parsed = SignupSchema.safeParse({
     full_name:      formData.get("full_name"),
     email:          formData.get("email"),
     password:       formData.get("password"),
     date_of_birth:  formData.get("date_of_birth"),
     terms_accepted: formData.get("terms_accepted"),
+    referred_by:    typeof rawReferred === "string" && rawReferred.length > 0 ? rawReferred : undefined,
   });
   if (!parsed.success) {
     return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
   }
-  const { full_name, email, password, date_of_birth } = parsed.data;
+  const { full_name, email, password, date_of_birth, referred_by } = parsed.data;
 
   const supabase = await supabaseServer();
   const { error } = await supabase.auth.signUp({
@@ -70,6 +75,7 @@ export async function signUpWithPassword(formData: FormData) {
         date_of_birth,
         signup_method: "email_password",
         terms_accepted: true,
+        ...(referred_by ? { referred_by } : {}),
       },
       emailRedirectTo: `${getOrigin()}/auth/callback`,
     },

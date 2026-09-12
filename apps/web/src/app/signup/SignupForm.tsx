@@ -1,15 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signUpWithPassword, signInWithOAuth } from "@/lib/auth-actions";
 import { analytics } from "@/lib/analytics";
+
+function readReferralCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|;\s*)dr_ref=([^;]+)/);
+  const raw = match?.[1];
+  if (!raw) return null;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw)) return null;
+  return raw;
+}
 
 export function SignupForm() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [sentEmail, setSentEmail] = useState("");
+  const [referredBy, setReferredBy] = useState<string | null>(null);
+
+  useEffect(() => {
+    setReferredBy(readReferralCookie());
+  }, []);
 
   // 13 años atrás como fecha máxima permitida
   const maxDob = (() => {
@@ -28,7 +42,7 @@ export function SignupForm() {
       if (!r.ok) {
         setError(r.error);
       } else {
-        analytics.track("user_signed_up", { method: "email" });
+        analytics.track("user_signed_up", { method: "email", via_referral: !!referredBy });
         setSentEmail(String(fd.get("email") ?? ""));
         setSent(true);
       }
@@ -68,6 +82,7 @@ export function SignupForm() {
       </div>
 
       <form onSubmit={onSubmit} className="space-y-3">
+        {referredBy && <input type="hidden" name="referred_by" value={referredBy} />}
         <div>
           <label className="label" htmlFor="full_name">Nombre y apellido</label>
           <input id="full_name" name="full_name" type="text" required minLength={2} maxLength={80} className="input" placeholder="Carlos Martínez" autoComplete="name" />
@@ -144,6 +159,14 @@ function SocialButtons() {
       >
         <GoogleIcon /> {busy ? "Redirigiendo…" : "Continuar con Google"}
       </button>
+      <button
+        type="button"
+        className="btn-ghost w-full justify-center flex items-center gap-2"
+        disabled={busy}
+        onClick={() => go("apple")}
+      >
+        <AppleIcon /> {busy ? "Redirigiendo…" : "Continuar con Apple"}
+      </button>
       {oauthError && (
         <div role="alert" aria-live="assertive" className="p-2.5 bg-danger/10 border border-danger/30 rounded text-danger text-xs">
           {oauthError}
@@ -160,6 +183,14 @@ function GoogleIcon() {
       <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.76c-.99.66-2.25 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/>
       <path fill="#FBBC05" d="M5.84 14.11A6.6 6.6 0 0 1 5.5 12c0-.74.13-1.45.34-2.11V7.05H2.18A11 11 0 0 0 1 12c0 1.78.43 3.47 1.18 4.95l3.66-2.84z"/>
       <path fill="#EA4335" d="M12 5.38c1.62 0 3.07.56 4.21 1.64l3.15-3.15C17.46 2.13 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.05l3.66 2.84C6.71 7.3 9.14 5.38 12 5.38z"/>
+    </svg>
+  );
+}
+
+function AppleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden fill="currentColor">
+      <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
     </svg>
   );
 }

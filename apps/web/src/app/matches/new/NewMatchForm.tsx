@@ -38,6 +38,7 @@ import { linkMatchToPairing } from "@/lib/tournament-pairing-link";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
 import type { UserPreferences } from "@/types/user-preferences";
 import { analytics } from "@/lib/analytics";
+import { Hint } from "@/components/Hint";
 
 type Player = {
   id: string;
@@ -110,11 +111,15 @@ export function NewMatchForm({
   defaultPreset,
   initialPreferences,
   frequentPlayers = [],
+  preloadedPlayer = null,
+  hintsSeen = [],
 }: {
   currentUser: Player;
   defaultPreset: PresetId;
   initialPreferences?: UserPreferences | null;
   frequentPlayers?: Player[];
+  preloadedPlayer?: Player | null;
+  hintsSeen?: string[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -159,7 +164,9 @@ export function NewMatchForm({
   const [selectedPreset, setSelectedPreset] = useState<PresetId | null>(initialPresetId);
 
   const [teamA, setTeamA] = useState<Player[]>([currentUser]);
-  const [teamB, setTeamB] = useState<Player[]>([]);
+  const [teamB, setTeamB] = useState<Player[]>(
+    preloadedPlayer && preloadedPlayer.id !== currentUser.id ? [preloadedPlayer] : [],
+  );
   const teamSize = 2;
 
   const [friendly, setFriendly] = useState(false);
@@ -171,6 +178,11 @@ export function NewMatchForm({
       analytics.track("modality_step_skipped", {
         count_rule: countRule,
         preset_id: selectedPreset ?? "personalizado",
+      });
+    }
+    if (preloadedPlayer) {
+      analytics.track("matches_preload_used", {
+        preloaded_user_id: preloadedPlayer.id,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -491,13 +503,20 @@ export function NewMatchForm({
         >
           Atrás
         </button>
-        <button
-          type="submit"
-          className="btn-primary flex-1"
-          disabled={pending}
+        <Hint
+          id="first_match_start_button"
+          initialSeenIds={hintsSeen}
+          title="Después de jugar"
+          body="Cuando terminen, los 4 deben confirmar el resultado. Sin consenso, la partida no cuenta para el rating."
         >
-          {pending ? "Creando…" : "Iniciar partida en vivo"}
-        </button>
+          <button
+            type="submit"
+            className="btn-primary flex-1"
+            disabled={pending}
+          >
+            {pending ? "Creando…" : "Iniciar partida en vivo"}
+          </button>
+        </Hint>
       </div>
     </form>
   );

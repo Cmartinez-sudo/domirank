@@ -15,6 +15,8 @@ import {
   cancelInvitation,
   leaveGroup,
 } from "@/lib/groups";
+import { createOrRotateJoinCode, disableJoinCode } from "@/lib/group-join-code";
+import { analytics } from "@/lib/analytics";
 import type { SearchedUser } from "@/lib/users";
 
 type Member = {
@@ -56,6 +58,8 @@ export function MembersPanel({
   currentUserId,
   isAdminOrCo,
   isCreator,
+  joinCode,
+  joinCodeExpiresAt,
 }: {
   groupId: string;
   members: Member[];
@@ -63,6 +67,8 @@ export function MembersPanel({
   currentUserId: string;
   isAdminOrCo: boolean;
   isCreator: boolean;
+  joinCode: string | null;
+  joinCodeExpiresAt: string | null;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -173,6 +179,15 @@ export function MembersPanel({
 
   return (
     <div className="space-y-5">
+      {/* Compartir link (join_code) — solo admin/co_admin */}
+      {isAdminOrCo && (
+        <JoinLinkSection
+          groupId={groupId}
+          initialCode={joinCode}
+          initialExpiresAt={joinCodeExpiresAt}
+        />
+      )}
+
       {/* Buscar para invitar */}
       {isAdminOrCo && (
         <section className="card">
@@ -372,5 +387,153 @@ export function MembersPanel({
         pending={busyId === currentUserId}
       />
     </div>
+  );
+}
+
+/**
+ * Sección "Compartir link" — genera/rota/desactiva un join_code.
+ * Cualquiera con el link se suma como member activo (respetando límite 100).
+ */
+function JoinLinkSection({
+  groupId,
+  initialCode,
+  initialExpiresAt,
+}: {
+  groupId: string;
+  initialCode: string | null;
+  initialExpiresAt: string | null;
+}) {
+  const toast = useToast();
+  const [code, setCode] = useState<string | null>(initialCode);
+  const [expiresAt, setExpiresAt] = useState<string | null>(initialExpiresAt);
+  const [pending, setPending] = useState<"none" | "gen" | "rot" | "off">("none");
+  const [copied, setCopied] = useState(false);
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const link = code ? `${origin}/g/${code}` : null;
+  const isExpired = expiresAt ? new Date(expiresAt) < new Date() : false;
+
+  async function handleGenerate(source: "gen" | "rot") {
+    setPending(source);
+    const r = await createOrRotateJoinCode({ groupId });
+    setPending("none");
+    if (!r.ok) {
+      toast.error(r.error);
+      return;
+    }
+    setCode(r.data!.code);
+    setExpiresAt(r.data!.expiresAt);
+    analytics.track("group_join_code_generated", {
+      group_id: groupId,
+      is_rotation: source === "rot",
+    });
+    toast.success(source === "rot" ? "Nuevo link generado (el viejo dejó de funcionar)" : "Link generado");
+  }
+
+  async function handleDisable() {
+    setPending("off");
+    const r = await disableJoinCode({ groupId });
+    setPending("none");
+    if (!r.ok) {
+      toast.error(r.error);
+      return;
+    }
+    setCode(null);
+    setExpiresAt(null);
+    toast.info("Link desactivado");
+  }
+
+  async function handleCopy() {
+    if (!link) return;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      analytics.track("group_join_link_copied", { group_id: groupId });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("No se pudo copiar. Copia manualmente el link.");
+    }
+  }
+
+  const waHref = link
+    ? `https://wa.me/?text=${encodeURIComponent(`Únete a mi grupo en DomiRank: ${link}`)}`
+    : null;
+
+  return (
+    <section className="card">
+      <h2 className="font-semibold text-sm mb-1">Link de invitación</h2>
+      <p className="text-text-mute text-xs mb-3">
+        Cualquiera con este link se suma al grupo. Rótalo si se filtró.
+      </p>
+
+      {!code && (
+        <button
+          type="button"
+          onClick={() => handleGenerate("gen")}
+          disabled={pending !== "none"}
+          className="btn-primary !min-h-0 !py-2 !px-4 text-sm disabled:opacity-50"
+        >
+          {pending === "gen" ? "Generando…" : "Generar link"}
+        </button>
+      )}
+
+      {code && link && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 p-2 rounded bg-surface-3 border border-border">
+            <code className="text-xs font-mono truncate flex-1 text-text-dim">{link}</code>
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="btn-secondary !min-h-0 !py-1 !px-2 text-xs whitespace-nowrap"
+            >
+              {copied ? "Copiado ✓" : "Copiar"}
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {waHref && (
+              <a
+                href={waHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-primary !min-h-0 !py-1.5 !px-3 text-xs"
+                onClick={() =>
+                  analytics.track("group_join_link_shared", {
+                    group_id: groupId,
+                    channel: "whatsapp",
+                  })
+                }
+              >
+                Compartir por WhatsApp
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={() => handleGenerate("rot")}
+              disabled={pending !== "none"}
+              className="btn-secondary !min-h-0 !py-1.5 !px-3 text-xs disabled:opacity-50"
+            >
+              {pending === "rot" ? "Rotando…" : "Rotar código"}
+            </button>
+            <button
+              type="button"
+              onClick={handleDisable}
+              disabled={pending !== "none"}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-danger hover:bg-danger/10 transition-colors disabled:opacity-50"
+            >
+              {pending === "off" ? "Desactivando…" : "Desactivar"}
+            </button>
+          </div>
+
+          <p className={`text-xs ${isExpired ? "text-danger" : "text-text-mute"}`}>
+            {isExpired
+              ? "⚠ Este link ya expiró — genera uno nuevo."
+              : expiresAt
+              ? `Expira el ${new Date(expiresAt).toLocaleDateString("es", { day: "numeric", month: "short", year: "numeric" })}.`
+              : "Sin expiración."}
+          </p>
+        </div>
+      )}
+    </section>
   );
 }
