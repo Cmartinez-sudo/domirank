@@ -39,11 +39,10 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      - run: pnpm install --frozen-lockfile
+      # Instalar sólo @domirank/web + sus workspace deps (apps/mobile trae
+      # React 19 que contamina el .pnpm store y confunde a tsc en web).
+      - run: pnpm install --filter '@domirank/web...' --frozen-lockfile
 
-      # Ejecutamos el script dentro de apps/web (no vía --filter desde root)
-      # para que TypeScript resuelva @types/react desde el node_modules de
-      # apps/web (React 18) y no del hoisted del monorepo (React 19 de mobile).
       - name: Run ${{ matrix.task }}
         working-directory: apps/web
         run: pnpm ${{ matrix.task }}
