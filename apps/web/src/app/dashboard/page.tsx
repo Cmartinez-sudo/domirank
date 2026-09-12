@@ -29,7 +29,15 @@ export default async function Dashboard() {
   // Se muestra bloqueando el dashboard normal hasta que:
   //   - cumpla first_valuable_action_at (Combo OR), o
   //   - descarte 3 veces ("Solo explorar")
+  //
+  // FIX 2026-09-11: solo aplica a usuarios NUEVOS. Un usuario legacy que ya
+  // tiene partidas jugadas obviamente no necesita ver "el dominó no se juega
+  // solo" — ya tiene su mesa. Guard extra: si tiene ≥1 partida, first
+  // valuable action ya sucedió aunque la columna esté null (backfill lazy).
+  const totalGamesForP1 =
+    (profile.d6_doubles_games || 0) + (profile.d9_doubles_games || 0);
   const p1ShouldShow =
+    totalGamesForP1 === 0 &&
     profile.first_valuable_action_at == null &&
     (profile.p1_dismissed_count ?? 0) < 3;
 
