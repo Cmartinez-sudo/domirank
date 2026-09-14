@@ -15,7 +15,11 @@ import { tournamentInvitationEmail } from './email-templates';
 
 // ─── Validation schemas ───────────────────────────────────────────────────────
 
-export const TournamentFormatSchema = z.enum(['swiss_pairs', 'swiss_individual']);
+// Kept non-exported: Next.js 14 forbids `'use server'` files from exporting
+// non-async-function values. `TournamentFormatSchema` is used only inside this
+// module (Zod schemas below). The `TournamentFormat` type stays exported because
+// TypeScript types are erased at build time and don't trigger the validator.
+const TournamentFormatSchema = z.enum(['swiss_pairs', 'swiss_individual']);
 export type TournamentFormat = z.infer<typeof TournamentFormatSchema>;
 
 const PairInputSchema = z.object({
