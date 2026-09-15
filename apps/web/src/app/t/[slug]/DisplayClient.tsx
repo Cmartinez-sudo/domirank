@@ -15,6 +15,7 @@ import { StandingsPanel } from './StandingsPanel';
 import { MatchesPanel } from './MatchesPanel';
 import type { MatchCardProps } from './MatchCard';
 import { OrgLogo } from './OrgLogo';
+import { DisplayThemeToggle } from './DisplayThemeToggle';
 
 type TournamentView = {
   id: string;
@@ -167,7 +168,7 @@ export function DisplayClient({
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <div className="text-2xl text-slate-400">Cargando torneo…</div>
+        <div className="text-2xl text-text-mute">Cargando torneo…</div>
       </div>
     );
   }
@@ -248,13 +249,15 @@ export function DisplayClient({
         className="flex shrink-0 items-center gap-[clamp(16px,2vw,40px)] border-b px-6 py-4"
         style={{ borderBottomColor: brandColor }}
       >
-        {/* Left — DomiRank brand (no magic padding; sized by clamp) */}
+        {/* Left — DomiRank brand. Uses the horizontal-clean mark that
+            AppShell already ships in both themes (gradient-safe on light
+            and dark backgrounds). Sized by clamp, no magic padding. */}
         <div className="shrink-0">
           <Image
-            src="/branding/logo-square-tagline.svg"
+            src="/branding/logo-horizontal-clean.svg"
             alt="DomiRank"
             width={200}
-            height={200}
+            height={50}
             priority
             className="h-auto w-[clamp(96px,8vw,160px)]"
           />
@@ -268,15 +271,15 @@ export function DisplayClient({
           />
           <div className="min-w-0 text-center">
             <div className="flex items-baseline justify-center gap-3">
-              <h1 className="truncate text-[clamp(22px,2.4vw,44px)] font-semibold leading-none tracking-tight text-white">
+              <h1 className="truncate text-[clamp(22px,2.4vw,44px)] font-semibold leading-none tracking-tight text-text">
                 {tournament.name}
               </h1>
-              <span className="shrink-0 rounded-full px-2 py-0.5 text-[clamp(10px,0.85vw,13px)] font-semibold uppercase tracking-wider text-slate-400 ring-1 ring-inset ring-white/10">
+              <span className="shrink-0 rounded-full px-2 py-0.5 text-[clamp(10px,0.85vw,13px)] font-semibold uppercase tracking-wider text-text-dim ring-1 ring-inset ring-border">
                 {formatLabels.badge}
               </span>
             </div>
             {tournament.organization_name && (
-              <p className="mt-1.5 truncate text-[11px] font-medium uppercase tracking-[0.15em] text-slate-500">
+              <p className="mt-1.5 truncate text-[11px] font-medium uppercase tracking-[0.15em] text-text-mute">
                 {tournament.organization_name}
               </p>
             )}
@@ -286,12 +289,12 @@ export function DisplayClient({
         {/* Right — Round / Timer / Live status, baseline-aligned */}
         <div className="flex shrink-0 items-baseline gap-[clamp(16px,2vw,40px)] text-right">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-text-mute">
               Ronda
             </div>
-            <div className="mt-0.5 font-mono text-[clamp(28px,3vw,48px)] font-semibold leading-none tabular-nums text-white">
+            <div className="mt-0.5 font-mono text-[clamp(28px,3vw,48px)] font-semibold leading-none tabular-nums text-text">
               {tournament.current_round_number ?? 0}
-              <span className="text-[clamp(16px,1.5vw,24px)] font-medium text-slate-500">
+              <span className="text-[clamp(16px,1.5vw,24px)] font-medium text-text-mute">
                 /{tournament.rounds_count}
               </span>
             </div>
@@ -303,6 +306,7 @@ export function DisplayClient({
             />
           )}
           <LiveIndicator status={tournament.status} />
+          <DisplayThemeToggle />
         </div>
       </header>
 
@@ -315,7 +319,7 @@ export function DisplayClient({
         />
 
         <section className="flex min-h-0 flex-col gap-3">
-          <h2 className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
+          <h2 className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.15em] text-text-mute">
             {roundLabel}
           </h2>
           <MatchesPanel matches={matchCards} />
@@ -323,15 +327,15 @@ export function DisplayClient({
       </main>
 
       <footer
-        className="flex shrink-0 items-center justify-between gap-6 border-t px-6 py-4 text-slate-500"
+        className="flex shrink-0 items-center justify-between gap-6 border-t px-6 py-4 text-text-mute"
         style={{ borderTopColor: brandColor }}
       >
         <div className="text-sm">
-          Meta <span className="font-semibold text-slate-300">{tournament.target_points}</span> tantos
+          Meta <span className="font-semibold text-text-dim">{tournament.target_points}</span> tantos
         </div>
         <div className="flex items-center gap-6">
           {(tournament.sponsor_1_logo_url || tournament.sponsor_2_logo_url) && (
-            <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-text-mute">
               Patrocinan
             </span>
           )}
@@ -361,28 +365,32 @@ export function DisplayClient({
  * Live/finished status pill. Uses a soft-pulsing emerald dot for LIVE
  * (Apple-quiet) instead of the previous full-badge red pulse, and a
  * muted amber pill for FINALIZADO.
+ *
+ * Colours shift between themes so the pill keeps enough contrast on
+ * both a dark and a white background (emerald-400/500 for the dot,
+ * emerald-700 text on light vs emerald-300 on dark).
  */
 function LiveIndicator({ status }: { status: string }) {
   if (status === 'finished') {
     return (
-      <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-amber-300 ring-1 ring-inset ring-amber-500/40">
+      <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-amber-700 ring-1 ring-inset ring-amber-500/40 dark:text-amber-300">
         Finalizado
       </span>
     );
   }
   if (status === 'in_progress') {
     return (
-      <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-emerald-300 ring-1 ring-inset ring-emerald-500/30">
+      <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-emerald-700 ring-1 ring-inset ring-emerald-500/40 dark:text-emerald-300 dark:ring-emerald-500/30">
         <span className="relative flex h-2 w-2">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-70 dark:bg-emerald-400" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400" />
         </span>
         En vivo
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-400 ring-1 ring-inset ring-white/10">
+    <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-text-dim ring-1 ring-inset ring-border">
       {status}
     </span>
   );

@@ -12,6 +12,11 @@
  *     naturally drifts to in-progress matches while finals remain readable.
  *   - Byes reuse the same shell with a BYE badge and a single team row.
  *
+ * Colours use theme tokens (bg-surface / text-text / text-text-mute) so
+ * the card follows the user's light/dark preference. The emerald leader
+ * accent is theme-aware too — emerald-400 pops on dark, emerald-600 keeps
+ * contrast on white in light mode.
+ *
  * The component makes no assumptions about the surrounding grid — it
  * fills its parent cell via `h-full` and is safe inside CSS auto-fill or
  * fixed-column layouts.
@@ -48,7 +53,7 @@ export function MatchCard({
 
   return (
     <article
-      className={`flex h-full flex-col justify-between overflow-hidden rounded-2xl bg-slate-900/80 px-5 py-4 ring-1 ring-inset ring-white/5 ${
+      className={`flex h-full flex-col justify-between overflow-hidden rounded-2xl bg-surface px-5 py-4 ring-1 ring-inset ring-border shadow-card ${
         isFinished ? 'opacity-70' : ''
       }`}
     >
@@ -56,10 +61,10 @@ export function MatchCard({
 
       {isBye ? (
         <div className="flex flex-1 flex-col justify-center gap-1">
-          <span className="truncate text-[clamp(18px,1.6vw,28px)] font-semibold text-white">
+          <span className="truncate text-[clamp(18px,1.6vw,28px)] font-semibold text-text">
             {homeName}
           </span>
-          <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
+          <span className="text-xs font-medium uppercase tracking-wider text-text-mute">
             Descansa esta ronda
           </span>
         </div>
@@ -84,19 +89,19 @@ function TableHeader({
 }) {
   return (
     <header className="flex items-baseline gap-2">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-text-mute">
         Mesa
       </span>
-      <span className="font-mono text-[clamp(20px,1.8vw,32px)] font-semibold leading-none tabular-nums text-white">
+      <span className="font-mono text-[clamp(20px,1.8vw,32px)] font-semibold leading-none tabular-nums text-text">
         {tableNumber}
       </span>
       {isBye && (
-        <span className="ml-1 rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">
+        <span className="ml-1 rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-text-dim">
           Bye
         </span>
       )}
       {isFinished && !isBye && (
-        <span className="ml-1 text-[10px] font-medium uppercase tracking-[0.15em] text-slate-500">
+        <span className="ml-1 text-[10px] font-medium uppercase tracking-[0.15em] text-text-mute">
           · Final
         </span>
       )}
@@ -118,14 +123,18 @@ function TeamRow({
     <div className="flex min-w-0 items-baseline gap-4">
       <span
         className={`min-w-0 flex-1 truncate text-[clamp(16px,1.4vw,24px)] leading-tight ${
-          highlight ? 'font-semibold text-white' : 'font-medium text-slate-400'
+          highlight ? 'font-semibold text-text' : 'font-medium text-text-mute'
         }`}
       >
         {name}
       </span>
       <span
         className={`shrink-0 font-mono text-[clamp(40px,4.4vw,72px)] font-bold leading-none tabular-nums ${
-          highlight ? 'text-emerald-400' : score === null ? 'text-slate-600' : 'text-slate-500'
+          highlight
+            ? 'text-emerald-500 dark:text-emerald-400'
+            : score === null
+              ? 'text-text-mute/60'
+              : 'text-text-mute'
         }`}
       >
         {scoreDisplay}

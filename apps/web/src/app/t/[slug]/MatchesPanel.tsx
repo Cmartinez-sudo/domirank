@@ -121,7 +121,7 @@ export function MatchesPanel({
 
   if (matches.length === 0) {
     return (
-      <div className="flex min-h-0 flex-1 items-center justify-center rounded-2xl bg-slate-900/40 text-lg text-slate-500 ring-1 ring-inset ring-white/5">
+      <div className="flex min-h-0 flex-1 items-center justify-center rounded-2xl bg-surface/60 text-lg text-text-mute ring-1 ring-inset ring-border">
         {emptyLabel}
       </div>
     );
@@ -190,7 +190,7 @@ export function MatchesPanel({
       )}
 
       {paginate && (
-        <div className="pointer-events-none absolute bottom-1 right-2 font-mono text-[11px] uppercase tracking-wider tabular-nums text-slate-500">
+        <div className="pointer-events-none absolute bottom-1 right-2 font-mono text-[11px] uppercase tracking-wider tabular-nums text-text-mute">
           {page + 1}/{totalPages}
         </div>
       )}

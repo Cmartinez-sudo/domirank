@@ -19,7 +19,7 @@ export function OrgLogo({ url, name }: { url: string | null; name: string }) {
     return (
       <div
         aria-label={name}
-        className="flex h-[clamp(60px,6vw,100px)] w-[clamp(60px,6vw,100px)] shrink-0 items-center justify-center rounded-lg bg-slate-800 text-xs font-bold uppercase tracking-wider text-slate-300"
+        className="flex h-[clamp(60px,6vw,100px)] w-[clamp(60px,6vw,100px)] shrink-0 items-center justify-center rounded-lg bg-surface-2 text-xs font-bold uppercase tracking-wider text-text-dim ring-1 ring-inset ring-border"
       >
         {initials}
       </div>
