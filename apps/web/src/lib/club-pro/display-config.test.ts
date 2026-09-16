@@ -93,6 +93,42 @@ describe('resolveDisplayConfig', () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
+  it('accepts hiddenInMobile flag on element slots (fase 2)', () => {
+    const custom: DisplayConfig = {
+      ...DEFAULT_DISPLAY_CONFIG,
+      desktop: {
+        zones: {
+          ...DEFAULT_DISPLAY_CONFIG.desktop.zones,
+          'header-right': [
+            { id: 'round', visible: true, hiddenInMobile: false },
+            { id: 'timer', visible: true, hiddenInMobile: true },
+            { id: 'live', visible: true },
+          ],
+        },
+      },
+    };
+    expect(resolveDisplayConfig(custom)).toEqual(custom);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('accepts hiddenInMobile flag on sponsors (fase 2)', () => {
+    const custom: DisplayConfig = {
+      ...DEFAULT_DISPLAY_CONFIG,
+      sponsors: { ...DEFAULT_DISPLAY_CONFIG.sponsors, hiddenInMobile: true },
+    };
+    expect(resolveDisplayConfig(custom)).toEqual(custom);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('is backward compatible with pre-fase-2 configs (no hiddenInMobile field)', () => {
+    // A config saved by fase 1 doesn't carry hiddenInMobile — must
+    // still validate and read as undefined (= show everywhere).
+    expect(resolveDisplayConfig(DEFAULT_DISPLAY_CONFIG)).toEqual(
+      DEFAULT_DISPLAY_CONFIG,
+    );
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
   it('default matches what the display shipped with pre-editor', () => {
     // Regression guard: the code-side default MUST render the same
     // chrome as the layout the display had before this feature landed.

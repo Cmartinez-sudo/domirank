@@ -47,6 +47,12 @@ const ElementSlotSchema = z.object({
   id: DisplayElementIdSchema,
   visible: z.boolean(),
   size: DisplaySizeSchema.optional(),
+  /**
+   * When true, the element is hidden on viewports narrower than the
+   * mobile breakpoint. Optional — configs saved before Fase 2 don't
+   * carry this field, and read as `undefined` = show everywhere.
+   */
+  hiddenInMobile: z.boolean().optional(),
 });
 export type ElementSlot = z.infer<typeof ElementSlotSchema>;
 
@@ -65,6 +71,7 @@ const SponsorsConfigSchema = z.object({
   zone:       DisplayZoneIdSchema,
   size:       DisplaySizeSchema,
   order:      z.number().int().min(0),
+  hiddenInMobile: z.boolean().optional(),
 });
 export type SponsorsConfig = z.infer<typeof SponsorsConfigSchema>;
 

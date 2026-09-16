@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { supabaseService } from '@/lib/supabase/service';
 import { requireOrgAdmin } from './auth';
+import { DisplayConfigSchema, type DisplayConfig } from './display-config';
 
 // ─── Constants (shared with upload-actions.ts) ────────────────────────────────
 
@@ -180,5 +181,64 @@ export async function clearOrgAsset(input: unknown): Promise<DeleteResult> {
 
   revalidatePath(`/admin/org/${org.slug}`);
   revalidatePath(`/admin/org/${org.slug}/settings`);
+  return { ok: true };
+}
+
+// ─── updateOrgDisplayConfig ───────────────────────────────────────────────────
+
+const UpdateOrgDisplayConfigSchema = z.object({
+  orgSlug: z.string().min(1),
+  config: DisplayConfigSchema.nullable(),
+});
+
+export type UpdateOrgDisplayConfigResult =
+  | { ok: true }
+  | { ok: false; error: string; fieldErrors?: Record<string, string[]> };
+
+/**
+ * Persists the display layout config for the org's public TV screen.
+ * Passing `config = null` resets the org back to the app-side default
+ * (the resolver in `display-config.ts` interprets NULL that way).
+ *
+ * Uses the service role so the write bypasses RLS — the caller is
+ * already re-verified via `requireOrgAdmin`. Fase 2 keeps sponsors'
+ * per-tournament rows untouched; slotsCount changes only affect how
+ * many uploaders the tournament settings page renders and how many
+ * logos the display picks up (sponsors above the new count remain in
+ * DB, per grilling decision Q8).
+ */
+export async function updateOrgDisplayConfig(
+  input: unknown,
+): Promise<UpdateOrgDisplayConfigResult> {
+  const parsed = UpdateOrgDisplayConfigSchema.safeParse(input);
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string[]> = {};
+    for (const issue of parsed.error.issues) {
+      const key = issue.path.join('.') || '_';
+      (fieldErrors[key] ??= []).push(issue.message);
+    }
+    return {
+      ok: false,
+      error: 'Config inválido — revisá los campos marcados.',
+      fieldErrors,
+    };
+  }
+
+  const { org } = await requireOrgAdmin(parsed.data.orgSlug);
+  const service = supabaseService();
+
+  const value: DisplayConfig | null = parsed.data.config;
+  const { error: updErr } = await service
+    .from('organizations')
+    .update({ display_config: value })
+    .eq('id', org.id);
+
+  if (updErr) return { ok: false, error: updErr.message };
+
+  // Revalidate the editor page + the org dashboard so any cached data
+  // reflects the change. The public /t/[slug] display is client-rendered
+  // and picks up changes on next fetch/realtime tick.
+  revalidatePath(`/admin/org/${org.slug}/display`);
+  revalidatePath(`/admin/org/${org.slug}`);
   return { ok: true };
 }
