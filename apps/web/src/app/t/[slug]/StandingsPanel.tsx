@@ -91,23 +91,23 @@ export function StandingsPanel({
 
   return (
     <section className="relative flex min-h-0 flex-col gap-3">
-      <h2 className="text-[11px] font-semibold uppercase tracking-[0.15em] text-text-mute">
+      <h2 className="text-[clamp(12px,1vw,16px)] font-semibold uppercase tracking-[0.15em] text-text-mute">
         Clasificación
       </h2>
-      <div className="flex shrink-0 items-center gap-3 rounded-xl bg-surface/60 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.15em] ring-1 ring-inset ring-border">
+      <div className="flex shrink-0 items-center gap-3 rounded-xl bg-surface/60 px-4 py-3 text-[clamp(12px,1vw,16px)] font-semibold uppercase tracking-[0.15em] ring-1 ring-inset ring-border">
         <span className="w-10 text-right text-text-mute">#</span>
         <span className="w-8" /> {/* medal slot */}
-        <span className="flex-1 text-text-dim">
+        <span className="flex-1 text-text">
           {isIndividual ? 'Jugador' : 'Pareja'}
         </span>
         {/* Primary stats — same weight as pair column, drive sort order */}
-        <span className="w-12 text-center text-text-dim" title="Victorias">V</span>
-        <span className="w-12 text-center text-text-dim" title="Derrotas">D</span>
-        <span className="w-14 text-right text-text-dim" title="Coeficiente de Efectividad">CE</span>
+        <span className="w-12 text-center text-text" title="Victorias">V</span>
+        <span className="w-12 text-center text-text" title="Derrotas">D</span>
+        <span className="w-14 text-right text-text" title="Coeficiente de Efectividad">CE</span>
         {/* Secondary stats — muted, contextual only */}
-        <span className="w-16 text-right text-text-mute/70" title="Efectividad %">Efec</span>
-        <span className="w-14 text-right text-text-mute/70" title="Puntos a favor">PF</span>
-        <span className="w-14 text-right text-text-mute/70" title="Puntos en contra">PC</span>
+        <span className="w-16 text-right text-text-mute" title="Efectividad %">Efec</span>
+        <span className="w-14 text-right text-text-mute" title="Puntos a favor">PF</span>
+        <span className="w-14 text-right text-text-mute" title="Puntos en contra">PC</span>
       </div>
       <div ref={listRef} className="min-h-0 flex-1 overflow-hidden">
         <ol
@@ -125,47 +125,47 @@ export function StandingsPanel({
               <li
                 key={s.pairId}
                 ref={idx === 0 ? rowRef : undefined}
-                className={`flex items-center gap-3 rounded-xl px-4 py-[clamp(10px,1.4vh,18px)] ring-1 ring-inset ring-border ${
+                className={`flex items-center gap-3 rounded-xl px-4 py-[clamp(12px,1.6vh,22px)] ring-1 ring-inset ring-border ${
                   isPodium ? 'bg-surface-2 shadow-card' : 'bg-surface/60'
                 } ${s.withdrawn ? 'opacity-40' : ''}`}
               >
                 <span
-                  className={`w-10 text-right font-mono text-lg font-semibold tabular-nums ${
+                  className={`w-10 text-right font-mono text-[clamp(18px,1.4vw,28px)] font-bold tabular-nums ${
                     isPodium ? 'text-text' : 'text-text-mute'
                   }`}
                 >
                   {absoluteRank + 1}
                 </span>
-                <span className="w-8 text-xl leading-none">{medal}</span>
+                <span className="w-8 text-[clamp(20px,1.6vw,30px)] leading-none">{medal}</span>
                 <span
-                  className={`flex-1 truncate text-base font-medium ${
-                    isPodium ? 'text-text' : 'text-text-dim'
+                  className={`flex-1 truncate text-[clamp(16px,1.4vw,28px)] ${
+                    isPodium ? 'font-bold text-text' : 'font-semibold text-text'
                   }`}
                 >
                   {name}
                 </span>
                 {/* Primary stats — full size, tabular, prominent */}
                 <span
-                  className={`w-12 text-center font-mono text-lg font-semibold tabular-nums ${
+                  className={`w-12 text-center font-mono text-[clamp(18px,1.5vw,30px)] font-bold tabular-nums ${
                     s.wins > 0 ? 'text-text' : 'text-text-dim'
                   }`}
                 >
                   {s.wins}
                 </span>
-                <span className="w-12 text-center font-mono text-lg tabular-nums text-text-dim">
+                <span className="w-12 text-center font-mono text-[clamp(18px,1.5vw,30px)] font-semibold tabular-nums text-text-dim">
                   {s.losses}
                 </span>
-                <span className="w-14 text-right font-mono text-base font-medium tabular-nums text-text-dim">
+                <span className="w-14 text-right font-mono text-[clamp(16px,1.3vw,26px)] font-semibold tabular-nums text-text">
                   {s.effectivenessCoefficient.toFixed(2)}
                 </span>
                 {/* Secondary stats — small + muted */}
-                <span className="w-16 text-right font-mono text-xs tabular-nums text-text-mute">
+                <span className="w-16 text-right font-mono text-[clamp(12px,1vw,18px)] tabular-nums text-text-mute">
                   {s.effectivenessPercent.toFixed(1)}%
                 </span>
-                <span className="w-14 text-right font-mono text-xs tabular-nums text-emerald-600 dark:text-emerald-400/80">
+                <span className="w-14 text-right font-mono text-[clamp(12px,1vw,18px)] tabular-nums text-emerald-600 dark:text-emerald-400/80">
                   {s.pointsScored}
                 </span>
-                <span className="w-14 text-right font-mono text-xs tabular-nums text-danger/80">
+                <span className="w-14 text-right font-mono text-[clamp(12px,1vw,18px)] tabular-nums text-danger/80">
                   {s.pointsConceded}
                 </span>
               </li>

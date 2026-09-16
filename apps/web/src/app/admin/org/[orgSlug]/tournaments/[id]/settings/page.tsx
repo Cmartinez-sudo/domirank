@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { requireOrgMember } from '@/lib/club-pro/auth';
 import { supabaseServer } from '@/lib/supabase/server';
+import { resolveDisplayConfig } from '@/lib/club-pro/display-config';
 import { AssetUploader } from './AssetUploader';
 import { EditForm } from './EditForm';
 
@@ -26,14 +27,25 @@ export default async function SettingsPage({
     .maybeSingle();
   if (!tournament) notFound();
 
-  // Sponsors moved to their own table in mig 0111. Fase 1 still exposes
-  // exactly 2 upload slots in the UI (positions 1 and 2) — the org-level
-  // display config that controls slot count arrives in Fase 2.
-  const { data: sponsorsRaw } = await supabase
-    .from('tournament_sponsors')
-    .select('position, logo_url')
-    .eq('tournament_id', tournament.id)
-    .in('position', [1, 2]);
+  // Sponsors: how many slots to render is now driven by the org's
+  // display config (Fase 2). Positions above `slotsCount` remain in
+  // DB but are not surfaced — the display renders only positions
+  // 1..slotsCount as well.
+  const { data: orgFull } = await supabase
+    .from('organizations')
+    .select('display_config')
+    .eq('id', org.id)
+    .maybeSingle();
+  const displayConfig = resolveDisplayConfig(orgFull?.display_config);
+  const slotsCount = displayConfig.sponsors.slotsCount;
+
+  const { data: sponsorsRaw } = slotsCount > 0
+    ? await supabase
+        .from('tournament_sponsors')
+        .select('position, logo_url')
+        .eq('tournament_id', tournament.id)
+        .lte('position', slotsCount)
+    : { data: [] as Array<{ position: number; logo_url: string }> };
   const sponsorByPosition = new Map(
     (sponsorsRaw ?? []).map((s) => [s.position, s.logo_url]),
   );
@@ -101,6 +113,12 @@ export default async function SettingsPage({
             Imágenes que aparecen en el display público del torneo. PNG, JPG,
             WebP o SVG, máximo 500 KB.
           </p>
+          {slotsCount === 0 && (
+            <p className="mt-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Los sponsors están deshabilitados en la plantilla del club (0 slots).
+              Ajustá el editor de display para habilitar sponsors.
+            </p>
+          )}
           <div className="mt-4 space-y-4">
             <AssetUploader
               orgSlug={org.slug}
@@ -108,18 +126,15 @@ export default async function SettingsPage({
               slot="logo"
               currentUrl={tournament.logo_url}
             />
-            <AssetUploader
-              orgSlug={org.slug}
-              tournamentId={tournament.id}
-              slot="sponsor-1"
-              currentUrl={sponsorByPosition.get(1) ?? null}
-            />
-            <AssetUploader
-              orgSlug={org.slug}
-              tournamentId={tournament.id}
-              slot="sponsor-2"
-              currentUrl={sponsorByPosition.get(2) ?? null}
-            />
+            {Array.from({ length: slotsCount }, (_, i) => i + 1).map((position) => (
+              <AssetUploader
+                key={position}
+                orgSlug={org.slug}
+                tournamentId={tournament.id}
+                slot={`sponsor-${position}`}
+                currentUrl={sponsorByPosition.get(position) ?? null}
+              />
+            ))}
           </div>
         </section>
       )}

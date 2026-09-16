@@ -39,7 +39,8 @@ export const DisplayZoneIdSchema = z.enum([
   'header-left',
   'header-center',
   'header-right',
-  'footer',
+  'footer-left',
+  'footer-right',
 ]);
 export type DisplayZoneId = z.infer<typeof DisplayZoneIdSchema>;
 
@@ -47,6 +48,12 @@ const ElementSlotSchema = z.object({
   id: DisplayElementIdSchema,
   visible: z.boolean(),
   size: DisplaySizeSchema.optional(),
+  /**
+   * When true, the element is hidden on viewports narrower than the
+   * mobile breakpoint. Optional — configs saved before Fase 2 don't
+   * carry this field, and read as `undefined` = show everywhere.
+   */
+  hiddenInMobile: z.boolean().optional(),
 });
 export type ElementSlot = z.infer<typeof ElementSlotSchema>;
 
@@ -54,7 +61,8 @@ const ZonesSchema = z.object({
   'header-left':   z.array(ElementSlotSchema),
   'header-center': z.array(ElementSlotSchema),
   'header-right':  z.array(ElementSlotSchema),
-  'footer':        z.array(ElementSlotSchema),
+  'footer-left':   z.array(ElementSlotSchema),
+  'footer-right':  z.array(ElementSlotSchema),
 });
 export type DisplayZones = z.infer<typeof ZonesSchema>;
 
@@ -65,6 +73,7 @@ const SponsorsConfigSchema = z.object({
   zone:       DisplayZoneIdSchema,
   size:       DisplaySizeSchema,
   order:      z.number().int().min(0),
+  hiddenInMobile: z.boolean().optional(),
 });
 export type SponsorsConfig = z.infer<typeof SponsorsConfigSchema>;
 
@@ -106,16 +115,17 @@ export const DEFAULT_DISPLAY_CONFIG: DisplayConfig = {
         { id: 'timer', visible: true },
         { id: 'live', visible: true },
       ],
-      'footer': [
+      'footer-left': [
         { id: 'meta', visible: true },
       ],
+      'footer-right': [],
     },
   },
   sponsors: {
     slotsCount: 2,
-    zone: 'footer',
+    zone: 'footer-right',
     size: 'md',
-    order: 100, // last inside footer (after `meta`, order 0 by array pos)
+    order: 0,
   },
 };
 

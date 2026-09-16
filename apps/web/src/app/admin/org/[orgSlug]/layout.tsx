@@ -36,12 +36,20 @@ export default async function OrgAdminLayout({
           </div>
           <div className="flex items-center gap-3">
             {(role === 'owner' || role === 'admin') && (
-              <Link
-                href={`/admin/org/${org.slug}/settings`}
-                className="text-xs font-medium text-slate-600 hover:text-slate-900"
-              >
-                Configuración
-              </Link>
+              <>
+                <Link
+                  href={`/admin/org/${org.slug}/display`}
+                  className="text-xs font-medium text-slate-600 hover:text-slate-900"
+                >
+                  Display
+                </Link>
+                <Link
+                  href={`/admin/org/${org.slug}/settings`}
+                  className="text-xs font-medium text-slate-600 hover:text-slate-900"
+                >
+                  Configuración
+                </Link>
+              </>
             )}
             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium uppercase tracking-wider text-slate-600">
               {role}
