@@ -91,19 +91,23 @@ export function StandingsPanel({
 
   return (
     <section className="relative flex min-h-0 flex-col gap-3">
-      <h2 className="text-sm font-medium uppercase tracking-wider text-slate-400">
+      <h2 className="text-[11px] font-semibold uppercase tracking-[0.15em] text-text-mute">
         Clasificación
       </h2>
-      <div className="flex shrink-0 items-center gap-3 rounded-lg bg-slate-900/60 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
-        <span className="w-10 text-right">#</span>
+      <div className="flex shrink-0 items-center gap-3 rounded-xl bg-surface/60 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.15em] ring-1 ring-inset ring-border">
+        <span className="w-10 text-right text-text-mute">#</span>
         <span className="w-8" /> {/* medal slot */}
-        <span className="flex-1">{isIndividual ? 'Jugador' : 'Pareja'}</span>
-        <span className="w-12 text-center" title="Victorias">V</span>
-        <span className="w-12 text-center" title="Derrotas">D</span>
-        <span className="w-14 text-right" title="Coeficiente de Efectividad">CE</span>
-        <span className="w-16 text-right" title="Efectividad %">Efec</span>
-        <span className="w-14 text-right" title="Puntos a favor">PF</span>
-        <span className="w-14 text-right" title="Puntos en contra">PC</span>
+        <span className="flex-1 text-text-dim">
+          {isIndividual ? 'Jugador' : 'Pareja'}
+        </span>
+        {/* Primary stats — same weight as pair column, drive sort order */}
+        <span className="w-12 text-center text-text-dim" title="Victorias">V</span>
+        <span className="w-12 text-center text-text-dim" title="Derrotas">D</span>
+        <span className="w-14 text-right text-text-dim" title="Coeficiente de Efectividad">CE</span>
+        {/* Secondary stats — muted, contextual only */}
+        <span className="w-16 text-right text-text-mute/70" title="Efectividad %">Efec</span>
+        <span className="w-14 text-right text-text-mute/70" title="Puntos a favor">PF</span>
+        <span className="w-14 text-right text-text-mute/70" title="Puntos en contra">PC</span>
       </div>
       <div ref={listRef} className="min-h-0 flex-1 overflow-hidden">
         <ol
@@ -116,35 +120,52 @@ export function StandingsPanel({
             const absoluteRank = start + idx;
             const medal =
               absoluteRank === 0 ? '🥇' : absoluteRank === 1 ? '🥈' : absoluteRank === 2 ? '🥉' : '';
+            const isPodium = absoluteRank < 3;
             return (
               <li
                 key={s.pairId}
                 ref={idx === 0 ? rowRef : undefined}
-                className={`flex items-center gap-3 rounded-lg px-4 py-[clamp(10px,1.4vh,18px)] ${
-                  absoluteRank < 3 ? 'bg-slate-800' : 'bg-slate-900/60'
+                className={`flex items-center gap-3 rounded-xl px-4 py-[clamp(10px,1.4vh,18px)] ring-1 ring-inset ring-border ${
+                  isPodium ? 'bg-surface-2 shadow-card' : 'bg-surface/60'
                 } ${s.withdrawn ? 'opacity-40' : ''}`}
               >
-                <span className="w-10 text-right font-mono text-lg font-bold tabular-nums text-slate-300">
+                <span
+                  className={`w-10 text-right font-mono text-lg font-semibold tabular-nums ${
+                    isPodium ? 'text-text' : 'text-text-mute'
+                  }`}
+                >
                   {absoluteRank + 1}
                 </span>
-                <span className="w-8 text-xl">{medal}</span>
-                <span className="flex-1 truncate text-base font-medium">{name}</span>
-                <span className="w-12 text-center font-mono text-base font-bold tabular-nums">
+                <span className="w-8 text-xl leading-none">{medal}</span>
+                <span
+                  className={`flex-1 truncate text-base font-medium ${
+                    isPodium ? 'text-text' : 'text-text-dim'
+                  }`}
+                >
+                  {name}
+                </span>
+                {/* Primary stats — full size, tabular, prominent */}
+                <span
+                  className={`w-12 text-center font-mono text-lg font-semibold tabular-nums ${
+                    s.wins > 0 ? 'text-text' : 'text-text-dim'
+                  }`}
+                >
                   {s.wins}
                 </span>
-                <span className="w-12 text-center font-mono text-base tabular-nums text-slate-400">
+                <span className="w-12 text-center font-mono text-lg tabular-nums text-text-dim">
                   {s.losses}
                 </span>
-                <span className="w-14 text-right font-mono text-sm tabular-nums text-slate-400">
+                <span className="w-14 text-right font-mono text-base font-medium tabular-nums text-text-dim">
                   {s.effectivenessCoefficient.toFixed(2)}
                 </span>
-                <span className="w-16 text-right font-mono text-sm tabular-nums text-slate-300">
+                {/* Secondary stats — small + muted */}
+                <span className="w-16 text-right font-mono text-xs tabular-nums text-text-mute">
                   {s.effectivenessPercent.toFixed(1)}%
                 </span>
-                <span className="w-14 text-right font-mono text-base font-semibold tabular-nums text-emerald-400">
+                <span className="w-14 text-right font-mono text-xs tabular-nums text-emerald-600 dark:text-emerald-400/80">
                   {s.pointsScored}
                 </span>
-                <span className="w-14 text-right font-mono text-base tabular-nums text-red-400">
+                <span className="w-14 text-right font-mono text-xs tabular-nums text-danger/80">
                   {s.pointsConceded}
                 </span>
               </li>
@@ -152,12 +173,12 @@ export function StandingsPanel({
           })}
         </ol>
       </div>
-      <div className="flex shrink-0 items-center justify-between px-4 pt-2 text-[11px] uppercase tracking-wider text-slate-500">
+      <div className="flex shrink-0 items-center justify-between px-4 pt-2 text-[10px] uppercase tracking-[0.15em] text-text-mute/70">
         <span>
-          V: victorias · D: derrotas · CE: coef. efectividad · Efec: efectividad % · PF / PC: puntos
+          V: victorias · D: derrotas · CE: coef. efectividad · Efec: % · PF / PC: puntos
         </span>
         {paginationEnabled && (
-          <span className="font-mono tabular-nums text-slate-400">
+          <span className="font-mono tabular-nums text-text-mute">
             {page + 1}/{totalPages}
           </span>
         )}

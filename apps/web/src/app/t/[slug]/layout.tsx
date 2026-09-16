@@ -10,7 +10,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1.0,
-  themeColor: '#020617',
+  // Theme color is dynamic per theme — the root ThemeColorSync updates
+  // the meta tag on light/dark switch, so we omit a static value here.
 };
 
 /**
@@ -21,11 +22,12 @@ export const viewport: Viewport = {
  *
  * The `<html>` and `<body>` come from the root layout above us; AppShell
  * detects /t/* and renders only `{children}` (no sidebar, no bottom nav,
- * no max-width container). We wrap content in a fullscreen black box.
+ * no max-width container). Colors come from the theme tokens (bg-bg /
+ * text-text) so the display follows the user's light/dark preference.
  */
 export default function PublicDisplayLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="h-dvh w-full overflow-hidden bg-slate-950 text-white">
+    <div className="h-dvh w-full overflow-hidden bg-bg text-text">
       {children}
     </div>
   );

@@ -4,15 +4,15 @@ import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import { computeStandings } from '@/lib/club-pro/compute-standings';
-import {
-  formatPairName,
-  isIndividualFormat,
-  labelsForFormat,
-} from '@/lib/club-pro/pair-display';
+import { formatPairName, isIndividualFormat } from '@/lib/club-pro/pair-display';
 import type { Pair, Match, PairStanding } from '@/lib/club-pro/swiss-types';
 import { RoundTimer } from './RoundTimer';
 import { StandingsPanel } from './StandingsPanel';
+import { MatchesPanel } from './MatchesPanel';
+import type { MatchCardProps } from './MatchCard';
 import { OrgLogo } from './OrgLogo';
+import { DisplayThemeToggle } from './DisplayThemeToggle';
+import { FullscreenToggle } from './FullscreenToggle';
 
 type TournamentView = {
   id: string;
@@ -59,11 +59,6 @@ type RoundData = {
   round_number: number;
   started_at: string | null;
   ended_at: string | null;
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  in_progress: 'EN VIVO',
-  finished: 'FINALIZADO',
 };
 
 export function DisplayClient({
@@ -170,7 +165,7 @@ export function DisplayClient({
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <div className="text-2xl text-slate-400">Cargando torneo…</div>
+        <div className="text-2xl text-text-mute">Cargando torneo…</div>
       </div>
     );
   }
@@ -224,59 +219,70 @@ export function DisplayClient({
       ? tournament.brand_primary_color
       : '#2563eb';
   const isIndividual = isIndividualFormat(tournament.format);
-  const formatLabels = labelsForFormat(tournament.format);
+
+  const roundLabel = isFinished
+    ? 'Ronda final'
+    : `Mesas — Ronda ${tournament.current_round_number ?? 0}`;
+
+  const matchCards: Array<MatchCardProps & { id: string }> = currentRoundMatches.map((m) => {
+    const home = pairById.get(m.pair_home_id);
+    const away = m.pair_away_id ? pairById.get(m.pair_away_id) : null;
+    return {
+      id: m.id,
+      tableNumber: m.table_number,
+      homeName: formatPairName(home),
+      awayName: away ? formatPairName(away) : null,
+      homeScore: m.pair_home_score,
+      awayScore: m.pair_away_score,
+      status: m.status as MatchCardProps['status'],
+    };
+  });
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       {/* Header — DomiRank | Tournament branding | Round/Timer/Live */}
       <header
-        className="flex shrink-0 items-center gap-6 border-b-2 px-6 py-4"
+        className="flex shrink-0 items-center gap-[clamp(16px,2vw,40px)] border-b px-6 py-4"
         style={{ borderBottomColor: brandColor }}
       >
-        {/* Left — DomiRank brand */}
-        <div className="shrink-0 p-4">
+        {/* Left — DomiRank brand. Uses the horizontal-clean mark that
+            AppShell already ships in both themes (gradient-safe on light
+            and dark backgrounds). Sized by clamp, no magic padding. */}
+        <div className="shrink-0">
           <Image
-            src="/branding/logo-square-tagline.svg"
+            src="/branding/logo-horizontal-clean.svg"
             alt="DomiRank"
-            width={200}
-            height={200}
+            width={240}
+            height={60}
             priority
-            className="h-auto w-[clamp(120px,10vw,200px)]"
+            className="h-auto w-[clamp(140px,12vw,240px)]"
           />
         </div>
 
-        {/* Center — tournament co-branding (flex-1 to fill) */}
+        {/* Center — tournament co-branding. Name wraps freely (no
+            truncate) so long titles read in full; text-balance keeps
+            the multi-line wrap even. */}
         <div className="flex min-w-0 flex-1 items-center justify-center gap-4">
           <OrgLogo
             url={tournament.organization_logo_url}
             name={tournament.organization_name}
           />
-          <div className="min-w-0 text-center">
-            <div className="flex items-center justify-center gap-2">
-              <h1 className="truncate text-[clamp(20px,2.2vw,40px)] font-bold leading-tight text-white">
-                {tournament.name}
-              </h1>
-              <span className="shrink-0 rounded-full border border-slate-600 px-2 py-0.5 text-[clamp(10px,0.9vw,14px)] font-semibold uppercase tracking-wider text-slate-300">
-                {formatLabels.badge}
-              </span>
-            </div>
-            {tournament.organization_name && (
-              <p className="mt-1 truncate text-xs uppercase tracking-wider text-slate-400">
-                {tournament.organization_name}
-              </p>
-            )}
-          </div>
+          <h1
+            className="min-w-0 text-balance text-center text-[clamp(22px,2.4vw,44px)] font-semibold leading-tight tracking-tight text-text"
+          >
+            {tournament.name}
+          </h1>
         </div>
 
-        {/* Right — Round / Timer / Live */}
-        <div className="flex shrink-0 items-center gap-[clamp(16px,2vw,40px)] text-right">
+        {/* Right — Round / Timer / Live / Fullscreen. Baseline-aligned. */}
+        <div className="flex shrink-0 items-baseline gap-[clamp(16px,2vw,40px)] text-right">
           <div>
-            <div className="text-sm font-medium uppercase tracking-wider text-slate-400">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-text-mute">
               Ronda
             </div>
-            <div className="text-[clamp(28px,3vw,48px)] font-mono font-bold leading-none tabular-nums">
+            <div className="mt-0.5 font-mono text-[clamp(28px,3vw,48px)] font-semibold leading-none tabular-nums text-text">
               {tournament.current_round_number ?? 0}
-              <span className="text-[clamp(16px,1.5vw,24px)] text-slate-400">
+              <span className="text-[clamp(16px,1.5vw,24px)] font-medium text-text-mute">
                 /{tournament.rounds_count}
               </span>
             </div>
@@ -287,104 +293,42 @@ export function DisplayClient({
               durationMinutes={tournament.round_duration_minutes}
             />
           )}
-          <span
-            className={`rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest ${
-              isFinished ? 'bg-amber-500 text-slate-900' : 'animate-pulse bg-red-600'
-            }`}
-          >
-            {STATUS_LABEL[tournament.status] ?? tournament.status}
-          </span>
+          <LiveIndicator status={tournament.status} />
+          <FullscreenToggle />
         </div>
       </header>
 
-      {/* Main fills all available vertical/horizontal space — 60/40 split favoring standings */}
+      {/* Theme toggle lives fixed bottom-right (24px from edge) so it
+          shares the visual x-axis with the FullscreenToggle in the top
+          header cluster, which also sits at 24px from the edge via px-6. */}
+      <DisplayThemeToggle />
+
+      {/* Main — 60/40 split favoring standings */}
       <main className="grid min-h-0 flex-1 grid-cols-[60%_40%] gap-[1vw] px-[1vw] py-[1vh]">
-        {/* Standings */}
         <StandingsPanel
           standings={sortedStandings}
           pairById={pairById}
           isIndividual={isIndividual}
         />
 
-        {/* Matches grid — compacter cards because column is narrower now */}
         <section className="flex min-h-0 flex-col gap-3">
-          <h2 className="shrink-0 text-sm font-medium uppercase tracking-wider text-slate-400">
-            {isFinished
-              ? 'Ronda final'
-              : `Mesas — Ronda ${tournament.current_round_number ?? 0}`}
+          <h2 className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.15em] text-text-mute">
+            {roundLabel}
           </h2>
-          {currentRoundMatches.length === 0 ? (
-            <div className="flex min-h-0 flex-1 items-center justify-center rounded-xl border border-dashed border-slate-700 text-lg text-slate-400">
-              Esperando inicio de la ronda…
-            </div>
-          ) : (
-            <div className="grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-3 overflow-hidden">
-              {currentRoundMatches.map((m) => {
-                const home = pairById.get(m.pair_home_id);
-                const away = m.pair_away_id ? pairById.get(m.pair_away_id) : null;
-                const isBye = away === null;
-                if (isBye) {
-                  return (
-                    <div
-                      key={m.id}
-                      className="flex flex-col justify-center gap-2 rounded-xl border border-amber-700 bg-amber-900/30 px-4 py-3"
-                    >
-                      <div className="text-xs font-medium uppercase tracking-wider text-amber-400">
-                        Mesa {m.table_number} — Bye
-                      </div>
-                      <div className="truncate text-[clamp(16px,1.4vw,24px)] font-medium">
-                        {formatPairName(home)}
-                      </div>
-                    </div>
-                  );
-                }
-                const isFinishedMatch = m.status === 'finished';
-                return (
-                  <div
-                    key={m.id}
-                    className={`flex flex-col justify-between rounded-xl border px-4 py-3 ${
-                      isFinishedMatch ? 'border-slate-700 bg-slate-900' : 'border-slate-600 bg-slate-800'
-                    }`}
-                  >
-                    <div className="text-xs font-medium uppercase tracking-wider text-slate-400">
-                      Mesa {m.table_number}
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <PlayerRow
-                        name={formatPairName(home)}
-                        score={m.pair_home_score}
-                        winner={
-                          isFinishedMatch &&
-                          (m.pair_home_score ?? 0) > (m.pair_away_score ?? 0)
-                        }
-                      />
-                      <PlayerRow
-                        name={formatPairName(away)}
-                        score={m.pair_away_score}
-                        winner={
-                          isFinishedMatch &&
-                          (m.pair_away_score ?? 0) > (m.pair_home_score ?? 0)
-                        }
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <MatchesPanel matches={matchCards} />
         </section>
       </main>
 
       <footer
-        className="flex shrink-0 items-center justify-between gap-6 border-t-2 px-6 py-4 text-slate-500"
+        className="flex shrink-0 items-center justify-between gap-6 border-t px-6 py-4 text-text-mute"
         style={{ borderTopColor: brandColor }}
       >
         <div className="text-sm">
-          Meta <span className="font-semibold text-slate-300">{tournament.target_points}</span> tantos
+          Meta <span className="font-semibold text-text-dim">{tournament.target_points}</span> tantos
         </div>
         <div className="flex items-center gap-6">
           {(tournament.sponsor_1_logo_url || tournament.sponsor_2_logo_url) && (
-            <span className="text-xs font-medium uppercase tracking-widest text-slate-500">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-text-mute">
               Patrocinan
             </span>
           )}
@@ -410,25 +354,37 @@ export function DisplayClient({
   );
 }
 
-function PlayerRow({
-  name,
-  score,
-  winner,
-}: {
-  name: string;
-  score: number | null;
-  winner: boolean;
-}) {
-  return (
-    <div
-      className={`flex items-baseline justify-between gap-3 ${
-        winner ? 'text-emerald-400' : ''
-      }`}
-    >
-      <span className="min-w-0 truncate text-[clamp(14px,1.2vw,20px)] font-medium">{name}</span>
-      <span className="shrink-0 font-mono text-[clamp(22px,2vw,32px)] font-bold leading-none tabular-nums">
-        {score ?? '—'}
+/**
+ * Live/finished status pill. Uses a soft-pulsing emerald dot for LIVE
+ * (Apple-quiet) instead of the previous full-badge red pulse, and a
+ * muted amber pill for FINALIZADO.
+ *
+ * Colours shift between themes so the pill keeps enough contrast on
+ * both a dark and a white background (emerald-400/500 for the dot,
+ * emerald-700 text on light vs emerald-300 on dark).
+ */
+function LiveIndicator({ status }: { status: string }) {
+  if (status === 'finished') {
+    return (
+      <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-amber-700 ring-1 ring-inset ring-amber-500/40 dark:text-amber-300">
+        Finalizado
       </span>
-    </div>
+    );
+  }
+  if (status === 'in_progress') {
+    return (
+      <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-emerald-700 ring-1 ring-inset ring-emerald-500/40 dark:text-emerald-300 dark:ring-emerald-500/30">
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-70 dark:bg-emerald-400" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400" />
+        </span>
+        En vivo
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-text-dim ring-1 ring-inset ring-border">
+      {status}
+    </span>
   );
 }
