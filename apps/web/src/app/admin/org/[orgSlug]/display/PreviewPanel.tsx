@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { DisplayConfig } from '@/lib/club-pro/display-config';
 import { DisplayShell } from '@/app/t/[slug]/DisplayShell';
 import {
@@ -38,10 +38,20 @@ export function PreviewPanel({
   onTogglePreviewMobile: (mobile: boolean) => void;
 }) {
   const canvasRef = useRef<HTMLDivElement>(null);
-  // Start with a modest non-zero default so the shell has visible size
-  // during the first frame, before the ResizeObserver fires with the
-  // real container dimensions.
-  const [scale, setScale] = useState(0.3);
+  // `null` until the ResizeObserver has measured the canvas at least
+  // once. We render nothing in the preview until then — safer than
+  // guessing a starting scale, which can either be too big (clipped
+  // right side) or too small (unreadable).
+  const [scale, setScale] = useState<number | null>(null);
+  // Gate the whole preview inner render until after mount so SSR
+  // and the first client render always match ("Cargando preview…"
+  // on both). React 18 in prod treats scale-driven differences as a
+  // hydration error.
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const viewport = previewMobile ? MOBILE : TV;
 
@@ -54,10 +64,11 @@ export function PreviewPanel({
       if (w === 0 || h === 0) return;
       const sx = w / viewport.width;
       const sy = h / viewport.height;
-      // Fit both dimensions inside the canvas with a small margin,
-      // and clamp to a sensible min so a first-tick miss doesn't hide
-      // the preview entirely.
-      const next = Math.max(0.1, Math.min(sx, sy) * 0.95);
+      // Fit both dimensions inside the canvas with a 5 % margin so
+      // the ring/shadow around the preview doesn't touch the panel
+      // edges. Floor at a tiny value so it stays visible even in
+      // absurdly cramped containers.
+      const next = Math.max(0.05, Math.min(sx, sy) * 0.95);
       setScale(next);
     };
     const observer = new ResizeObserver(recompute);
@@ -102,38 +113,42 @@ export function PreviewPanel({
         ref={canvasRef}
         className="flex min-h-0 flex-1 items-center justify-center overflow-hidden p-4"
       >
-        {/* Outer box takes the SCALED size so the flex centering works
-            around a box that visually matches the rendered content.
-            Inner wrapper renders at real 1920×1080 (or 390×844) and is
-            transform-scaled with `origin: 0 0` — the outer box already
-            reserves the correct amount of space. */}
-        <div
-          style={{
-            width: viewport.width * scale,
-            height: viewport.height * scale,
-            flexShrink: 0,
-          }}
-          className="overflow-hidden rounded-lg shadow-2xl ring-1 ring-black/10"
-        >
+        {!mounted || scale === null ? (
+          <div className="text-xs text-slate-400">Cargando preview…</div>
+        ) : (
+          // Outer box takes the SCALED size so the flex centering works
+          // around a box that visually matches the rendered content.
+          // Inner wrapper renders at real 1920×1080 (or 390×844) and is
+          // transform-scaled with `origin: 0 0` — the outer box already
+          // reserves the correct amount of space.
           <div
             style={{
-              width: viewport.width,
-              height: viewport.height,
-              transform: `scale(${scale})`,
-              transformOrigin: '0 0',
+              width: viewport.width * scale,
+              height: viewport.height * scale,
+              flexShrink: 0,
             }}
+            className="overflow-hidden rounded-lg shadow-2xl ring-1 ring-black/10"
           >
-            <DisplayShell
-              tournament={SAMPLE_TOURNAMENT}
-              pairs={SAMPLE_PAIRS}
-              matches={SAMPLE_MATCHES}
-              rounds={SAMPLE_ROUNDS}
-              sponsors={SAMPLE_SPONSORS}
-              config={config}
-              preview={{ mobile: previewMobile }}
-            />
+            <div
+              style={{
+                width: viewport.width,
+                height: viewport.height,
+                transform: `scale(${scale})`,
+                transformOrigin: '0 0',
+              }}
+            >
+              <DisplayShell
+                tournament={SAMPLE_TOURNAMENT}
+                pairs={SAMPLE_PAIRS}
+                matches={SAMPLE_MATCHES}
+                rounds={SAMPLE_ROUNDS}
+                sponsors={SAMPLE_SPONSORS}
+                config={config}
+                preview={{ mobile: previewMobile }}
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

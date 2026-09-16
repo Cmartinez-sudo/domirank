@@ -51,11 +51,21 @@ export default async function DisplayEditorPage({
           broken editor. Spec: "El editor de la pantalla SOLO está disponible
           en desktop. Bloquealo por breakpoint, no lo escondas a medias." */}
       <div className="hidden lg:block">
-        <DisplayEditorClient
-          orgSlug={org.slug}
-          initialConfig={initialConfig}
-          initialHasCustomConfig={hasCustomConfig}
-        />
+        {/* The editor needs ~1200 px of horizontal room to fit the config
+            panel + a preview large enough to see the whole TV shell.
+            The org admin layout caps content at max-w-6xl (1152 px), so
+            we wrap in an overflow-x-auto scroller with a min-width — if
+            the viewport is narrower, the admin scrolls horizontally
+            rather than getting a clipped preview. */}
+        <div className="overflow-x-auto">
+          <div className="min-w-[1200px]">
+            <DisplayEditorClient
+              orgSlug={org.slug}
+              initialConfig={initialConfig}
+              initialHasCustomConfig={hasCustomConfig}
+            />
+          </div>
+        </div>
       </div>
       <div className="lg:hidden rounded-md border border-dashed border-slate-300 bg-white p-8 text-center">
         <div className="mx-auto max-w-md space-y-3">
