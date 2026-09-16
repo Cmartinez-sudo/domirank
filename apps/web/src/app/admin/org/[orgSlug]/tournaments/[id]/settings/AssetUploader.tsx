@@ -4,13 +4,19 @@ import { useState, useTransition, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { uploadTournamentAsset, clearTournamentAsset } from '@/lib/club-pro/upload-actions';
 
-type Slot = 'logo' | 'sponsor_1' | 'sponsor_2';
+// Slot ids the server action accepts:
+//   - 'logo' targets `org_tournaments.logo_url`
+//   - 'sponsor-<N>' (N = 1..12) targets a row in `tournament_sponsors`
+//     with `position = N`
+// The old 'sponsor_1' / 'sponsor_2' names still round-trip through the
+// server action's normalizer, but the UI uses the new hyphenated form.
+type Slot = 'logo' | `sponsor-${number}`;
 
-const SLOT_LABEL: Record<Slot, string> = {
-  logo: 'Logo del torneo',
-  sponsor_1: 'Sponsor 1',
-  sponsor_2: 'Sponsor 2',
-};
+function slotLabel(slot: Slot): string {
+  if (slot === 'logo') return 'Logo del torneo';
+  const m = slot.match(/^sponsor-(\d+)$/);
+  return m ? `Sponsor ${m[1]}` : slot;
+}
 
 export function AssetUploader({
   orgSlug,
@@ -57,7 +63,7 @@ export function AssetUploader({
   };
 
   const handleClear = () => {
-    if (!confirm(`¿Quitar ${SLOT_LABEL[slot].toLowerCase()}?`)) return;
+    if (!confirm(`¿Quitar ${slotLabel(slot).toLowerCase()}?`)) return;
     setError(null);
     startTransition(async () => {
       const result = await clearTournamentAsset({ orgSlug, tournamentId, slot });
@@ -75,7 +81,7 @@ export function AssetUploader({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={currentUrl}
-          alt={SLOT_LABEL[slot]}
+          alt={slotLabel(slot)}
           className="h-16 w-16 shrink-0 rounded border border-slate-200 bg-white object-contain p-1"
         />
       ) : (
@@ -84,7 +90,7 @@ export function AssetUploader({
         </div>
       )}
       <div className="flex-1">
-        <div className="text-sm font-medium text-slate-900">{SLOT_LABEL[slot]}</div>
+        <div className="text-sm font-medium text-slate-900">{slotLabel(slot)}</div>
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <input
             ref={inputRef}

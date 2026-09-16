@@ -662,13 +662,25 @@ export async function sendTournamentInvitations(input: unknown): Promise<SendInv
   const { data: tournament, error: tErr } = await supabase
     .from('org_tournaments')
     .select(
-      'id, name, format, organization_id, target_points, rounds_count, round_duration_minutes, sponsor_1_logo_url, sponsor_2_logo_url',
+      'id, name, format, organization_id, target_points, rounds_count, round_duration_minutes',
     )
     .eq('id', parsed.data.tournamentId)
     .eq('organization_id', org.id)
     .maybeSingle();
   if (tErr || !tournament) return { ok: false, error: 'Torneo no encontrado' };
   const isIndividual = tournament.format === 'swiss_individual';
+
+  // Fetch sponsor logos for the email template. Positions 1 and 2 map
+  // to the two logo slots the invitation template still exposes; a
+  // future Fase 2 template can iterate the full list.
+  const { data: sponsorsRaw } = await supabase
+    .from('tournament_sponsors')
+    .select('position, logo_url')
+    .eq('tournament_id', tournament.id)
+    .in('position', [1, 2]);
+  const sponsorByPosition = new Map(
+    (sponsorsRaw ?? []).map((s) => [s.position, s.logo_url]),
+  );
 
   const { data: pairsRaw } = await supabase
     .from('org_tournament_pairs')
@@ -748,8 +760,8 @@ export async function sendTournamentInvitations(input: unknown): Promise<SendInv
         targetPoints: tournament.target_points,
         roundsCount: tournament.rounds_count,
         roundDurationMinutes: tournament.round_duration_minutes,
-        sponsor1LogoUrl: tournament.sponsor_1_logo_url ?? undefined,
-        sponsor2LogoUrl: tournament.sponsor_2_logo_url ?? undefined,
+        sponsor1LogoUrl: sponsorByPosition.get(1) ?? undefined,
+        sponsor2LogoUrl: sponsorByPosition.get(2) ?? undefined,
         waitlistUrl: appUrl,
       });
 

@@ -11,19 +11,47 @@ const MAX_FILE_BYTES = 512_000; // 500 KB
 const BUCKET = 'tournament-assets';
 const ALLOWED_MIME = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']);
 
-// Maps the "slot" the admin is uploading to → DB column on org_tournaments.
-const SLOT_TO_COLUMN: Record<string, 'logo_url' | 'sponsor_1_logo_url' | 'sponsor_2_logo_url'> = {
-  logo: 'logo_url',
-  sponsor_1: 'sponsor_1_logo_url',
-  sponsor_2: 'sponsor_2_logo_url',
-};
+/**
+ * Slot identifiers accepted by the tournament asset uploader.
+ *
+ * `logo` still maps to a single column on `org_tournaments`.
+ *
+ * `sponsor-<N>` (N = 1..12) targets the `tournament_sponsors` table
+ * introduced in mig 0111. N is the 1-based `position` for the row. The
+ * old `sponsor_1` / `sponsor_2` names are also accepted so any client
+ * still round-tripping cached JS doesn't fail; they normalize to
+ * `sponsor-1` / `sponsor-2`.
+ */
+const SPONSOR_SLOT_RE = /^sponsor-([1-9]|1[0-2])$/;
+const LEGACY_SPONSOR_SLOT_RE = /^sponsor_([1-9]|1[0-2])$/;
+
+function normalizeSlot(raw: string): string {
+  const legacy = raw.match(LEGACY_SPONSOR_SLOT_RE);
+  if (legacy) return `sponsor-${legacy[1]}`;
+  return raw;
+}
+
+function parseSlot(raw: string):
+  | { kind: 'logo' }
+  | { kind: 'sponsor'; position: number }
+  | null {
+  if (raw === 'logo') return { kind: 'logo' };
+  const m = raw.match(SPONSOR_SLOT_RE);
+  if (m) return { kind: 'sponsor', position: Number(m[1]) };
+  return null;
+}
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
 const UploadSchema = z.object({
   orgSlug: z.string().min(1),
   tournamentId: z.string().uuid(),
-  slot: z.enum(['logo', 'sponsor_1', 'sponsor_2']),
+  slot: z
+    .string()
+    .transform(normalizeSlot)
+    .refine((s) => parseSlot(s) !== null, {
+      message: 'Slot inválido — usá "logo" o "sponsor-<1..12>"',
+    }),
 });
 
 const DeleteSchema = UploadSchema;
@@ -35,7 +63,7 @@ export type DeleteResult = { ok: true } | { ok: false; error: string };
 
 /**
  * Uploads an image to the tournament-assets bucket and patches the
- * corresponding column on org_tournaments. Uses service_role to write
+ * corresponding row (or column for `logo`). Uses service_role to write
  * to Storage (the bucket can be public-read, but uploads require write
  * permissions that anon/authenticated don't have by default).
  *
@@ -57,6 +85,8 @@ export async function uploadTournamentAsset(formData: FormData): Promise<UploadR
 
   const parsed = UploadSchema.safeParse(inputRaw);
   if (!parsed.success) return { ok: false, error: 'Input inválido' };
+  const slotSpec = parseSlot(parsed.data.slot);
+  if (!slotSpec) return { ok: false, error: 'Slot inválido' };
 
   const file = formData.get('file');
   if (!(file instanceof File)) return { ok: false, error: 'Falta el archivo' };
@@ -101,14 +131,27 @@ export async function uploadTournamentAsset(formData: FormData): Promise<UploadR
   const { data: publicData } = service.storage.from(BUCKET).getPublicUrl(path);
   const publicUrl = publicData.publicUrl;
 
-  const column = SLOT_TO_COLUMN[parsed.data.slot];
-  const { error: updErr } = await service
-    .from('org_tournaments')
-    .update({ [column]: publicUrl })
-    .eq('id', parsed.data.tournamentId);
-
-  if (updErr) {
-    return { ok: false, error: `DB update falló: ${updErr.message}` };
+  if (slotSpec.kind === 'logo') {
+    const { error: updErr } = await service
+      .from('org_tournaments')
+      .update({ logo_url: publicUrl })
+      .eq('id', parsed.data.tournamentId);
+    if (updErr) return { ok: false, error: `DB update falló: ${updErr.message}` };
+  } else {
+    // Upsert the sponsor row at the given position. Using upsert so a
+    // re-upload for the same slot replaces the URL cleanly instead of
+    // hitting the UNIQUE (tournament_id, position) constraint.
+    const { error: upsertErr } = await service
+      .from('tournament_sponsors')
+      .upsert(
+        {
+          tournament_id: parsed.data.tournamentId,
+          position: slotSpec.position,
+          logo_url: publicUrl,
+        },
+        { onConflict: 'tournament_id,position' },
+      );
+    if (upsertErr) return { ok: false, error: `DB update falló: ${upsertErr.message}` };
   }
 
   revalidatePath(`/admin/org/${org.slug}/tournaments/${parsed.data.tournamentId}/settings`);
@@ -119,25 +162,37 @@ export async function uploadTournamentAsset(formData: FormData): Promise<UploadR
 // ─── Delete ───────────────────────────────────────────────────────────────────
 
 /**
- * Clears the URL for a given slot. Does NOT delete the underlying file
- * from Storage — left as orphan for safety. A future cron can prune
- * unreferenced files.
+ * Clears the URL for a given slot:
+ *   - `logo` → sets `org_tournaments.logo_url = NULL`
+ *   - `sponsor-<N>` → deletes the row from `tournament_sponsors`
+ *
+ * Storage file is left orphan (cheap, and lets us restore easily if the
+ * admin clicked by mistake). A future cron can prune unreferenced files.
  */
 export async function clearTournamentAsset(input: unknown): Promise<DeleteResult> {
   const parsed = DeleteSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: 'Input inválido' };
+  const slotSpec = parseSlot(parsed.data.slot);
+  if (!slotSpec) return { ok: false, error: 'Slot inválido' };
 
   const { org } = await requireOrgAdmin(parsed.data.orgSlug);
   const service = supabaseService();
 
-  const column = SLOT_TO_COLUMN[parsed.data.slot];
-  const { error: updErr } = await service
-    .from('org_tournaments')
-    .update({ [column]: null })
-    .eq('id', parsed.data.tournamentId)
-    .eq('organization_id', org.id);
-
-  if (updErr) return { ok: false, error: updErr.message };
+  if (slotSpec.kind === 'logo') {
+    const { error: updErr } = await service
+      .from('org_tournaments')
+      .update({ logo_url: null })
+      .eq('id', parsed.data.tournamentId)
+      .eq('organization_id', org.id);
+    if (updErr) return { ok: false, error: updErr.message };
+  } else {
+    const { error: delErr } = await service
+      .from('tournament_sponsors')
+      .delete()
+      .eq('tournament_id', parsed.data.tournamentId)
+      .eq('position', slotSpec.position);
+    if (delErr) return { ok: false, error: delErr.message };
+  }
 
   revalidatePath(`/admin/org/${org.slug}/tournaments/${parsed.data.tournamentId}/settings`);
   revalidatePath(`/admin/org/${org.slug}/tournaments/${parsed.data.tournamentId}/overview`);

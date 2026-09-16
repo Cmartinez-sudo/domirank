@@ -19,12 +19,24 @@ export default async function SettingsPage({
   const { data: tournament } = await supabase
     .from('org_tournaments')
     .select(
-      'id, name, description, display_slug, status, rounds_count, current_round_number, round_duration_minutes, target_points, scheduled_start_at, prize_description, logo_url, sponsor_1_logo_url, sponsor_2_logo_url',
+      'id, name, description, display_slug, status, rounds_count, current_round_number, round_duration_minutes, target_points, scheduled_start_at, prize_description, logo_url',
     )
     .eq('id', id)
     .eq('organization_id', org.id)
     .maybeSingle();
   if (!tournament) notFound();
+
+  // Sponsors moved to their own table in mig 0111. Fase 1 still exposes
+  // exactly 2 upload slots in the UI (positions 1 and 2) — the org-level
+  // display config that controls slot count arrives in Fase 2.
+  const { data: sponsorsRaw } = await supabase
+    .from('tournament_sponsors')
+    .select('position, logo_url')
+    .eq('tournament_id', tournament.id)
+    .in('position', [1, 2]);
+  const sponsorByPosition = new Map(
+    (sponsorsRaw ?? []).map((s) => [s.position, s.logo_url]),
+  );
 
   const canWrite = role === 'owner' || role === 'admin';
   const displayUrl = `/t/${tournament.display_slug}`;
@@ -99,14 +111,14 @@ export default async function SettingsPage({
             <AssetUploader
               orgSlug={org.slug}
               tournamentId={tournament.id}
-              slot="sponsor_1"
-              currentUrl={tournament.sponsor_1_logo_url}
+              slot="sponsor-1"
+              currentUrl={sponsorByPosition.get(1) ?? null}
             />
             <AssetUploader
               orgSlug={org.slug}
               tournamentId={tournament.id}
-              slot="sponsor_2"
-              currentUrl={tournament.sponsor_2_logo_url}
+              slot="sponsor-2"
+              currentUrl={sponsorByPosition.get(2) ?? null}
             />
           </div>
         </section>
