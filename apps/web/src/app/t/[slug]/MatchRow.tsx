@@ -43,11 +43,11 @@ export function MatchRow({
       }`}
     >
       {/* Mesa anchor — vertical block on the left */}
-      <div className="flex w-[clamp(48px,4vw,72px)] shrink-0 flex-col items-center justify-center border-r border-border pr-3">
-        <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-text-mute">
+      <div className="flex w-[clamp(56px,4.5vw,88px)] shrink-0 flex-col items-center justify-center border-r border-border pr-3">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-text-mute">
           Mesa
         </span>
-        <span className="font-mono text-[clamp(18px,1.6vw,28px)] font-semibold leading-none tabular-nums text-text">
+        <span className="font-mono text-[clamp(22px,2vw,36px)] font-bold leading-none tabular-nums text-text">
           {tableNumber}
         </span>
       </div>
@@ -56,10 +56,10 @@ export function MatchRow({
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
         {isBye ? (
           <div className="flex items-baseline justify-between gap-3">
-            <span className="min-w-0 truncate text-[clamp(13px,1.1vw,18px)] font-medium text-text">
+            <span className="min-w-0 truncate text-[clamp(16px,1.4vw,26px)] font-semibold text-text">
               {homeName}
             </span>
-            <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.15em] text-text-dim">
+            <span className="shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-text-dim">
               Bye
             </span>
           </div>
@@ -87,16 +87,16 @@ function RowLine({
   return (
     <div className="flex min-w-0 items-baseline gap-3">
       <span
-        className={`min-w-0 flex-1 truncate text-[clamp(13px,1.1vw,18px)] leading-tight ${
-          highlight ? 'font-semibold text-text' : 'font-medium text-text-mute'
+        className={`min-w-0 flex-1 truncate text-[clamp(16px,1.4vw,26px)] leading-tight ${
+          highlight ? 'font-bold text-text' : 'font-semibold text-text-mute'
         }`}
       >
         {name}
       </span>
       <span
-        className={`shrink-0 font-mono text-[clamp(20px,1.8vw,30px)] font-bold leading-none tabular-nums ${
+        className={`shrink-0 font-mono text-[clamp(24px,2.2vw,40px)] font-bold leading-none tabular-nums ${
           highlight
-            ? 'text-emerald-500 dark:text-emerald-400'
+            ? 'text-emerald-600 dark:text-emerald-400'
             : score === null
               ? 'text-text-mute/60'
               : 'text-text-mute'

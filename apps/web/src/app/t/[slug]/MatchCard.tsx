@@ -122,16 +122,16 @@ function TeamRow({
   return (
     <div className="flex min-w-0 items-baseline gap-4">
       <span
-        className={`min-w-0 flex-1 truncate text-[clamp(16px,1.4vw,24px)] leading-tight ${
-          highlight ? 'font-semibold text-text' : 'font-medium text-text-mute'
+        className={`min-w-0 flex-1 truncate text-[clamp(18px,1.8vw,36px)] leading-tight ${
+          highlight ? 'font-bold text-text' : 'font-semibold text-text-mute'
         }`}
       >
         {name}
       </span>
       <span
-        className={`shrink-0 font-mono text-[clamp(40px,4.4vw,72px)] font-bold leading-none tabular-nums ${
+        className={`shrink-0 font-mono text-[clamp(44px,5vw,88px)] font-bold leading-none tabular-nums ${
           highlight
-            ? 'text-emerald-500 dark:text-emerald-400'
+            ? 'text-emerald-600 dark:text-emerald-400'
             : score === null
               ? 'text-text-mute/60'
               : 'text-text-mute'
