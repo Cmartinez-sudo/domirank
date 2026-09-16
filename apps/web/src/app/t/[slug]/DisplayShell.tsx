@@ -258,10 +258,16 @@ export function DisplayShell({
         style={{ borderTopColor: brandColor }}
       >
         <Zone
-          zoneId="footer"
+          zoneId="footer-left"
           zones={config.desktop.zones}
           ctx={zoneContext}
-          className="flex items-center gap-6"
+          className="flex shrink-0 items-center gap-6"
+        />
+        <Zone
+          zoneId="footer-right"
+          zones={config.desktop.zones}
+          ctx={zoneContext}
+          className="flex shrink-0 items-center gap-6"
         />
       </footer>
     </div>

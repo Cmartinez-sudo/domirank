@@ -42,7 +42,15 @@ describe('resolveDisplayConfig', () => {
   it('returns default when a required zone is missing', () => {
     const bad = {
       ...DEFAULT_DISPLAY_CONFIG,
-      desktop: { zones: { 'header-left': [], 'header-center': [], 'header-right': [] } },
+      desktop: {
+        zones: {
+          'header-left': [],
+          'header-center': [],
+          'header-right': [],
+          'footer-left': [],
+          // footer-right missing
+        },
+      },
     };
     expect(resolveDisplayConfig(bad)).toEqual(DEFAULT_DISPLAY_CONFIG);
     expect(warnSpy).toHaveBeenCalledOnce();
@@ -68,10 +76,11 @@ describe('resolveDisplayConfig', () => {
             { id: 'round', visible: true },
             { id: 'timer', visible: true },
           ],
-          'footer': [
+          'footer-left': [
             { id: 'domirank-logo', visible: true, size: 'sm' },
             { id: 'meta', visible: true },
           ],
+          'footer-right': [],
         },
       },
       sponsors: { slotsCount: 4, zone: 'header-left', size: 'sm', order: 5 },
@@ -85,7 +94,7 @@ describe('resolveDisplayConfig', () => {
       ...DEFAULT_DISPLAY_CONFIG,
       mobile: {
         zones: {
-          'footer': [{ id: 'meta', visible: false }],
+          'footer-left': [{ id: 'meta', visible: false }],
         },
       },
     };
@@ -146,14 +155,15 @@ describe('resolveDisplayConfig', () => {
       { id: 'timer', visible: true },
       { id: 'live', visible: true },
     ]);
-    expect(DEFAULT_DISPLAY_CONFIG.desktop.zones.footer).toEqual([
+    expect(DEFAULT_DISPLAY_CONFIG.desktop.zones['footer-left']).toEqual([
       { id: 'meta', visible: true },
     ]);
+    expect(DEFAULT_DISPLAY_CONFIG.desktop.zones['footer-right']).toEqual([]);
     expect(DEFAULT_DISPLAY_CONFIG.sponsors).toEqual({
       slotsCount: 2,
-      zone: 'footer',
+      zone: 'footer-right',
       size: 'md',
-      order: 100,
+      order: 0,
     });
   });
 });

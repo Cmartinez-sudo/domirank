@@ -27,14 +27,16 @@ const ZONE_LABEL: Record<DisplayZoneId, string> = {
   'header-left': 'Header · izquierda',
   'header-center': 'Header · centro',
   'header-right': 'Header · derecha',
-  'footer': 'Footer',
+  'footer-left': 'Footer · izquierda',
+  'footer-right': 'Footer · derecha',
 };
 
 const ZONE_OPTIONS: DisplayZoneId[] = [
   'header-left',
   'header-center',
   'header-right',
-  'footer',
+  'footer-left',
+  'footer-right',
 ];
 
 const SIZE_OPTIONS: DisplaySize[] = ['sm', 'md', 'lg'];
@@ -155,7 +157,7 @@ function guessDefaultZone(id: DisplayElementId): DisplayZoneId {
   if (id === 'domirank-logo') return 'header-left';
   if (id === 'org-logo' || id === 'tournament-name') return 'header-center';
   if (id === 'round' || id === 'timer' || id === 'live') return 'header-right';
-  return 'footer';
+  return 'footer-left';
 }
 
 function ElementRow({
@@ -185,28 +187,32 @@ function ElementRow({
   };
 
   return (
-    <li className="rounded-md border border-slate-200 bg-white p-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="mr-1 text-lg leading-none" aria-hidden="true">
+    <li className="space-y-2 rounded-md border border-slate-200 bg-white p-3">
+      {/* Row 1: identity + visible toggle */}
+      <div className="flex items-center gap-2">
+        <span className="text-base leading-none" aria-hidden="true">
           {meta.icon}
         </span>
-        <span className="mr-2 flex-1 truncate text-sm font-medium text-slate-900">
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">
           {meta.label}
         </span>
-
-        <label className="flex items-center gap-1 text-xs text-slate-600">
+        <label className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-slate-600">
           <input
             type="checkbox"
             checked={row.visible}
             onChange={(e) => updateSlot((s) => ({ ...s, visible: e.target.checked }))}
+            className="h-4 w-4"
           />
           Visible
         </label>
+      </div>
 
+      {/* Row 2: zone + reorder + size */}
+      <div className="flex flex-wrap items-center gap-2">
         <select
           value={row.zone}
           onChange={(e) => changeZone(e.target.value as DisplayZoneId)}
-          className="rounded border border-slate-300 bg-white px-2 py-1 text-xs"
+          className="min-w-0 flex-1 rounded border border-slate-300 bg-white px-2 py-1 text-xs"
         >
           {ZONE_OPTIONS.map((z) => (
             <option key={z} value={z}>
@@ -215,14 +221,14 @@ function ElementRow({
           ))}
         </select>
 
-        <div className="inline-flex overflow-hidden rounded border border-slate-300">
+        <div className="inline-flex shrink-0 overflow-hidden rounded border border-slate-300">
           <button
             type="button"
             onClick={() => moveInZone(-1)}
             disabled={!canMoveUp}
             className="border-r border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-30"
             aria-label="Mover arriba en la zona"
-            title="Mover arriba en la zona"
+            title="Mover arriba"
           >
             ↑
           </button>
@@ -232,14 +238,14 @@ function ElementRow({
             disabled={!canMoveDown}
             className="px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-30"
             aria-label="Mover abajo en la zona"
-            title="Mover abajo en la zona"
+            title="Mover abajo"
           >
             ↓
           </button>
         </div>
 
         {meta.supportsSize && (
-          <div className="inline-flex overflow-hidden rounded border border-slate-300">
+          <div className="inline-flex shrink-0 overflow-hidden rounded border border-slate-300">
             {SIZE_OPTIONS.map((s) => (
               <button
                 key={s}
@@ -250,6 +256,7 @@ function ElementRow({
                     ? 'bg-slate-900 text-white'
                     : 'text-slate-700 hover:bg-slate-50'
                 }`}
+                title={`Tamaño ${s.toUpperCase()}`}
               >
                 {s.toUpperCase()}
               </button>
@@ -258,13 +265,15 @@ function ElementRow({
         )}
       </div>
 
-      <label className="mt-2 flex items-center gap-2 text-xs text-slate-600">
+      {/* Row 3: mobile override */}
+      <label className="flex items-center gap-2 text-xs text-slate-600">
         <input
           type="checkbox"
           checked={row.hiddenInMobile}
           onChange={(e) =>
             updateSlot((s) => ({ ...s, hiddenInMobile: e.target.checked }))
           }
+          className="h-3.5 w-3.5"
         />
         Ocultar en mobile
       </label>
@@ -432,9 +441,10 @@ function moveSlotToZone(
 
 function cloneZones(zones: DisplayConfig['desktop']['zones']): DisplayConfig['desktop']['zones'] {
   return {
-    'header-left': [...zones['header-left']],
+    'header-left':   [...zones['header-left']],
     'header-center': [...zones['header-center']],
-    'header-right': [...zones['header-right']],
-    'footer': [...zones['footer']],
+    'header-right':  [...zones['header-right']],
+    'footer-left':   [...zones['footer-left']],
+    'footer-right':  [...zones['footer-right']],
   };
 }
