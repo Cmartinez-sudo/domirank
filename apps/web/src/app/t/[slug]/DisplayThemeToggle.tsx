@@ -6,10 +6,11 @@ import { useTheme } from 'next-themes';
 /**
  * Discreet theme toggle overlay for the public display.
  *
- * Positioned absolute in the top-right of the viewport, opacity 0.3 by
- * default and 1 on hover — think YouTube-TV fullscreen icon: present
- * for the operator, invisible enough to not compete with tournament
- * data during projection.
+ * Rendered as a fixed sun/moon button anchored to the bottom-right of
+ * the viewport. `right-6` (24px) matches the header's `px-6` padding
+ * so this button lines up on the same visual x-axis as the
+ * FullscreenToggle in the top header cluster — one at the top, this
+ * one at the bottom, both flush to the right edge.
  *
  * We render neutral markup until mounted so SSR/hydration don't diverge
  * (`resolvedTheme` is client-only in next-themes).
@@ -34,7 +35,7 @@ export function DisplayThemeToggle() {
       aria-label={label}
       title={label}
       onClick={() => setTheme(next)}
-      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-text-mute opacity-40 ring-1 ring-inset ring-border transition-opacity duration-200 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+      className="fixed bottom-4 right-6 z-50 inline-flex h-8 w-8 items-center justify-center rounded-full bg-bg/70 text-text-mute opacity-40 ring-1 ring-inset ring-border backdrop-blur transition-opacity duration-200 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
     >
       <span aria-hidden="true" className="inline-flex">
         {isLight ? <MoonIcon /> : <SunIcon />}

@@ -4,11 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import { computeStandings } from '@/lib/club-pro/compute-standings';
-import {
-  formatPairName,
-  isIndividualFormat,
-  labelsForFormat,
-} from '@/lib/club-pro/pair-display';
+import { formatPairName, isIndividualFormat } from '@/lib/club-pro/pair-display';
 import type { Pair, Match, PairStanding } from '@/lib/club-pro/swiss-types';
 import { RoundTimer } from './RoundTimer';
 import { StandingsPanel } from './StandingsPanel';
@@ -16,6 +12,7 @@ import { MatchesPanel } from './MatchesPanel';
 import type { MatchCardProps } from './MatchCard';
 import { OrgLogo } from './OrgLogo';
 import { DisplayThemeToggle } from './DisplayThemeToggle';
+import { FullscreenToggle } from './FullscreenToggle';
 
 type TournamentView = {
   id: string;
@@ -222,7 +219,6 @@ export function DisplayClient({
       ? tournament.brand_primary_color
       : '#2563eb';
   const isIndividual = isIndividualFormat(tournament.format);
-  const formatLabels = labelsForFormat(tournament.format);
 
   const roundLabel = isFinished
     ? 'Ronda final'
@@ -256,37 +252,29 @@ export function DisplayClient({
           <Image
             src="/branding/logo-horizontal-clean.svg"
             alt="DomiRank"
-            width={200}
-            height={50}
+            width={240}
+            height={60}
             priority
-            className="h-auto w-[clamp(96px,8vw,160px)]"
+            className="h-auto w-[clamp(140px,12vw,240px)]"
           />
         </div>
 
-        {/* Center — tournament co-branding */}
+        {/* Center — tournament co-branding. Name wraps freely (no
+            truncate) so long titles read in full; text-balance keeps
+            the multi-line wrap even. */}
         <div className="flex min-w-0 flex-1 items-center justify-center gap-4">
           <OrgLogo
             url={tournament.organization_logo_url}
             name={tournament.organization_name}
           />
-          <div className="min-w-0 text-center">
-            <div className="flex items-baseline justify-center gap-3">
-              <h1 className="truncate text-[clamp(22px,2.4vw,44px)] font-semibold leading-none tracking-tight text-text">
-                {tournament.name}
-              </h1>
-              <span className="shrink-0 rounded-full px-2 py-0.5 text-[clamp(10px,0.85vw,13px)] font-semibold uppercase tracking-wider text-text-dim ring-1 ring-inset ring-border">
-                {formatLabels.badge}
-              </span>
-            </div>
-            {tournament.organization_name && (
-              <p className="mt-1.5 truncate text-[11px] font-medium uppercase tracking-[0.15em] text-text-mute">
-                {tournament.organization_name}
-              </p>
-            )}
-          </div>
+          <h1
+            className="min-w-0 text-balance text-center text-[clamp(22px,2.4vw,44px)] font-semibold leading-tight tracking-tight text-text"
+          >
+            {tournament.name}
+          </h1>
         </div>
 
-        {/* Right — Round / Timer / Live status, baseline-aligned */}
+        {/* Right — Round / Timer / Live / Fullscreen. Baseline-aligned. */}
         <div className="flex shrink-0 items-baseline gap-[clamp(16px,2vw,40px)] text-right">
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-text-mute">
@@ -306,9 +294,14 @@ export function DisplayClient({
             />
           )}
           <LiveIndicator status={tournament.status} />
-          <DisplayThemeToggle />
+          <FullscreenToggle />
         </div>
       </header>
+
+      {/* Theme toggle lives fixed bottom-right (24px from edge) so it
+          shares the visual x-axis with the FullscreenToggle in the top
+          header cluster, which also sits at 24px from the edge via px-6. */}
+      <DisplayThemeToggle />
 
       {/* Main — 60/40 split favoring standings */}
       <main className="grid min-h-0 flex-1 grid-cols-[60%_40%] gap-[1vw] px-[1vw] py-[1vh]">
