@@ -5,9 +5,9 @@
  * este componente:
  *   1. Lee el torneo (modality, format, points_to_win, time_limit_minutes).
  *   2. Lee el pairing (team_a_user_ids, team_b_user_ids).
- *   3. Llama startLiveMatch con los datos precargados.
- *   4. Vincula el match al pairing via linkMatchToPairing.
- *   5. Redirige a /matches/[id]/live.
+ *   3. Llama startLiveMatch con los datos precargados y el pairing_id
+ *      (la RPC create_live_match crea y vincula en una transacción).
+ *   4. Redirige a /matches/[id]/live.
  *
  * Si algo falla (pairing no existe, usuario no autorizado, etc.),
  * renderiza un mensaje de error con link de vuelta al torneo.
@@ -21,7 +21,6 @@ import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { startLiveMatch } from "@/lib/live-match";
-import { linkMatchToPairing } from "@/lib/tournament-pairing-link";
 import {
   MODALIDADES,
   countRuleFromLegacyModality,
@@ -68,15 +67,26 @@ function resolveCountRule(t: { count_rule?: string | null; modality?: string | n
 function FastPathError({
   message,
   tournamentId,
+  conflictMatchId = null,
 }: {
   message: string;
   tournamentId: string | null;
+  /** Partida activa que bloquea la creación (otro jugador o el propio usuario). */
+  conflictMatchId?: string | null;
 }) {
   return (
     <div className="max-w-lg mx-auto pt-16 px-4 text-center space-y-4">
       <div className="p-4 bg-danger/10 border border-danger/30 rounded-xl text-danger text-sm">
         {message}
       </div>
+      {conflictMatchId && (
+        <Link
+          href={`/matches/${conflictMatchId}/live`}
+          className="btn-primary inline-block mr-2"
+        >
+          Ir a terminarla o cancelarla
+        </Link>
+      )}
       {tournamentId ? (
         <Link
           href={`/tournaments/${tournamentId}`}
@@ -224,25 +234,21 @@ export async function TournamentFastPath({
     team_b_players: pairing.team_b_user_ids as string[],
     tournament_id: tournamentId,
     time_limit_minutes: timeLimitMinutes,
+    // La RPC vincula el pairing en la misma transacción y es idempotente:
+    // un doble render/doble click devuelve la misma partida.
+    pairing_id: Number(pairing.id),
   });
 
   if (!matchRes.ok) {
     return (
       <FastPathError
-        message={`No se pudo crear la partida: ${matchRes.error}`}
+        message={matchRes.conflict ? matchRes.error : `No se pudo crear la partida: ${matchRes.error}`}
         tournamentId={tournamentId}
+        conflictMatchId={matchRes.conflict?.match_id ?? null}
       />
     );
   }
 
-  // ── 5. Vincular match al pairing ──────────────────────────
-  const linkRes = await linkMatchToPairing(pairingId, matchRes.match_id);
-  if (!linkRes.ok) {
-    // El match fue creado pero no vinculado. Redirigimos igual (el match es válido).
-    // El organizador puede vincularlo manualmente si es necesario.
-    console.error("[TournamentFastPath] link_match_to_pairing failed:", linkRes.error);
-  }
-
-  // ── 6. Redirigir al scoreboard en vivo ────────────────────
+  // ── 5. Redirigir al scoreboard en vivo ────────────────────
   redirect(`/matches/${matchRes.match_id}/live`);
 }
