@@ -4,6 +4,13 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
 import { rl, checkLimit } from "@/lib/ratelimit";
+import {
+  conflictMessage,
+  creatorActiveMatchMessage,
+  describeCreateLiveMatchError,
+  toActiveMatchConflict,
+  type CreateLiveMatchResult,
+} from "@/lib/live-match-errors";
 
 // ============================================================
 // createNewMatchInContinuousLeague — crea pairing + match en una polla
@@ -67,107 +74,55 @@ export async function createNewMatchInContinuousLeague(
     return { ok: false, error: "No eres parte de esta polla." };
   }
 
-  // 3.5. Resolver orphan in_progress matches del caller
-  //
-  // Constraint matches_one_inprogress_per_user: 1 sola partida in_progress
-  // por created_by. Si hay un orphan, el insert siguiente falla con
-  // "duplicate key violates unique constraint" — bug reportado en sesión
-  // 2026-05-29.
-  //
-  // Estrategia:
-  //   - Mismo polla: avisar al usuario que ya hay una activa (la matches
-  //     list ya debería ofrecerle "Continuar partida en curso" via bigbtn)
-  //   - Quick match orphan (sin tournament_id): auto-cancel — mismo
-  //     comportamiento que startLiveMatch (live-match.ts:56)
-  //   - Orphan de OTRO torneo: error claro con el nombre
-  const { data: orphan } = await supabase
-    .from("matches")
-    .select("id, tournament_id, tournaments(name)")
-    .eq("created_by", user.id)
-    .eq("status", "in_progress")
-    .maybeSingle();
-  if (orphan) {
-    if (orphan.tournament_id === tournament_id) {
-      return {
-        ok: false,
-        error: "Ya tienes una partida en curso en esta polla. Continúala primero.",
-      };
-    }
-    if (!orphan.tournament_id) {
-      // Quick match abandonado — cancelar
-      await supabase.from("matches").update({ status: "cancelled" }).eq("id", orphan.id);
-    } else {
-      const tName = (orphan as { tournaments?: { name?: string } | { name?: string }[] | null }).tournaments;
-      const name = Array.isArray(tName) ? tName[0]?.name : tName?.name;
-      return {
-        ok: false,
-        error: `Tienes una partida en curso en "${name ?? "otro torneo"}". Termínala o abandónala primero.`,
-      };
-    }
+  // 3.5. El caller debe jugar: cancel_match exige ser participante, así que
+  //      un creador que no juega quedaría bloqueado por
+  //      matches_one_inprogress_per_user. La RPC también lo valida.
+  if (!all.includes(user.id)) {
+    return { ok: false, error: "Debes ser uno de los 4 jugadores de la partida." };
   }
 
-  // 4. Insertar match (format='doubles', NO 'continuous_league')
-  const { data: match, error: mErr } = await supabase
-    .from("matches")
-    .insert({
-      format:        "doubles",
-      set_size:      "d6",
-      modality:      t.modality,
-      target_points: t.points_to_win,
-      capicua_bonus: 30,
-      status:        "in_progress",
-      created_by:    user.id,
-      tournament_id: tournament_id,
-      // rated: hereda explícitamente del torneo (defensive — PR #10 también
-      // lo haría vía aplicación del flag desde tournaments.rated en applyMatchRating).
-      rated:         t.rated,
-    })
-    .select("id")
-    .single();
-  if (mErr || !match) return { ok: false, error: mErr?.message ?? "No se pudo crear la partida." };
+  // 4. Crear match + match_players + pairing de la temporada actual en una
+  //    sola transacción (RPC create_live_match, mig 0113). Antes eran inserts
+  //    separados con un DELETE de rollback que RLS ignoraba (no hay policy
+  //    DELETE en matches) → partidas in_progress sin jugadores que bloqueaban
+  //    al creador con "duplicate key ... matches_one_inprogress_per_user".
+  //
+  //    p_keep_tournament_matches: si el caller tiene una partida de torneo
+  //    real en curso (esta polla u otro torneo) se le avisa en vez de
+  //    reemplazarla. Quick matches y huérfanas sin jugadores se cancelan.
+  const { data: res, error: rpcErr } = await supabase.rpc("create_live_match", {
+    p_team_a: team_a,
+    p_team_b: team_b,
+    // count_rule no se setea en polla (comportamiento previo: queda null).
+    p_count_rule: null,
+    p_modality: t.modality,
+    p_format: "doubles", // NO 'continuous_league'
+    p_set_size: "d6",
+    p_target_points: t.points_to_win,
+    p_capicua_bonus: 30,
+    // rated: hereda explícitamente del torneo (defensive — PR #10 también
+    // lo haría vía aplicación del flag desde tournaments.rated en applyMatchRating).
+    p_rated: t.rated,
+    p_tournament_id: tournament_id,
+    p_new_league_pairing: true,
+    p_keep_tournament_matches: true,
+  });
 
-  // 5. Insertar match_players
-  const mpRows = [
-    ...team_a.map((uid) => ({ match_id: match.id, user_id: uid, team: 1, score: 0 })),
-    ...team_b.map((uid) => ({ match_id: match.id, user_id: uid, team: 2, score: 0 })),
-  ];
-  const { error: mpErr } = await supabase.from("match_players").insert(mpRows);
-  if (mpErr) {
-    await supabase.from("matches").delete().eq("id", match.id);
-    return { ok: false, error: mpErr.message };
+  if (rpcErr) {
+    console.error("[createNewMatchInContinuousLeague] create_live_match failed:", rpcErr);
+    return { ok: false, error: describeCreateLiveMatchError(rpcErr) };
   }
-
-  // 6. Insertar pairing con season = current_season
-  //    IMPORTANTE: la constraint UNIQUE (tournament_id, round, board) requiere
-  //    que board sea único por (tournament_id, round). Usamos round=0 (polla no
-  //    tiene rondas) y board = count_de_pairings_existentes + 1 para evitar
-  //    conflictos al crear múltiples partidas en la misma polla.
-  const { count: existingCount } = await supabase
-    .from("tournament_pairings")
-    .select("id", { count: "exact", head: true })
-    .eq("tournament_id", tournament_id)
-    .eq("round", 0);
-
-  const board = (existingCount ?? 0) + 1;
-
-  const { error: prErr } = await supabase
-    .from("tournament_pairings")
-    .insert({
-      tournament_id:   tournament_id,
-      round:           0,  // legacy column, no se usa en polla
-      board:           board,
-      team_a_user_ids: team_a,
-      team_b_user_ids: team_b,
-      match_id:        match.id,
-      season:          t.current_season,
-    });
-  if (prErr) {
-    console.error("[createNewMatchInContinuousLeague] pairing insert failed:", prErr);
-    // Match queda creado pero sin pairing. Reportable pero no bloqueante.
+  const payload = res as CreateLiveMatchResult | null;
+  if (!payload) return { ok: false, error: describeCreateLiveMatchError(null) };
+  if (!payload.ok) {
+    if (payload.error === "creator_has_active_match") {
+      return { ok: false, error: creatorActiveMatchMessage(payload) };
+    }
+    return { ok: false, error: conflictMessage(toActiveMatchConflict(payload)) };
   }
 
   revalidatePath(`/tournaments/${tournament_id}`);
-  return { ok: true, match_id: match.id };
+  return { ok: true, match_id: payload.match_id };
 }
 
 // ============================================================

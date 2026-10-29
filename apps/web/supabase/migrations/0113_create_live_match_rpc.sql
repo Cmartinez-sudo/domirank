@@ -32,6 +32,11 @@
 --      Con p_pairing_id el pairing se bloquea FOR UPDATE: un doble render /
 --      doble submit del fast path devuelve la misma partida en vez de
 --      intentar crear otra.
+--      Polla (continuous-league-actions.ts) usa la misma RPC con
+--      p_new_league_pairing (valida polla abierta + roster y crea el pairing
+--      de la temporada actual en la misma transacción) y
+--      p_keep_tournament_matches (no reemplaza una partida de torneo real en
+--      curso del creador; sí cancela quick matches y huérfanas).
 --   B. Limpieza: cancela ('migration_cleanup') las in_progress existentes
 --      sin match_players.
 --
@@ -47,32 +52,40 @@
 -- Dependencias: 0005, 0059, 0066, 0073 (trigger score keeper), 0031.
 -- ============================================================
 
+-- Firma de una versión previa de esta misma migración (por si ya se corrió
+-- en staging). En prod no existe: no-op.
+drop function if exists public.create_live_match(uuid[], uuid[], text, text, text, text, integer, integer, boolean, uuid, integer, bigint);
+
 create or replace function public.create_live_match(
-  p_team_a             uuid[],
-  p_team_b             uuid[],
-  p_count_rule         text,
-  p_modality           text,
-  p_format             text,
-  p_set_size           text,
-  p_target_points      integer,
-  p_capicua_bonus      integer,
-  p_rated              boolean,
-  p_tournament_id      uuid    default null,
-  p_time_limit_minutes integer default null,
-  p_pairing_id         bigint  default null
+  p_team_a                   uuid[],
+  p_team_b                   uuid[],
+  p_count_rule               text,
+  p_modality                 text,
+  p_format                   text,
+  p_set_size                 text,
+  p_target_points            integer,
+  p_capicua_bonus            integer,
+  p_rated                    boolean,
+  p_tournament_id            uuid    default null,
+  p_time_limit_minutes       integer default null,
+  p_pairing_id               bigint  default null,
+  p_new_league_pairing       boolean default false,
+  p_keep_tournament_matches  boolean default false
 ) returns jsonb
 language plpgsql
 security definer
 set search_path = public
 as $$
 declare
-  v_caller    uuid := auth.uid();
-  v_players   uuid[];
-  v_pairing   public.tournament_pairings%rowtype;
-  v_existing  record;
-  v_conflict  record;
-  v_prev      record;
-  v_match_id  uuid;
+  v_caller     uuid := auth.uid();
+  v_players    uuid[];
+  v_pairing    public.tournament_pairings%rowtype;
+  v_league     record;
+  v_existing   record;
+  v_kept       record;
+  v_conflict   record;
+  v_prev       record;
+  v_match_id   uuid;
 begin
   if v_caller is null then
     raise exception 'not_authenticated' using errcode = '42501';
@@ -120,6 +133,54 @@ begin
         return jsonb_build_object('ok', true, 'match_id', v_existing.id, 'reused', true);
       end if;
       raise exception 'pairing_already_has_match' using errcode = 'P0001';
+    end if;
+  end if;
+
+  -- Polla: el pairing se crea aquí. Como es SECURITY DEFINER (salta RLS de
+  -- tournament_pairings), se validan polla abierta y roster en la RPC.
+  if p_new_league_pairing then
+    if p_pairing_id is not null or p_tournament_id is null then
+      raise exception 'invalid_league_pairing' using errcode = '22023';
+    end if;
+    -- Serializa el cálculo de board entre creadores de la misma polla.
+    perform pg_advisory_xact_lock(hashtextextended('create_live_match:league:' || p_tournament_id::text, 0));
+
+    select id, format, status, current_season into v_league
+      from public.tournaments where id = p_tournament_id;
+    if not found then
+      raise exception 'tournament_not_found' using errcode = 'P0002';
+    end if;
+    if v_league.format <> 'continuous_league' then
+      raise exception 'not_a_continuous_league' using errcode = '22023';
+    end if;
+    if v_league.status not in ('open', 'in_progress') then
+      raise exception 'league_closed' using errcode = 'P0001';
+    end if;
+    if (select count(*) from public.tournament_players
+         where tournament_id = p_tournament_id and user_id = any(v_players)) <> 4 then
+      raise exception 'player_not_in_league' using errcode = '42501';
+    end if;
+  end if;
+
+  -- Polla: una partida de torneo real (con jugadores) en curso del creador no
+  -- se reemplaza en silencio. Quick matches y huérfanas sí se cancelan abajo.
+  if p_keep_tournament_matches then
+    select m.id, m.tournament_id, t.name as tournament_name into v_kept
+      from public.matches m
+      left join public.tournaments t on t.id = m.tournament_id
+     where m.created_by = v_caller
+       and m.status = 'in_progress'
+       and m.tournament_id is not null
+       and exists (select 1 from public.match_players mp where mp.match_id = m.id)
+     limit 1;
+    if found then
+      return jsonb_build_object(
+        'ok', false,
+        'error', 'creator_has_active_match',
+        'match_id', v_kept.id,
+        'tournament_name', v_kept.tournament_name,
+        'same_tournament', v_kept.tournament_id = p_tournament_id
+      );
     end if;
   end if;
 
@@ -193,15 +254,27 @@ begin
     update public.tournament_pairings set match_id = v_match_id where id = p_pairing_id;
   end if;
 
+  -- Polla: round=0 (sin rondas), board único por (tournament_id, round).
+  if p_new_league_pairing then
+    insert into public.tournament_pairings
+      (tournament_id, round, board, team_a_user_ids, team_b_user_ids, match_id, season)
+    values (
+      p_tournament_id, 0,
+      (select coalesce(max(board), 0) + 1 from public.tournament_pairings
+        where tournament_id = p_tournament_id and round = 0),
+      p_team_a, p_team_b, v_match_id, v_league.current_season
+    );
+  end if;
+
   return jsonb_build_object('ok', true, 'match_id', v_match_id, 'reused', false);
 end;
 $$;
 
-comment on function public.create_live_match(uuid[], uuid[], text, text, text, text, integer, integer, boolean, uuid, integer, bigint) is
+comment on function public.create_live_match(uuid[], uuid[], text, text, text, text, integer, integer, boolean, uuid, integer, bigint, boolean, boolean) is
   'Crea una partida en vivo (matches + match_players [+ vínculo a pairing]) en una sola transacción. Valida auth.uid() como jugador, cancela sus in_progress previas (replaced_by_new_match) y devuelve {ok:false,error:player_has_active_match,...} si algún jugador ya tiene otra partida activa. Idempotente por pairing.';
 
-revoke all on function public.create_live_match(uuid[], uuid[], text, text, text, text, integer, integer, boolean, uuid, integer, bigint) from public, anon;
-grant execute on function public.create_live_match(uuid[], uuid[], text, text, text, text, integer, integer, boolean, uuid, integer, bigint) to authenticated;
+revoke all on function public.create_live_match(uuid[], uuid[], text, text, text, text, integer, integer, boolean, uuid, integer, bigint, boolean, boolean) from public, anon;
+grant execute on function public.create_live_match(uuid[], uuid[], text, text, text, text, integer, integer, boolean, uuid, integer, bigint, boolean, boolean) to authenticated;
 
 -- ───── Limpieza: huérfanas in_progress sin match_players ─────
 -- 'migration_cleanup' es una reason sistémica permitida (0066): final, sin
@@ -236,6 +309,6 @@ select id, 'cancelled', null, 'migration_cleanup' from orphans;
 --       where reason = 'migration_cleanup' and created_at > now() - interval '1 hour';
 -- 3. La RPC existe y solo authenticated la ejecuta:
 --      select has_function_privilege('anon',
---        'public.create_live_match(uuid[],uuid[],text,text,text,text,integer,integer,boolean,uuid,integer,bigint)',
+--        'public.create_live_match(uuid[],uuid[],text,text,text,text,integer,integer,boolean,uuid,integer,bigint,boolean,boolean)',
 --        'execute');   -- false
 -- ============================================================

@@ -27,6 +27,27 @@ export type CreateLiveMatchConflictPayload = {
   is_self: boolean;
 };
 
+/** Payload {ok:false, error:'creator_has_active_match', ...} (polla,
+ *  p_keep_tournament_matches): el creador tiene una partida de torneo en curso. */
+export type CreatorActiveMatchPayload = {
+  ok: false;
+  error: "creator_has_active_match";
+  match_id: string;
+  tournament_name: string | null;
+  same_tournament: boolean;
+};
+
+/** Respuesta jsonb de create_live_match cuando no lanza excepción. */
+export type CreateLiveMatchResult =
+  | { ok: true; match_id: string; reused: boolean }
+  | CreateLiveMatchConflictPayload
+  | CreatorActiveMatchPayload;
+
+export function creatorActiveMatchMessage(p: CreatorActiveMatchPayload): string {
+  if (p.same_tournament) return "Ya tienes una partida en curso en esta polla. Continúala primero.";
+  return `Tienes una partida en curso en "${p.tournament_name ?? "otro torneo"}". Termínala o abandónala primero.`;
+}
+
 export function toActiveMatchConflict(p: CreateLiveMatchConflictPayload): ActiveMatchConflict {
   return {
     user_id: p.user_id,
@@ -60,6 +81,10 @@ export function describeCreateLiveMatchError(error: { message?: string | null } 
   if (msg.includes("not_a_player_of_this_pairing")) return "Esta partida no te corresponde.";
   if (msg.includes("match_not_in_tournament")) return "El enfrentamiento no corresponde a este torneo.";
   if (msg.includes("pairing_already_has_match")) return "Esta partida ya fue registrada.";
+  if (msg.includes("tournament_not_found")) return "Torneo no encontrado.";
+  if (msg.includes("not_a_continuous_league")) return "Este torneo no es una polla.";
+  if (msg.includes("league_closed")) return "La polla está cerrada.";
+  if (msg.includes("player_not_in_league")) return "Hay un jugador que no pertenece a la polla.";
   // Backstop del trigger trg_one_active_match (mig 0059) ante una carrera.
   if (msg.includes("already has an active match")) {
     return "Uno de los jugadores ya está en otra partida activa. Debe terminarla o cancelarla antes de empezar esta.";

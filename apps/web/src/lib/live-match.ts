@@ -11,10 +11,11 @@ import { matchAttestRequestedEmail } from "@/lib/email-templates";
 import { checkAndFireFirstValuableAction } from "@/lib/activation";
 import {
   conflictMessage,
+  creatorActiveMatchMessage,
   describeCreateLiveMatchError,
   toActiveMatchConflict,
   type ActiveMatchConflict,
-  type CreateLiveMatchConflictPayload,
+  type CreateLiveMatchResult,
 } from "@/lib/live-match-errors";
 
 /* ============================================================
@@ -48,10 +49,6 @@ const StartSchema = z.object({
   pairing_id: z.number().int().positive().nullable().optional(),
 });
 export type StartLiveMatchInput = z.infer<typeof StartSchema>;
-
-type CreateLiveMatchResult =
-  | { ok: true; match_id: string; reused: boolean }
-  | CreateLiveMatchConflictPayload;
 
 export async function startLiveMatch(
   input: StartLiveMatchInput,
@@ -129,6 +126,10 @@ export async function startLiveMatch(
   const payload = res as CreateLiveMatchResult | null;
   if (!payload) return { ok: false, error: describeCreateLiveMatchError(null) };
   if (!payload.ok) {
+    // Solo la polla pide p_keep_tournament_matches; aquí no debería llegar.
+    if (payload.error === "creator_has_active_match") {
+      return { ok: false, error: creatorActiveMatchMessage(payload) };
+    }
     const conflict = toActiveMatchConflict(payload);
     return { ok: false, error: conflictMessage(conflict), conflict };
   }

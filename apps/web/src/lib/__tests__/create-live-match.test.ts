@@ -137,6 +137,26 @@ describe("create_live_match RPC (mig 0113) — contrato SQL", () => {
     expect(body).toMatch(/update public\.tournament_pairings set match_id = v_match_id/i);
   });
 
+  it("polla: valida polla abierta + roster y crea el pairing de la temporada en la misma transacción", () => {
+    const league = body.substring(body.indexOf("if p_new_league_pairing then"));
+    expect(league).toMatch(/v_league\.format <> 'continuous_league'/);
+    expect(league).toMatch(/v_league\.status not in \('open', 'in_progress'\)/);
+    expect(league).toMatch(/from public\.tournament_players[\s\S]*?user_id = any\(v_players\)\) <> 4/i);
+    expect(body).toMatch(/insert into public\.tournament_pairings[\s\S]*?v_match_id, v_league\.current_season/i);
+  });
+
+  it("polla: no reemplaza una partida de torneo real en curso del creador", () => {
+    const keep = body.indexOf("if p_keep_tournament_matches then");
+    expect(keep).toBeGreaterThan(-1);
+    // Se decide antes de cancelar nada.
+    expect(keep).toBeLessThan(body.search(/cancellation_reason\s*=\s*'replaced_by_new_match'/i));
+    expect(body).toMatch(/'creator_has_active_match'/);
+  });
+
+  it("re-ejecutable en staging: elimina la firma previa de la RPC", () => {
+    expect(sql).toMatch(/drop function if exists public\.create_live_match\(/i);
+  });
+
   it("serializa creaciones concurrentes del mismo usuario", () => {
     expect(body).toMatch(/pg_advisory_xact_lock\(/i);
   });
