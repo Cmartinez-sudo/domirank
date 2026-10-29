@@ -9,6 +9,13 @@ import { validateMatchClosure } from "@domirank/shared/matches";
 import { buildMatchEmailMeta, sendToUserIds } from "@/lib/match-notifications";
 import { matchAttestRequestedEmail } from "@/lib/email-templates";
 import { checkAndFireFirstValuableAction } from "@/lib/activation";
+import {
+  conflictMessage,
+  describeCreateLiveMatchError,
+  toActiveMatchConflict,
+  type ActiveMatchConflict,
+  type CreateLiveMatchConflictPayload,
+} from "@/lib/live-match-errors";
 
 /* ============================================================
    START LIVE MATCH
@@ -36,10 +43,19 @@ const StartSchema = z.object({
   /** Si la partida afecta al Elo global. Si tournament_id está y rated no se
    *  pasa, se hereda de tournaments.rated. Default para quick match: true. */
   rated: z.boolean().optional(),
+  /** Pairing de torneo (fast path). La RPC lo vincula en la misma transacción
+   *  y, si ya tiene una partida in_progress, devuelve esa (idempotente). */
+  pairing_id: z.number().int().positive().nullable().optional(),
 });
 export type StartLiveMatchInput = z.infer<typeof StartSchema>;
 
-export async function startLiveMatch(input: StartLiveMatchInput): Promise<{ ok: true; match_id: string } | { ok: false; error: string }> {
+type CreateLiveMatchResult =
+  | { ok: true; match_id: string; reused: boolean }
+  | CreateLiveMatchConflictPayload;
+
+export async function startLiveMatch(
+  input: StartLiveMatchInput,
+): Promise<{ ok: true; match_id: string } | { ok: false; error: string; conflict?: ActiveMatchConflict }> {
   const parsed = StartSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
   const i = parsed.data;
@@ -60,24 +76,12 @@ export async function startLiveMatch(input: StartLiveMatchInput): Promise<{ ok: 
   // Epic Q: ya no validamos amistad. Cualquier jugador puede agregarse.
   // La confianza viene del attestation system (3 de 4 firmas).
 
-  // Si ya hay una partida in_progress del usuario, cancelarla vía RPC
-  // (reason='replaced_by_new_match' → sistémica, sin undo window).
-  const { data: prevActive } = await supabase
-    .from("matches")
-    .select("id")
-    .eq("created_by", user.id)
-    .eq("status", "in_progress");
-  for (const m of (prevActive ?? []) as Array<{ id: string }>) {
-    await supabase.rpc("cancel_match", {
-      p_match_id: m.id,
-      p_reason: "replaced_by_new_match",
-    });
+  // El creador debe jugar: cancel_match exige ser participante, así que un
+  // creador que no juega no podría cancelar su partida y quedaría bloqueado
+  // por matches_one_inprogress_per_user. La RPC también lo valida.
+  if (!all.includes(user.id)) {
+    return { ok: false, error: "Debes ser uno de los 4 jugadores de la partida." };
   }
-
-  // Si la partida tiene límite de tiempo, el timer arranca inmediatamente
-  // al crearla (ya está "in_progress" desde el momento de creación).
-  const now = new Date().toISOString();
-  const timeLimitMinutes = i.time_limit_minutes ?? null;
 
   // Resolución de `rated`:
   //   1. Si el caller lo pasa explícito, ese gana (UI quick match toggle).
@@ -93,52 +97,52 @@ export async function startLiveMatch(input: StartLiveMatchInput): Promise<{ ok: 
     if (t && typeof t.rated === "boolean") rated = t.rated;
   }
 
-  const { data: match, error: mErr } = await supabase
-    .from("matches")
-    .insert({
-      format: i.format,
-      set_size: i.set_size,
-      // Dual-write: la columna legacy `modality` recibe "custom" en inserts
-      // nuevos (o el valor legacy que pase el caller); la identidad real
-      // vive en `count_rule`.
-      modality: i.modality ?? "custom",
-      count_rule: i.count_rule,
-      target_points: i.target_points,
-      capicua_bonus: i.capicua_bonus,
-      status: "in_progress",
-      rated,
-      created_by: user.id,
-      tournament_id: i.tournament_id ?? null,
-      // R6: timer. Si hay time_limit_minutes, timer arranca ya.
-      time_limit_minutes: timeLimitMinutes,
-      timer_started_at: timeLimitMinutes ? now : null,
-    })
-    .select("id")
-    .single();
+  // Creación atómica (mig 0113): en una sola transacción cancela las
+  // in_progress previas del creador (reason='replaced_by_new_match'),
+  // inserta matches + match_players (los snapshots de rating se llenan al
+  // finalizar) y, si viene pairing_id, vincula el pairing. Si algo falla no
+  // queda nada a medias — antes el DELETE de rollback lo ignoraba RLS y
+  // quedaban huérfanas que bloqueaban matches_one_inprogress_per_user.
+  const { data: res, error: rpcErr } = await supabase.rpc("create_live_match", {
+    p_team_a: i.team_a_players,
+    p_team_b: i.team_b_players,
+    p_count_rule: i.count_rule,
+    // Dual-write: la columna legacy `modality` recibe "custom" en inserts
+    // nuevos (o el valor legacy que pase el caller); la identidad real
+    // vive en `count_rule`.
+    p_modality: i.modality ?? "custom",
+    p_format: i.format,
+    p_set_size: i.set_size,
+    p_target_points: i.target_points,
+    p_capicua_bonus: i.capicua_bonus,
+    p_rated: rated,
+    p_tournament_id: i.tournament_id ?? null,
+    // R6: timer. Si hay time_limit_minutes, el timer arranca al crearla.
+    p_time_limit_minutes: i.time_limit_minutes ?? null,
+    p_pairing_id: i.pairing_id ?? null,
+  });
 
-  if (mErr || !match) return { ok: false, error: mErr?.message ?? "No se pudo crear la partida" };
-
-  // Insertar match_players con team y score 0 (los snapshots de rating se llenan al finalizar)
-  const mpRows = [
-    ...i.team_a_players.map((pid) => ({ match_id: match.id, user_id: pid, team: 1, score: 0 })),
-    ...i.team_b_players.map((pid) => ({ match_id: match.id, user_id: pid, team: 2, score: 0 })),
-  ];
-  const { error: mpErr } = await supabase.from("match_players").insert(mpRows);
-  if (mpErr) {
-    await supabase.from("matches").delete().eq("id", match.id);
-    return { ok: false, error: mpErr.message };
+  if (rpcErr) {
+    console.error("[startLiveMatch] create_live_match failed:", rpcErr);
+    return { ok: false, error: describeCreateLiveMatchError(rpcErr) };
+  }
+  const payload = res as CreateLiveMatchResult | null;
+  if (!payload) return { ok: false, error: describeCreateLiveMatchError(null) };
+  if (!payload.ok) {
+    const conflict = toActiveMatchConflict(payload);
+    return { ok: false, error: conflictMessage(conflict), conflict };
   }
 
   // Sprint 1b: first_valuable_action vía "match_created_with_cojugador".
   // Los co-jugadores llegan como UUIDs (todos identified). Basta con ≥1 distinto al creator.
   const hasCojugador = all.some((pid) => pid !== user.id);
-  if (hasCojugador) {
+  if (hasCojugador && !payload.reused) {
     checkAndFireFirstValuableAction(user.id, "match_created_with_cojugador").catch((err) => {
       console.warn("[startLiveMatch] checkFVA failed:", err);
     });
   }
 
-  return { ok: true, match_id: match.id };
+  return { ok: true, match_id: payload.match_id };
 }
 
 /* ============================================================
